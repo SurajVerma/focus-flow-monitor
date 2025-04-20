@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Denied</title>
+    <link rel="stylesheet" href="blocked.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">⚠️</div>
+      <h1>Access Denied</h1>
+      <p>Your access has been restricted by the <strong>Web Time Tracker</strong> extension.</p>
+
+      <div class="details">
+        <p><strong>Blocked URL:</strong> <span id="display-url">loading...</span></p>
+        <p><strong>Reason:</strong> <span id="display-reason">loading...</span></p>
+        <p><strong>Matching Rule:</strong> <span id="display-rule">loading...</span></p>
+        <p id="limit-info" style="display: none">
+          <strong>Time Spent Today:</strong> <span id="display-spent"></span> / <strong>Limit:</strong>
+          <span id="display-limit"></span>
+        </p>
+      </div>
+      <button id="goBackButton">Go Back</button>
+    </div>
+
+    <script src="blocked.js"></script>
+  </body>
+</html>

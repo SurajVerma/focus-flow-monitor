@@ -1,0 +1,524 @@
+/* options.css */
+body {
+  font-family: sans-serif;
+  padding: 20px;
+  background-color: #f4f7f6;
+  color: #333;
+}
+
+.container {
+  max-width: 800px; /* Limit width for better readability */
+  margin: 0 auto; /* Center the container */
+  background-color: #ffffff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  color: #0056b3; /* A different shade of blue */
+  margin-bottom: 30px;
+}
+
+h2 {
+  color: #007bff;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 5px;
+  margin-top: 30px;
+}
+
+section {
+  margin-bottom: 20px;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background-color: #ddd;
+  margin: 40px 0;
+}
+
+ul#detailedTimeList {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+}
+
+ul#detailedTimeList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 5px;
+  border-bottom: 1px dashed #eee;
+  font-size: 1em;
+}
+
+ul#detailedTimeList li:last-child {
+  border-bottom: none;
+}
+
+ul#detailedTimeList .domain {
+  color: #555;
+  margin-right: 15px;
+  flex-grow: 1; /* Allow domain to take up space */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+ul#detailedTimeList .time {
+  color: #333;
+  font-weight: bold;
+  white-space: nowrap;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+p {
+  /* General paragraph styling */
+  color: #666;
+  /* Removed default italic */
+  line-height: 1.5;
+}
+section#blocking-section > p {
+  /* Specific paragraph in blocking section */
+  font-style: italic;
+  margin-bottom: 15px; /* Add some space below the description */
+}
+
+#chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #aaa;
+  font-size: 1.2em;
+}
+
+section#categories-section h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+section#categories-section h4 {
+  margin-top: 15px;
+  margin-bottom: 5px;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.form-inline {
+  display: flex;
+  gap: 10px; /* Spacing between elements */
+  margin-bottom: 15px;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.form-inline input[type='text'],
+.form-inline select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  flex-grow: 1; /* Allow input/select to grow */
+}
+.form-inline select {
+  min-width: 150px; /* Ensure select is not too small */
+}
+
+.form-inline button {
+  padding: 8px 15px;
+  background-color: #28a745; /* Green */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.form-inline button:hover {
+  background-color: #218838;
+}
+
+/* Styling for the lists */
+#categoryList,
+#assignmentList {
+  list-style: none;
+  padding: 0;
+  margin-top: 5px;
+  max-height: 200px; /* Limit height and allow scrolling */
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 5px;
+}
+
+#categoryList li,
+#assignmentList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px dashed #eee;
+}
+
+#categoryList li:last-child,
+#assignmentList li:last-child {
+  border-bottom: none;
+}
+
+#categoryList button.delete-btn,
+#assignmentList button.delete-btn {
+  background-color: #dc3545; /* Red */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.8em;
+  cursor: pointer;
+  margin-left: 10px; /* Space between item and button */
+  transition: background-color 0.2s ease;
+}
+
+#categoryList button.delete-btn:hover,
+#assignmentList button.delete-btn:hover {
+  background-color: #c82333;
+}
+
+/* Specific styling for assignment list items */
+#assignmentList .assignment-domain {
+  font-weight: bold;
+  color: #0056b3;
+  margin-right: 10px;
+}
+#assignmentList .assignment-category {
+  color: #555;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+ul#categoryTimeList {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+}
+
+ul#categoryTimeList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 5px;
+  border-bottom: 1px dashed #eee;
+  font-size: 1em;
+}
+
+ul#categoryTimeList li:last-child {
+  border-bottom: none;
+}
+
+ul#categoryTimeList .category-name {
+  color: #555;
+  margin-right: 15px;
+  font-weight: bold;
+}
+
+ul#categoryTimeList .time {
+  color: #333;
+  font-weight: bold;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+/* Add to options.css */
+
+section#blocking-section h4 {
+  margin-top: 15px;
+  margin-bottom: 5px;
+  color: #555;
+  font-size: 0.9em;
+}
+
+/* Style the main form row */
+.add-rule-form {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: 10px;
+  align-items: center; /* Align items vertically */
+  padding: 10px;
+  background-color: #f8f9fa; /* Slightly different background */
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.add-rule-form select,
+.add-rule-form input[type='text'] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  flex-grow: 1; /* Allow text input/selects to grow */
+  min-width: 150px; /* Prevent them getting too small */
+}
+
+/* Container for time limit inputs */
+.time-limit-input {
+  display: flex; /* Use flex to align items horizontally */
+  align-items: center;
+  gap: 5px;
+  flex-grow: 2; /* Allow slightly more space */
+}
+
+.time-limit-input input[type='number'] {
+  width: 70px; /* Fixed width for number input */
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.time-limit-input select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.time-limit-input span {
+  white-space: nowrap;
+  color: #495057;
+}
+
+.add-rule-form button {
+  padding: 8px 15px;
+  background-color: #007bff; /* Standard blue for 'Add' */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-grow: 0; /* Don't grow button */
+  white-space: nowrap;
+}
+.add-rule-form button:hover {
+  background-color: #0056b3;
+}
+
+/* Styling for the combined rules list */
+#ruleList {
+  /* Updated ID */
+  list-style: none;
+  padding: 0;
+  margin-top: 5px;
+  max-height: 250px; /* Maybe slightly taller */
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 5px;
+}
+
+#ruleList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px; /* Slightly more padding */
+  border-bottom: 1px dashed #eee;
+}
+#ruleList li:last-child {
+  border-bottom: none;
+}
+
+#ruleList .rule-info {
+  flex-grow: 1; /* Allow text to take up space */
+  margin-right: 10px;
+}
+#ruleList .rule-info .rule-type {
+  /* Style for Block/Limit type */
+  font-weight: bold;
+  margin-right: 5px;
+}
+#ruleList .rule-info .rule-target {
+  /* Style for URL/Category name */
+  color: #333;
+  font-style: italic;
+  margin-right: 5px;
+}
+#ruleList .rule-info .rule-limit {
+  /* Style for time limit text */
+  color: #28a745; /* Green for limits */
+  font-size: 0.9em;
+}
+#ruleList .rule-info .rule-blocked {
+  /* Style for permanent block */
+  color: #dc3545; /* Red */
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+#ruleList button.delete-btn {
+  /* Reuse existing delete style */
+  background-color: #6c757d;
+  color: white;
+  /* ... other styles from previous step ... */
+  padding: 3px 8px;
+  font-size: 0.8em;
+  cursor: pointer;
+  margin-left: 10px; /* etc */
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+#ruleList button.delete-btn:hover {
+  background-color: #5a6268;
+}
+
+/* === CALENDAR STYLES === */
+
+#calendar-view-section {
+  margin-bottom: 30px;
+}
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px; /* Compact Calendar: Reduced margin */
+  padding: 5px 10px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.calendar-controls button {
+  padding: 3px 8px; /* Compact Calendar: Reduced padding */
+  font-size: 0.85em; /* Compact Calendar: Reduced font size */
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.calendar-controls button:hover {
+  background-color: #5a6268;
+}
+
+#currentMonthYear {
+  font-weight: bold;
+  font-size: 1em; /* Compact Calendar: Slightly reduced font size */
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px; /* Compact Calendar: Reduced gap */
+  border: 1px solid #eee;
+  padding: 5px; /* Compact Calendar: Reduced padding */
+  border-radius: 5px;
+}
+
+.calendar-header {
+  font-weight: bold;
+  text-align: center;
+  font-size: 0.75em; /* Compact Calendar: Reduced font size */
+  color: #6c757d;
+  padding-bottom: 3px; /* Compact Calendar: Reduced padding */
+}
+
+.calendar-day {
+  border: 1px solid #f0f0f0;
+  min-height: 60px; /* Compact Calendar: Reduced height */
+  padding: 3px; /* Compact Calendar: Reduced padding */
+  font-size: 0.75em; /* Compact Calendar: Reduced font size */
+  background-color: #fff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.calendar-day.empty {
+  background-color: #f9f9f9;
+  border: 1px solid #f9f9f9;
+}
+
+.calendar-day .day-number {
+  font-weight: bold;
+  color: #333;
+  align-self: flex-start;
+  /* Compact Calendar: Make today highlight smaller */
+  line-height: 1.4em;
+  min-width: 1.4em;
+  text-align: center;
+}
+.calendar-day.today .day-number {
+  color: white;
+  background-color: #007bff;
+  border-radius: 50%;
+  width: 1.4em; /* Compact Calendar: Reduced size */
+  height: 1.4em; /* Compact Calendar: Reduced size */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0; /* Remove padding */
+  margin: 0; /* Remove margin */
+}
+
+.calendar-day .day-time {
+  font-size: 0.85em; /* Compact Calendar: Reduced font size */
+  color: #007bff;
+  font-weight: bold;
+  margin-top: 3px; /* Compact Calendar: Reduced margin */
+  text-align: center;
+  align-self: center;
+  /* Prevent text wrapping */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%; /* Prevent time from overflowing small cells */
+}
+
+.calendar-day .day-time.no-data {
+  color: #adb5bd;
+  font-weight: normal;
+}
+
+/* === PAGINATION STYLES === */
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.pagination-controls button {
+  padding: 5px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.9em;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.pagination-controls button:disabled {
+  background-color: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#domainPageInfo {
+  font-size: 0.9em;
+  color: #555;
+  font-weight: bold;
+  white-space: nowrap;
+}

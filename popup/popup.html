@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Web Time Tracker</title>
+  </head>
+  <body>
+    <div class="popup-container">
+      <header class="popup-header">
+        <div class="title-area">
+          <img src="../icons/icon-48.png" alt="Logo" class="logo" />
+          <span class="title-text">Time Tracker</span>
+        </div>
+        <!-- <button id="viewCalendarBtn" class="header-btn">View Calendar</button> -->
+        <button id="optionsBtn" class="header-btn icon-btn" title="Settings">⚙️</button>
+      </header>
+
+      <section class="summary-section">
+        <div id="currentDate" class="date-display">Loading date...</div>
+        <div id="totalTimeToday" class="total-time">--h --m --s</div>
+        <div id="todaySummary" class="today-summary">Loading summary...</div>
+        <div id="categoryProgressBar" class="progress-bar-container" style="display: none"></div>
+      </section>
+
+      <section class="hourly-chart-section">
+        <h4>Hourly Usage</h4>
+        <div class="chart-wrapper"><canvas id="hourlyChartCanvas"></canvas></div>
+      </section>
+    </div>
+    <script src="../libs/chart.umd.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
