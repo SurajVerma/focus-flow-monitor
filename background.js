@@ -1,6 +1,6 @@
-// background.js (v14 - Hourly Tracking added to YOUR v13)
+// background.js (v14 - Hourly Tracking added to YOUR v13 - MODIFIED TO IGNORE IDLE STATE)
 
-console.log('[System] Background script STARTING (v14 - Hourly Tracking).'); // Updated version marker
+console.log('[System] Background script STARTING (v14 - Hourly Tracking - Modified: Ignore Idle).'); // Updated version marker
 
 // --- Core Tracking Variables ---
 let currentTabId = null;
@@ -11,8 +11,8 @@ let categoryTimeData = {}; // All-time category totals
 let dailyDomainData = {}; // Daily domain data {'YYYY-MM-DD': {'domain.com': secs, ...}}
 let dailyCategoryData = {}; // Daily category data {'YYYY-MM-DD': {'Category': secs, ...}}
 let hourlyData = {}; // *** NEW: Hourly totals {'YYYY-MM-DD': {'HH': totalSeconds, ...}} ***
-let idleState = 'active';
-const idleThreshold = 1800;
+let idleState = 'active'; // Still track the state, but updateTime won't use it directly
+const idleThreshold = 1800; // Keep the constant, though it's not used by updateTime's core logic anymore
 
 // --- Configuration (loaded from storage or JSON defaults) ---
 let categories = ['Other'];
@@ -22,7 +22,6 @@ let rules = [];
 const defaultCategory = 'Other';
 
 // --- Helper: Get current date string ---
-// IDENTICAL to your v13 file
 function getCurrentDateString() {
   const now = new Date();
   const year = now.getFullYear();
@@ -32,7 +31,6 @@ function getCurrentDateString() {
 }
 
 // --- Load stored data or fetch defaults ---
-// MODIFIED: Load hourlyData as well
 async function loadData() {
   console.log('[System] loadData started.');
   try {
@@ -150,7 +148,6 @@ async function loadData() {
 loadData();
 
 // --- Save ALL current data state to storage ---
-// MODIFIED: Save hourlyData as well
 async function saveData() {
   // Log data just before saving for debugging purposes
   console.log('[Save Check] Data just before saving:', {
@@ -190,7 +187,6 @@ async function saveData() {
 }
 
 // --- Get Domain & Category ---
-// IDENTICAL to your v13 file
 function getDomain(url) {
   if (!url || !url.startsWith('http')) {
     return null;
@@ -201,7 +197,7 @@ function getDomain(url) {
     return null;
   }
 }
-// IDENTICAL to your v13 file
+
 function getCategoryForDomain(domain) {
   if (!domain) return null;
   if (categoryAssignments.hasOwnProperty(domain)) return categoryAssignments[domain];
@@ -216,9 +212,10 @@ function getCategoryForDomain(domain) {
 }
 
 // --- Update Time Tracking ---
-// MODIFIED: Add hourly tracking increment
+// MODIFIED: Removed idleState check
 function updateTime() {
-  if (currentTabUrl && startTime && idleState === 'active') {
+  // Check only if we have a current URL and a start time
+  if (currentTabUrl && startTime) {
     const domain = getDomain(currentTabUrl);
     if (domain) {
       const now = new Date(); // Get full date object once
@@ -275,84 +272,106 @@ function updateTime() {
         saveData(); // Save all data structures
       }
     } else {
-      startTime = null;
-    } // Domain is null
+      startTime = null; // Domain is null
+    }
+  } else {
+    // If either currentTabUrl or startTime is null, ensure timer is stopped
+    // This handles cases like browser startup or when focus is lost
+    startTime = null;
   }
 }
 
 // --- Event Handlers for Tabs, Windows, Idle ---
-// IDENTICAL to your v13 file
 function handleTabActivation(activeInfo) {
-  updateTime();
+  updateTime(); // Save time from previous tab before switching
   currentTabId = activeInfo.tabId;
   browser.tabs
     .get(currentTabId)
     .then((tab) => {
-      if (!browser.runtime.lastError && tab.active && tab.windowId !== browser.windows.WINDOW_ID_NONE) {
+      // Check if tab is valid, active, and in a real window
+      if (!browser.runtime.lastError && tab && tab.active && tab.windowId !== browser.windows.WINDOW_ID_NONE) {
         browser.windows
           .get(tab.windowId)
           .then((windowInfo) => {
+            // Check if the window is focused
             if (!browser.runtime.lastError && windowInfo.focused) {
               currentTabUrl = tab.url;
-              startTime = Date.now();
+              startTime = Date.now(); // Start timer for the new active tab
             } else {
+              // Tab is active but window is not focused
               currentTabUrl = null;
               startTime = null;
             }
           })
           .catch((err) => {
+            // Error getting window info, assume not trackable
             console.error('Err get window (act):', err);
             currentTabUrl = null;
             startTime = null;
           });
       } else {
+        // Tab is not active, invalid, or not in a real window
         currentTabUrl = null;
         startTime = null;
       }
     })
     .catch((error) => {
+      // Error getting tab info
       console.error('Err get tab (act):', error);
       currentTabUrl = null;
       startTime = null;
     });
 }
-// IDENTICAL to your v13 file
+
 function handleTabUpdate(tabId, changeInfo, tab) {
+  // Check if it's the current tab, the URL changed, and the tab is active
   if (tabId === currentTabId && changeInfo.url && tab.active) {
     browser.windows
       .get(tab.windowId)
       .then((windowInfo) => {
+        // Check if the window is focused
         if (!browser.runtime.lastError && windowInfo.focused) {
-          updateTime();
+          updateTime(); // Save time before URL changes
           currentTabUrl = changeInfo.url;
-          startTime = Date.now();
+          startTime = Date.now(); // Restart timer for the new URL
         } else {
+          // Tab updated but window isn't focused, stop timer
           updateTime();
           currentTabUrl = null;
           startTime = null;
         }
       })
       .catch((error) => {
+        // Error getting window info, stop timer
         console.error('Err get window (upd):', error);
         updateTime();
         currentTabUrl = null;
         startTime = null;
       });
+  } else if (tabId === currentTabId && changeInfo.status === 'loading' && tab.active) {
+    // If the *active* tab starts loading a new page (even if URL isn't in changeInfo yet)
+    // treat it like an update to stop the timer for the old URL immediately.
+    updateTime();
+    // Don't reset startTime here, wait for URL change or activation
   }
 }
-// IDENTICAL to your v13 file
+
 function handleWindowFocusChange(windowId) {
   if (windowId === browser.windows.WINDOW_ID_NONE) {
-    updateTime();
+    // Browser lost focus
+    updateTime(); // Save any pending time
     currentTabUrl = null;
     startTime = null;
   } else {
+    // Browser gained focus, check the active tab in that window
     browser.tabs
       .query({ active: true, windowId: windowId })
       .then((tabs) => {
         if (!browser.runtime.lastError && tabs.length > 0) {
+          // Effectively treat this like a tab activation
           handleTabActivation({ tabId: tabs[0].id, windowId: windowId });
         } else {
+          // No active tab found in the focused window?
           currentTabUrl = null;
           startTime = null;
         }
@@ -364,11 +383,17 @@ function handleWindowFocusChange(windowId) {
       });
   }
 }
-// IDENTICAL to your v13 file
+
+// Listener for idle state changes - still useful for other potential features
+// or if you later add options to use idle state again.
 browser.idle.onStateChanged.addListener((newState) => {
+  console.log(`[Idle] State changed from ${idleState} to ${newState}`);
   const oldState = idleState;
   idleState = newState;
+  // Reset start time when becoming active after being non-active
+  // Note: updateTime() no longer strictly depends on idleState === 'active'
   if (newState === 'active' && oldState !== 'active') {
+    // Re-check the current tab when becoming active
     browser.tabs
       .query({ active: true, currentWindow: true })
       .then((tabs) => {
@@ -381,34 +406,35 @@ browser.idle.onStateChanged.addListener((newState) => {
       })
       .catch((error) => {
         console.error('Err query tabs (idle):', error);
+        currentTabUrl = null;
+        startTime = null;
       });
   } else if (newState !== 'active') {
+    // Save time immediately when becoming idle or locked
     updateTime();
-    startTime = null;
+    startTime = null; // Stop timer
   }
 });
 
 // Register event listeners
-// IDENTICAL to your v13 file
 browser.tabs.onActivated.addListener(handleTabActivation);
 browser.tabs.onUpdated.addListener(handleTabUpdate, { properties: ['status', 'url'] });
 browser.windows.onFocusChanged.addListener(handleWindowFocusChange);
 
 // --- Periodic Save Alarm ---
-// IDENTICAL to your v13 file
 browser.alarms.create('periodicSave', { periodInMinutes: 1 });
 browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'periodicSave') {
+    // Still call updateTime to potentially save accumulated time if active
     updateTime();
   }
 });
 
 // --- Message Listener (Unified for Rules) ---
-// IDENTICAL to your v13 file
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {
     console.log(`[System] Reloading data due to ${request.action} message.`);
-    loadData();
+    loadData(); // Reload categories, assignments, and rules
     sendResponse({ success: true, message: 'Data reloaded by background script.' });
     return true; // Indicates asynchronous response is possible
   }
@@ -416,7 +442,6 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // --- Blocking & Limiting Logic ---
-// IDENTICAL to your v13 file
 function urlMatchesPattern(url, pattern) {
   if (!url || !pattern) return false;
 
@@ -448,13 +473,13 @@ function urlMatchesPattern(url, pattern) {
   }
 }
 
-// IDENTICAL to your v13 file (Redirects correctly)
 function handleBlockingRequest(requestDetails) {
   // Ignore requests not for the main page or initiated by the extension itself
   if (
     requestDetails.type !== 'main_frame' ||
     !requestDetails.url ||
-    requestDetails.url.startsWith('moz-extension://')
+    requestDetails.url.startsWith('moz-extension://') || // Ignore own extension pages
+    requestDetails.url.startsWith('about:') // Ignore internal browser pages
   ) {
     return {}; // Allow the request
   }
@@ -487,7 +512,8 @@ function handleBlockingRequest(requestDetails) {
       if (rule.type === 'limit-url') {
         if (requestedDomain && urlMatchesPattern(requestedUrl, targetValue)) {
           ruleMatches = true;
-          timeSpentToday = todaysDomainData[requestedDomain] || 0; // Get domain time
+          // Get time spent on *this specific domain* today
+          timeSpentToday = todaysDomainData[requestedDomain] || 0;
         }
       }
       // Check Category Limit
@@ -498,7 +524,8 @@ function handleBlockingRequest(requestDetails) {
         }
         if (determinedCategory && determinedCategory === targetValue) {
           ruleMatches = true;
-          timeSpentToday = todaysCategoryData[determinedCategory] || 0; // Get category time
+          // Get time spent on *this specific category* today
+          timeSpentToday = todaysCategoryData[determinedCategory] || 0;
         }
       }
 
@@ -506,7 +533,10 @@ function handleBlockingRequest(requestDetails) {
       if (ruleMatches) {
         const limitReached = timeSpentToday >= limitSeconds;
         console.log(
-          `    [Limit Result] For ${rule.type}='${targetValue}': Limit=${limitSeconds}s, Spent=${timeSpentToday}s. Limit reached: ${limitReached}`
+          `    [Limit Result] For ${rule.type}='${targetValue}': Limit=${formatTime(
+            limitSeconds,
+            false
+          )}, Spent=${formatTime(timeSpentToday, false)}. Limit reached: ${limitReached}`
         );
         if (limitReached) {
           console.log(`    [!!! LIMIT ENFORCED !!!] Limit EXCEEDED. REDIRECTING.`);
@@ -521,7 +551,7 @@ function handleBlockingRequest(requestDetails) {
         }
       }
     } catch (e) {
-      console.error(`[Limit Check Error] Processing rule ${JSON.stringify(rule)}`, e);
+      console.error(`[Limit Check Error] Processing rule ${JSON.stringify(rule)} for URL ${requestedUrl}`, e);
     }
   }
 
@@ -562,7 +592,7 @@ function handleBlockingRequest(requestDetails) {
         return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
       }
     } catch (e) {
-      console.error(`[Block Check Error] Processing rule ${JSON.stringify(rule)}`, e);
+      console.error(`[Block Check Error] Processing rule ${JSON.stringify(rule)} for URL ${requestedUrl}`, e);
     }
   }
 
@@ -572,7 +602,6 @@ function handleBlockingRequest(requestDetails) {
 }
 
 // Register the blocking/limiting listener
-// IDENTICAL to your v13 file
 try {
   if (browser.webRequest) {
     browser.webRequest.onBeforeRequest.addListener(
@@ -588,6 +617,6 @@ try {
   console.error('CRITICAL: Failed to register request listener.', error);
 }
 
-console.log('[System] Background script finished loading (v14 - Hourly Tracking).'); // Updated version marker
+console.log('[System] Background script finished loading (v14 - Hourly Tracking - Modified: Ignore Idle).'); // Updated version marker
 
 // --- End of background.js ---
