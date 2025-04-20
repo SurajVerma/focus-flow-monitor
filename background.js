@@ -12,7 +12,7 @@ let dailyDomainData = {}; // Daily domain data {'YYYY-MM-DD': {'domain.com': sec
 let dailyCategoryData = {}; // Daily category data {'YYYY-MM-DD': {'Category': secs, ...}}
 let hourlyData = {}; // *** NEW: Hourly totals {'YYYY-MM-DD': {'HH': totalSeconds, ...}} ***
 let idleState = 'active';
-const idleThreshold = 60;
+const idleThreshold = 1800;
 
 // --- Configuration (loaded from storage or JSON defaults) ---
 let categories = ['Other'];
