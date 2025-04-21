@@ -1,6 +1,6 @@
-// background.js (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - Regenerated Full File)
+// background.js (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED FOR Undercounting Fix)
 
-console.log('[System] Background script STARTING (v14 - DEBUG LOGGING - Simpler Timer Logic v3).');
+console.log('[System] Background script STARTING (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED).');
 
 // --- Core Tracking Variables ---
 let currentTabId = null;
@@ -28,7 +28,7 @@ function getCurrentDateString() {
   const year = now.getFullYear();
   const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
   const day = now.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`; // YYYY-MM-DD format
+  return `<span class="math-inline">\{year\}\-</span>{month}-${day}`; // YYYY-MM-DD format
 }
 
 // --- Load stored data or fetch defaults ---
@@ -202,7 +202,7 @@ function getDomain(url) {
   }
   try {
     const hostname = new URL(url).hostname;
-    // console.log(`[Debug] getDomain: URL=${url}, Hostname=${hostname}`);
+    // console.log(`[Debug] getDomain: URL=<span class="math-inline">\{url\}, Hostname\=</span>{hostname}`);
     return hostname;
   } catch (e) {
     console.error(`[Debug] getDomain: Error parsing URL ${url}:`, e);
@@ -239,7 +239,7 @@ function getCategoryForDomain(domain) {
 // --- Update Time Tracking (Simpler Logic V3) ---
 function updateTime() {
   console.log(
-    `[Debug updateTime V3] Called. currentTabUrl=${currentTabUrl}, startTime=${startTime}, lastSavedTime=${lastSavedTime}`
+    `[Debug updateTime V3] Called. currentTabUrl=<span class="math-inline">\{currentTabUrl\}, startTime\=</span>{startTime}, lastSavedTime=${lastSavedTime}`
   );
   // Only proceed if the timer is actually running (startTime is set)
   if (currentTabUrl && startTime) {
@@ -250,7 +250,9 @@ function updateTime() {
       const previousTime = lastSavedTime || startTime;
       const elapsedSeconds = Math.round((now - previousTime) / 1000);
 
-      console.log(`[Debug updateTime V3] Domain=${domain}, elapsedSeconds=${elapsedSeconds} (since ${previousTime})`);
+      console.log(
+        `[Debug updateTime V3] Domain=<span class="math-inline">\{domain\}, elapsedSeconds\=</span>{elapsedSeconds} (since ${previousTime})`
+      );
 
       if (elapsedSeconds > 0) {
         const nowDate = new Date(now); // Create Date object only if needed for hour
@@ -265,7 +267,7 @@ function updateTime() {
         // --- End Init Checks ---
 
         // Log current values BEFORE incrementing (Optional Verbose Log)
-        // console.log(`[Debug updateTime V3] Before Inc: trackedData[${domain}]=${trackedData[domain]||0}, dailyDomain[${todayStr}][${domain}]=${(dailyDomainData[todayStr]||{})[domain]||0}, hourly[${todayStr}][${currentHourStr}]=${(hourlyData[todayStr]||{})[currentHourStr]||0}`);
+        // console.log(`[Debug updateTime V3] Before Inc: trackedData[<span class="math-inline">\{domain\}\]\=</span>{trackedData[domain]||0}, dailyDomain[<span class="math-inline">\{todayStr\}\]\[</span>{domain}]=<span class="math-inline">\{\(dailyDomainData\[todayStr\]\|\|\{\}\)\[domain\]\|\|0\}, hourly\[</span>{todayStr}][<span class="math-inline">\{currentHourStr\}\]\=</span>{(hourlyData[todayStr]||{})[currentHourStr]||0}`);
 
         // --- Increment times ---
         trackedData[domain] = (trackedData[domain] || 0) + elapsedSeconds;
@@ -277,7 +279,7 @@ function updateTime() {
         console.log(
           `[Tracking V3] Domain: ${domain} -> Cat: ${
             category || 'None'
-          } -> Hour: ${currentHourStr} (+${elapsedSeconds}s)`
+          } -> Hour: <span class="math-inline">\{currentHourStr\} \(\+</span>{elapsedSeconds}s)`
         );
         if (category) {
           categoryTimeData[category] = (categoryTimeData[category] || 0) + elapsedSeconds;
@@ -449,14 +451,15 @@ function handleWindowFocusChange(windowId) {
             );
             handleTabActivation({ tabId: tabs[0].id, windowId: windowId }); // Let activation handle starting timer
           } else {
+            // --- MODIFICATION START ---
             console.log(
-              `[Event handleWindowFocusChange] Active tab ${tabs[0].id} is the same and timer was running. Ensuring timer continues by updating lastSavedTime.`
+              `[Event handleWindowFocusChange] Active tab ${tabs[0].id} is the same and timer was running. Calling updateTime to record any pending duration.`
             );
-            // Update lastSavedTime to prevent a large jump if updateTime hasn't run recently
-            lastSavedTime = Date.now();
-            console.log(
-              `[Event handleWindowFocusChange] Updated lastSavedTime to ${lastSavedTime}. startTime remains ${startTime}`
-            );
+            // Call updateTime immediately to capture time since last save before doing anything else.
+            updateTime();
+            // No need to manually reset lastSavedTime here, updateTime handles it.
+            console.log(`[Event handleWindowFocusChange] updateTime called. startTime remains ${startTime}`);
+            // --- MODIFICATION END ---
           }
         } else {
           console.log('[Event handleWindowFocusChange] No active tab found in focused window? Stopping timer.');
@@ -496,12 +499,14 @@ browser.idle.onStateChanged.addListener((newState) => {
                   console.log('[Idle] User active and window focused. Timer was stopped, calling handleTabActivation.');
                   handleTabActivation({ tabId: tabs[0].id, windowId: tabs[0].windowId });
                 } else {
+                  // --- MODIFICATION START ---
                   console.log(
-                    '[Idle] User active and window focused, and timer was already running. Updating lastSavedTime.'
+                    '[Idle] User active and window focused, and timer was already running. Calling updateTime to record any pending duration.'
                   );
-                  // Prevent potential large jump in time calculation if updateTime hasn't run recently
-                  lastSavedTime = Date.now();
-                  console.log(`[Idle] Updated lastSavedTime to ${lastSavedTime}. startTime remains ${startTime}`);
+                  // Call updateTime immediately to capture time since last save.
+                  updateTime();
+                  console.log(`[Idle] updateTime called. startTime remains ${startTime}`);
+                  // --- MODIFICATION END ---
                 }
               } else {
                 console.log('[Idle] User active BUT window NOT focused. Timer remains stopped.');
@@ -650,9 +655,9 @@ function handleBlockingRequest(requestDetails) {
       if (ruleMatches) {
         const limitReached = timeSpentToday >= limitSeconds;
         console.log(
-          `    [Limit Result] For ${rule.type}='${targetValue}': Limit=${formatTimeBlocking(
-            limitSeconds
-          )}, Spent=${formatTimeBlocking(timeSpentToday)}. Limit reached: ${limitReached}`
+          `    [Limit Result] For <span class="math-inline">\{rule\.type\}\='</span>{targetValue}': Limit=<span class="math-inline">\{formatTimeBlocking\(
+limitSeconds
+\)\}, Spent\=</span>{formatTimeBlocking(timeSpentToday)}. Limit reached: ${limitReached}`
         );
         if (limitReached) {
           console.log(`    [!!! LIMIT ENFORCED !!!] Limit EXCEEDED. REDIRECTING.`);
@@ -663,7 +668,7 @@ function handleBlockingRequest(requestDetails) {
           params.append('value', targetValue);
           params.append('limit', limitSeconds.toString());
           params.append('spent', timeSpentToday.toString());
-          return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
+          return { redirectUrl: `<span class="math-inline">\{blockPageBaseUrl\}?</span>{params.toString()}` };
         }
       }
     } catch (e) {
@@ -683,13 +688,15 @@ function handleBlockingRequest(requestDetails) {
         if (determinedCategory && determinedCategory === targetValue) ruleMatches = true;
       }
       if (ruleMatches) {
-        console.log(`    [!!! BLOCK ENFORCED !!!] Rule matched: ${rule.type}='${targetValue}'. REDIRECTING.`);
+        console.log(
+          `    [!!! BLOCK ENFORCED !!!] Rule matched: <span class="math-inline">\{rule\.type\}\='</span>{targetValue}'. REDIRECTING.`
+        );
         const params = new URLSearchParams();
         params.append('url', requestedUrl);
         params.append('reason', 'block');
         params.append('type', rule.type);
         params.append('value', targetValue);
-        return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
+        return { redirectUrl: `<span class="math-inline">\{blockPageBaseUrl\}?</span>{params.toString()}` };
       }
     } catch (e) {
       console.error(`[Block Check Error] Rule ${JSON.stringify(rule)} for URL ${requestedUrl}`, e);
@@ -715,5 +722,5 @@ try {
   console.error('CRITICAL: Failed to register request listener.', error);
 }
 
-console.log('[System] Background script finished loading (v14 - DEBUG LOGGING - Simpler Timer Logic v3).');
+console.log('[System] Background script finished loading (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED).');
 // --- End of background.js ---
