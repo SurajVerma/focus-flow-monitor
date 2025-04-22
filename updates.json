@@ -4,9 +4,9 @@
       "updates": [
         {
           "version": "0.6.1",
-          "update_link": "https://yourserver.com/path/to/focusflow-monitor-0.7.0.xpi",
-          "update_hash": "sha256:your_file_hash_here",
-          "update_info_url": "https://yourserver.com/path/to/release_notes.html"
+          "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/v0.6.1/359e173d93d4421eb63d-0.6.1.xpi",
+          "update_hash": "sha256:3643CACECDD8595F7A8924CA7FB72A7611F3956013A4CB30E9A6D3A6E8F5E8C5",
+          "update_info_url": "https://github.com/SurajVerma/focus-flow-monitor/releases/tag/v0.6.1"
         }
       ]
     }
