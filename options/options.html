@@ -3,64 +3,100 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="options.css" />
-    <title>Web Time Tracker Options</title>
+    <title>FocusFlow Monitor - Options & Stats</title>
   </head>
   <body>
     <div class="container">
-      <h1>Web Time Tracker Settings & Stats</h1>
-      <section id="calendar-view-section">
-        <h2>Calendar View</h2>
-        <div class="calendar-controls">
-          <button id="prevMonthBtn">&laquo; Prev</button>
-          <span id="currentMonthYear">Month Year</span>
-          <button id="nextMonthBtn">Next &raquo;</button>
-        </div>
-        <div id="calendarGrid" class="calendar-grid">
-          <div class="calendar-header">Sun</div>
-          <div class="calendar-header">Mon</div>
-          <div class="calendar-header">Tue</div>
-          <div class="calendar-header">Wed</div>
-          <div class="calendar-header">Thu</div>
-          <div class="calendar-header">Fri</div>
-          <div class="calendar-header">Sat</div>
-        </div>
-      </section>
-      <hr />
-      <div class="filter-container">
-        <label for="dateRangeSelect">Show Stats For:</label>
-        <select id="dateRangeSelect">
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-          <option value="all" selected>All Time</option>
-        </select>
-      </div>
-      <section id="stats-section">
-        <h2>Detailed Time Stats (<span class="stats-period">All Time</span>)</h2>
-        <ul id="detailedTimeList">
-          <li>Loading data...</li>
-        </ul>
-        <div class="pagination-controls" id="domainPagination">
-          <button id="domainPrevBtn" disabled>&laquo; Prev</button>
-          <span id="domainPageInfo">Page 1 of 1</span>
-          <button id="domainNextBtn" disabled>Next &raquo;</button>
+      <section id="tracking-settings-section">
+        <h2>Tracking Settings</h2>
+        <div class="form-group">
+          <label for="idleThresholdSelect">Consider inactive after:</label>
+          <select id="idleThresholdSelect">
+            <option value="60">1 Minute</option>
+            <option value="300">5 Minutes</option>
+            <option value="900">15 Minutes</option>
+            <option value="1800">30 Minutes (Default)</option>
+            <option value="3600">1 Hour</option>
+            <option value="-1">Never (Track all focused time)</option>
+          </select>
+          <p class="setting-description">
+            Choose how long without mouse or keyboard activity before tracking pauses. Longer times help track passive
+            viewing (like videos) but may inflate totals if you walk away. "Never" disables idle checking. I chose 30
+            minutes as default as I believe that is a sweet spot, as even when I (and few of my friend I asked to)
+            are/am watching videos, They/I tend to do an interaction mostly in about 30 minutes.
+          </p>
         </div>
       </section>
+      <h1>FocusFlow Monitor Settings & Stats</h1>
 
-      <hr />
+      <section id="stats-display-section">
+        <h2>Statistics Overview</h2>
+        <div class="stats-controls">
+          <div>
+            <label for="dateRangeSelect">Select Period:</label>
+            <select id="dateRangeSelect">
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="all" selected>All Time</option>
+            </select>
+          </div>
+          <div><button id="exportCsvBtn" class="export-button">Export to CSV</button></div>
+        </div>
 
-      <section id="category-stats-section">
-        <h2>Time Per Category</h2>
-        <ul id="categoryTimeList">
-          <li>Loading data...</li>
-        </ul>
+        <div class="stats-dashboard">
+          <div class="calendar-column">
+            <div class="calendar-container">
+              <div class="calendar-header-controls">
+                <button id="prevMonthBtn">&laquo; Prev</button>
+                <span id="currentMonthYear">Month Year</span>
+                <button id="nextMonthBtn">Next &raquo;</button>
+              </div>
+              <div id="calendarGrid" class="calendar-grid">
+                <div class="calendar-day-header">Sun</div>
+                <div class="calendar-day-header">Mon</div>
+                <div class="calendar-day-header">Tue</div>
+                <div class="calendar-day-header">Wed</div>
+                <div class="calendar-day-header">Thu</div>
+                <div class="calendar-day-header">Fri</div>
+                <div class="calendar-day-header">Sat</div>
+              </div>
+              <div id="calendarDetailPopup" class="calendar-detail-popup" style="display: none"></div>
+            </div>
+
+            <div class="stats-list-container">
+              <h3>Time per Category (<span class="stats-period">All Time</span>)</h3>
+              <ul id="categoryTimeList">
+                <li>Loading...</li>
+              </ul>
+            </div>
+          </div>
+          <div class="chart-column">
+            <h3 id="chartTitle">Usage Chart (<span class="stats-period">All Time</span>)</h3>
+            <div class="chart-view-controls">
+              <label><input type="radio" name="chartView" value="domain" checked /> By Website</label>
+              <label><input type="radio" name="chartView" value="category" /> By Category</label>
+            </div>
+            <div class="chart-wrapper"><canvas id="timeChartCanvas"></canvas></div>
+
+            <div class="stats-list-container">
+              <h3>Detailed Time per Website (<span class="stats-period">All Time</span>)</h3>
+              <ul id="detailedTimeList">
+                <li>Loading...</li>
+              </ul>
+              <div class="pagination-controls" id="domainPagination" style="display: none">
+                <button id="domainPrevBtn" disabled>&laquo; Prev</button>
+                <span id="domainPageInfo">Page 1 of 1</span>
+                <button id="domainNextBtn" disabled>Next &raquo;</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
-
       <hr />
 
       <section id="categories-section">
         <h2>Website Categories</h2>
-
         <div class="category-manage">
           <h3>Manage Categories</h3>
           <div class="form-inline">
@@ -72,7 +108,6 @@
             <li>Loading...</li>
           </ul>
         </div>
-
         <div class="assignment-manage">
           <h3>Assign Domains to Categories</h3>
           <div class="form-inline">
@@ -91,12 +126,9 @@
 
       <hr />
 
-      <hr />
-
       <section id="blocking-section">
         <h2>Site Blocking & Time Limiting</h2>
         <p>Permanently block access or set daily time limits for specific websites or categories.</p>
-
         <div class="form-inline add-rule-form">
           <select id="ruleTypeSelect">
             <option value="block-url">Block URL Pattern</option>
@@ -104,13 +136,10 @@
             <option value="block-category">Block Category</option>
             <option value="limit-category">Limit Category</option>
           </select>
-
           <input type="text" id="rulePatternInput" placeholder="e.g., *.social.com" />
-
           <select id="ruleCategorySelect" style="display: none">
             <option value="">Select Category</option>
           </select>
-
           <div class="time-limit-input" style="display: none">
             <input type="number" id="ruleLimitInput" min="1" step="1" placeholder="Time" />
             <select id="ruleUnitSelect">
@@ -119,28 +148,52 @@
             </select>
             <span> per day</span>
           </div>
-
           <button id="addRuleBtn">Add Rule</button>
         </div>
-
         <h4>Current Rules:</h4>
         <ul id="ruleList">
           <li>Loading...</li>
         </ul>
       </section>
+    </div>
 
-      <hr />
+    <div id="editRuleModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-button" id="closeEditModalBtn">&times;</span>
+        <h3>Edit Rule</h3>
+        <div id="editRuleFormContent">
+          <input type="hidden" id="editRuleIndex" />
+          <div class="form-group">
+            <label>Type:</label>
+            <span id="editRuleTypeDisplay"></span>
+          </div>
 
-      <hr />
+          <div class="form-group" id="editRulePatternGroup">
+            <label for="editRulePatternInput">Pattern/URL:</label>
+            <input type="text" id="editRulePatternInput" />
+          </div>
 
-      <section id="graphics-section">
-        <h2>Graphical View</h2>
-        <div
-          class="chart-container"
-          style="position: relative; width: 80%; max-width: 500px; height: auto; margin: 20px auto">
-          <canvas id="timeChartCanvas"></canvas>
+          <div class="form-group" id="editRuleCategoryGroup">
+            <label for="editRuleCategorySelect">Category:</label>
+            <select id="editRuleCategorySelect"></select>
+          </div>
+
+          <div class="form-group" id="editRuleLimitGroup">
+            <label>Limit (per day):</label>
+            <div class="time-limit-input">
+              <input type="number" id="editRuleLimitInput" min="1" step="1" />
+              <select id="editRuleUnitSelect">
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </section>
+        <div class="modal-actions">
+          <button id="saveRuleChangesBtn">Save Changes</button>
+          <button id="cancelEditRuleBtn" class="cancel-btn">Cancel</button>
+        </div>
+      </div>
     </div>
     <script src="../libs/chart.umd.js"></script>
     <script src="options.js"></script>
