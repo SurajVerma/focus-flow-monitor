@@ -7,3 +7,7 @@ No tracking or analytics—your data stays local, stored entirely in your browse
 
 **Actively evolving.**
 The app is under active development, so features may change over time.
+
+![quick-view](https://github.com/user-attachments/assets/9353a5f6-c4d3-4fc4-8e59-4d266fe4779c)
+
+![options](https://github.com/user-attachments/assets/9828332a-47c9-44bb-825e-602bc7e659d6)
