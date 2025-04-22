@@ -1,0 +1,14 @@
+{
+  "addons": {
+    "focusflow-monitor@bleuflex.com": {
+      "updates": [
+        {
+          "version": "0.6.1",
+          "update_link": "https://yourserver.com/path/to/focusflow-monitor-0.7.0.xpi",
+          "update_hash": "sha256:your_file_hash_here",
+          "update_info_url": "https://yourserver.com/path/to/release_notes.html"
+        }
+      ]
+    }
+  }
+}
