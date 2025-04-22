@@ -1,37 +1,51 @@
-/* options.css */
+/* options.css - Revert Selection Style, Allow Time Wrapping */
 body {
   font-family: sans-serif;
   padding: 20px;
   background-color: #f4f7f6;
   color: #333;
+  line-height: 1.5;
 }
 
 .container {
-  max-width: 800px; /* Limit width for better readability */
-  margin: 0 auto; /* Center the container */
+  max-width: 1200px;
+  margin: 0 auto;
   background-color: #ffffff;
   padding: 20px 30px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Headings, Sections, HR - unchanged */
 h1 {
   text-align: center;
-  color: #0056b3; /* A different shade of blue */
+  color: #0056b3;
   margin-bottom: 30px;
 }
-
 h2 {
   color: #007bff;
   border-bottom: 2px solid #eee;
   padding-bottom: 5px;
   margin-top: 30px;
+  margin-bottom: 15px;
 }
-
+h3 {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+  font-size: 1.1em;
+}
+h4 {
+  margin-top: 15px;
+  margin-bottom: 5px;
+  color: #555;
+  font-size: 0.9em;
+}
 section {
   margin-bottom: 20px;
 }
-
 hr {
   border: 0;
   height: 1px;
@@ -39,156 +53,75 @@ hr {
   margin: 40px 0;
 }
 
-ul#detailedTimeList {
-  list-style: none;
-  padding: 0;
-  margin-top: 15px;
-}
-
-ul#detailedTimeList li {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 5px;
-  border-bottom: 1px dashed #eee;
-  font-size: 1em;
-}
-
-ul#detailedTimeList li:last-child {
-  border-bottom: none;
-}
-
-ul#detailedTimeList .domain {
-  color: #555;
-  margin-right: 15px;
-  flex-grow: 1; /* Allow domain to take up space */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-ul#detailedTimeList .time {
-  color: #333;
-  font-weight: bold;
-  white-space: nowrap;
-  background-color: #e9ecef;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-
-p {
-  /* General paragraph styling */
-  color: #666;
-  /* Removed default italic */
-  line-height: 1.5;
-}
-section#blocking-section > p {
-  /* Specific paragraph in blocking section */
-  font-style: italic;
-  margin-bottom: 15px; /* Add some space below the description */
-}
-
-#chart-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #aaa;
-  font-size: 1.2em;
-}
-
-section#categories-section h3 {
-  margin-top: 20px;
-  margin-bottom: 10px;
-  color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-section#categories-section h4 {
-  margin-top: 15px;
-  margin-bottom: 5px;
-  color: #555;
-  font-size: 0.9em;
-}
-
+/* --- Settings Section Styles (unchanged) --- */
 .form-inline {
   display: flex;
-  gap: 10px; /* Spacing between elements */
+  gap: 10px;
   margin-bottom: 15px;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  flex-wrap: wrap;
 }
-
 .form-inline input[type='text'],
 .form-inline select {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  flex-grow: 1; /* Allow input/select to grow */
+  flex-grow: 1;
 }
 .form-inline select {
-  min-width: 150px; /* Ensure select is not too small */
+  min-width: 150px;
 }
-
 .form-inline button {
   padding: 8px 15px;
-  background-color: #28a745; /* Green */
+  background-color: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
-
 .form-inline button:hover {
   background-color: #218838;
 }
-
-/* Styling for the lists */
 #categoryList,
-#assignmentList {
+#assignmentList,
+#ruleList {
   list-style: none;
-  padding: 0;
-  margin-top: 5px;
-  max-height: 200px; /* Limit height and allow scrolling */
+  padding: 5px;
+  margin: 5px 0 0 0;
+  max-height: 200px;
   overflow-y: auto;
   border: 1px solid #eee;
   border-radius: 4px;
-  padding: 5px;
 }
-
 #categoryList li,
-#assignmentList li {
+#assignmentList li,
+#ruleList li {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
   border-bottom: 1px dashed #eee;
 }
-
 #categoryList li:last-child,
-#assignmentList li:last-child {
+#assignmentList li:last-child,
+#ruleList li:last-child {
   border-bottom: none;
 }
-
-#categoryList button.delete-btn,
-#assignmentList button.delete-btn {
-  background-color: #dc3545; /* Red */
+button.delete-btn {
+  background-color: #dc3545;
   color: white;
   border: none;
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 0.8em;
   cursor: pointer;
-  margin-left: 10px; /* Space between item and button */
+  margin-left: 10px;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
-
-#categoryList button.delete-btn:hover,
-#assignmentList button.delete-btn:hover {
+button.delete-btn:hover {
   background-color: #c82333;
 }
-
-/* Specific styling for assignment list items */
 #assignmentList .assignment-domain {
   font-weight: bold;
   color: #0056b3;
@@ -201,80 +134,32 @@ section#categories-section h4 {
   border-radius: 4px;
   font-size: 0.9em;
 }
-
-ul#categoryTimeList {
-  list-style: none;
-  padding: 0;
-  margin-top: 15px;
-}
-
-ul#categoryTimeList li {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 5px;
-  border-bottom: 1px dashed #eee;
-  font-size: 1em;
-}
-
-ul#categoryTimeList li:last-child {
-  border-bottom: none;
-}
-
-ul#categoryTimeList .category-name {
-  color: #555;
-  margin-right: 15px;
-  font-weight: bold;
-}
-
-ul#categoryTimeList .time {
-  color: #333;
-  font-weight: bold;
-  background-color: #e9ecef;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-/* Add to options.css */
-
-section#blocking-section h4 {
-  margin-top: 15px;
-  margin-bottom: 5px;
-  color: #555;
-  font-size: 0.9em;
-}
-
-/* Style the main form row */
 .add-rule-form {
   display: flex;
-  flex-wrap: wrap; /* Allow wrapping */
+  flex-wrap: wrap;
   gap: 10px;
-  align-items: center; /* Align items vertically */
+  align-items: center;
   padding: 10px;
-  background-color: #f8f9fa; /* Slightly different background */
+  background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   border-radius: 5px;
   margin-bottom: 15px;
 }
-
-.add-rule-form select,
-.add-rule-form input[type='text'] {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  flex-grow: 1; /* Allow text input/selects to grow */
-  min-width: 150px; /* Prevent them getting too small */
+.add-rule-form button {
+  background-color: #007bff;
+  flex-grow: 0;
 }
-
-/* Container for time limit inputs */
+.add-rule-form button:hover {
+  background-color: #0056b3;
+}
 .time-limit-input {
-  display: flex; /* Use flex to align items horizontally */
+  display: flex;
   align-items: center;
   gap: 5px;
-  flex-grow: 2; /* Allow slightly more space */
+  flex-grow: 2;
 }
-
 .time-limit-input input[type='number'] {
-  width: 70px; /* Fixed width for number input */
+  width: 70px;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -288,201 +173,316 @@ section#blocking-section h4 {
   white-space: nowrap;
   color: #495057;
 }
-
-.add-rule-form button {
-  padding: 8px 15px;
-  background-color: #007bff; /* Standard blue for 'Add' */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  flex-grow: 0; /* Don't grow button */
-  white-space: nowrap;
-}
-.add-rule-form button:hover {
-  background-color: #0056b3;
-}
-
-/* Styling for the combined rules list */
-#ruleList {
-  /* Updated ID */
-  list-style: none;
-  padding: 0;
-  margin-top: 5px;
-  max-height: 250px; /* Maybe slightly taller */
-  overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  padding: 5px;
-}
-
-#ruleList li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px; /* Slightly more padding */
-  border-bottom: 1px dashed #eee;
-}
-#ruleList li:last-child {
-  border-bottom: none;
-}
-
 #ruleList .rule-info {
-  flex-grow: 1; /* Allow text to take up space */
+  flex-grow: 1;
   margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #ruleList .rule-info .rule-type {
-  /* Style for Block/Limit type */
   font-weight: bold;
   margin-right: 5px;
 }
 #ruleList .rule-info .rule-target {
-  /* Style for URL/Category name */
   color: #333;
   font-style: italic;
   margin-right: 5px;
 }
 #ruleList .rule-info .rule-limit {
-  /* Style for time limit text */
-  color: #28a745; /* Green for limits */
+  color: #28a745;
   font-size: 0.9em;
 }
 #ruleList .rule-info .rule-blocked {
-  /* Style for permanent block */
-  color: #dc3545; /* Red */
+  color: #dc3545;
   font-size: 0.9em;
   font-weight: bold;
 }
-
 #ruleList button.delete-btn {
-  /* Reuse existing delete style */
   background-color: #6c757d;
-  color: white;
-  /* ... other styles from previous step ... */
-  padding: 3px 8px;
-  font-size: 0.8em;
-  cursor: pointer;
-  margin-left: 10px; /* etc */
-  border: none;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
 }
 #ruleList button.delete-btn:hover {
   background-color: #5a6268;
 }
 
-/* === CALENDAR STYLES === */
-
-#calendar-view-section {
-  margin-bottom: 30px;
+/* --- Statistics Section Styles --- */
+#stats-display-section {
+}
+.stats-controls {
+  margin-bottom: 20px;
+}
+.stats-dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin-top: 10px;
+  align-items: stretch;
 }
 
-.calendar-controls {
+/* Columns */
+.calendar-column {
+  flex: 0 0 400px;
+  min-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.chart-column {
+  flex: 1 1 auto;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Containers within columns */
+.calendar-container,
+.stats-list-container {
+  border: 1px solid #eee;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: #fff;
+}
+.calendar-container {
+  position: relative;
+}
+.stats-list-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 150px;
+}
+.stats-list-container h3 {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.stats-list-container ul {
+  margin: 0;
+  padding: 0 5px 0 0;
+  list-style: none;
+  overflow-y: auto;
+  flex-grow: 1;
+  max-height: 250px;
+}
+
+/* --- Calendar Styles --- */
+.calendar-header-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px; /* Compact Calendar: Reduced margin */
-  padding: 5px 10px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
 }
-
-.calendar-controls button {
-  padding: 3px 8px; /* Compact Calendar: Reduced padding */
-  font-size: 0.85em; /* Compact Calendar: Reduced font size */
+.calendar-header-controls button {
+  padding: 3px 8px;
+  font-size: 0.85em;
   background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
-.calendar-controls button:hover {
+.calendar-header-controls button:hover {
   background-color: #5a6268;
 }
-
 #currentMonthYear {
   font-weight: bold;
-  font-size: 1em; /* Compact Calendar: Slightly reduced font size */
+  font-size: 1.1em;
 }
-
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px; /* Compact Calendar: Reduced gap */
-  border: 1px solid #eee;
-  padding: 5px; /* Compact Calendar: Reduced padding */
-  border-radius: 5px;
+  gap: 4px;
 }
-
-.calendar-header {
+.calendar-day-header {
   font-weight: bold;
   text-align: center;
-  font-size: 0.75em; /* Compact Calendar: Reduced font size */
+  font-size: 0.8em;
   color: #6c757d;
-  padding-bottom: 3px; /* Compact Calendar: Reduced padding */
+  padding-bottom: 5px;
 }
 
 .calendar-day {
-  border: 1px solid #f0f0f0;
-  min-height: 60px; /* Compact Calendar: Reduced height */
-  padding: 3px; /* Compact Calendar: Reduced padding */
-  font-size: 0.75em; /* Compact Calendar: Reduced font size */
-  background-color: #fff;
-  position: relative;
+  border: 1px solid #eee;
+  min-height: 65px; /* Increased height slightly for wrapping */
+  padding: 4px; /* Adjusted padding back */
+  font-size: 0.75em;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  /* overflow: hidden; --- REMOVED to allow wrapping */
 }
-
+.calendar-day:hover {
+  background-color: #e9f5ff;
+  border-color: #cce7ff;
+}
 .calendar-day.empty {
   background-color: #f9f9f9;
   border: 1px solid #f9f9f9;
+  cursor: default;
 }
-
-.calendar-day .day-number {
-  font-weight: bold;
-  color: #333;
-  align-self: flex-start;
-  /* Compact Calendar: Make today highlight smaller */
-  line-height: 1.4em;
-  min-width: 1.4em;
-  text-align: center;
+.calendar-day.today {
+  border-color: #007bff;
 }
 .calendar-day.today .day-number {
-  color: white;
+  font-weight: bold;
+  color: #fff;
   background-color: #007bff;
   border-radius: 50%;
-  width: 1.4em; /* Compact Calendar: Reduced size */
-  height: 1.4em; /* Compact Calendar: Reduced size */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0; /* Remove padding */
-  margin: 0; /* Remove margin */
-}
-
-.calendar-day .day-time {
-  font-size: 0.85em; /* Compact Calendar: Reduced font size */
-  color: #007bff;
-  font-weight: bold;
-  margin-top: 3px; /* Compact Calendar: Reduced margin */
+  width: 1.5em;
+  height: 1.5em;
+  line-height: 1.5em;
   text-align: center;
-  align-self: center;
-  /* Prevent text wrapping */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 90%; /* Prevent time from overflowing small cells */
+  display: inline-block;
+  align-self: flex-end;
+  margin: 0; /* Reset margin if needed */
+} /* Adjusted margin */
+
+.day-number {
+  text-align: right;
+  font-size: 1em;
+  color: #666;
+  align-self: flex-end;
 }
 
-.calendar-day .day-time.no-data {
-  color: #adb5bd;
+.day-time {
+  font-weight: bold;
+  font-size: 0.9em; /* Slightly smaller font */
+  text-align: center;
+  margin-top: 3px;
+  align-self: center;
+  width: 100%;
+  line-height: 1.2; /* Add line height for wrapping */
+  /* REMOVED: white-space: nowrap; */
+  /* REMOVED: overflow: hidden; */
+  /* REMOVED: text-overflow: ellipsis; */
+  word-wrap: break-word; /* Allow breaking long words if needed, though unlikely */
+}
+.day-time.no-data {
+  color: #ccc;
   font-weight: normal;
 }
 
-/* === PAGINATION STYLES === */
+/* REVERTED Selected Style */
+.calendar-day.selected {
+  border: 1px solid #007bff; /* Use the original border highlight */
+  background-color: #e9f5ff; /* Keep a light background */
+}
+/* (Keep hover style separate or combine if desired) */
+.calendar-day.selected:hover {
+  background-color: #cce7ff;
+}
 
+/* Calendar Detail Popup (Unchanged) */
+.calendar-detail-popup {
+  position: absolute;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  min-width: 150px;
+  max-width: 250px;
+  z-index: 10;
+  pointer-events: none;
+}
+.calendar-detail-popup strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 1.1em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 3px;
+}
+.calendar-detail-popup ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.calendar-detail-popup li {
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Chart Styles (Unchanged) */
+.chart-column h3 {
+  text-align: center;
+  margin-top: 0;
+  font-size: 1.1em;
+}
+.chart-wrapper {
+  position: relative;
+  height: 400px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#timeChartCanvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+.chart-view-controls {
+  margin-bottom: 15px;
+  text-align: center;
+  padding: 5px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+.chart-view-controls label {
+  margin: 0 10px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+/* Detailed Lists Styles (Unchanged) */
+#detailedTimeList li,
+#categoryTimeList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px 8px 5px;
+  border-bottom: 1px dashed #eee;
+  font-size: 0.9em;
+}
+#detailedTimeList li:last-child,
+#categoryTimeList li:last-child {
+  border-bottom: none;
+}
+#detailedTimeList .domain,
+#categoryTimeList .category-name {
+  color: #555;
+  margin-right: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+#categoryTimeList .category-name {
+  font-weight: bold;
+}
+#detailedTimeList .time,
+#categoryTimeList .time {
+  color: #333;
+  font-weight: bold;
+  white-space: nowrap;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  flex-shrink: 0;
+}
+
+/* Pagination (Unchanged) */
 .pagination-controls {
   display: flex;
   justify-content: center;
@@ -493,7 +493,6 @@ section#blocking-section h4 {
   border-top: 1px solid #eee;
   flex-wrap: wrap;
 }
-
 .pagination-controls button {
   padding: 5px 12px;
   background-color: #007bff;
@@ -504,21 +503,277 @@ section#blocking-section h4 {
   transition: background-color 0.2s ease;
   font-size: 0.9em;
 }
-
 .pagination-controls button:hover:not(:disabled) {
   background-color: #0056b3;
 }
-
 .pagination-controls button:disabled {
   background-color: #cccccc;
   color: #666666;
   cursor: not-allowed;
   opacity: 0.7;
 }
-
 #domainPageInfo {
   font-size: 0.9em;
   color: #555;
   font-weight: bold;
   white-space: nowrap;
+}
+
+/* Responsive adjustments (Unchanged) */
+@media (max-width: 900px) {
+  .stats-dashboard {
+    flex-direction: column;
+  }
+  .calendar-column,
+  .chart-column {
+    flex-basis: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .chart-wrapper {
+    height: 300px;
+  }
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+    max-width: 100%;
+  }
+  h1 {
+    font-size: 1.5em;
+  }
+  h2 {
+    font-size: 1.3em;
+  }
+  h3 {
+    font-size: 1.1em;
+  }
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-inline input,
+  .form-inline select,
+  .form-inline button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .time-limit-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .time-limit-input input[type='number'] {
+    width: auto;
+  }
+  .calendar-day {
+    min-height: 50px;
+    font-size: 0.7em;
+  }
+  .day-time {
+    font-size: 0.85em;
+  } /* Adjusted slightly */
+}
+
+/* Style for Edit Button (next to delete) */
+#ruleList button.edit-btn {
+  background-color: #ffc107; /* Yellow/Amber for edit */
+  color: #212529; /* Dark text for contrast */
+  border: none;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.8em;
+  cursor: pointer;
+  margin-left: 5px; /* Space between edit and delete */
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+#ruleList button.edit-btn:hover {
+  background-color: #e0a800;
+}
+
+/* --- Modal Styles --- */
+.modal {
+  position: fixed; /* Stay in place */
+  z-index: 100; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+  display: flex; /* Use flexbox for centering */
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: auto; /* Auto margin helps centering */
+  padding: 25px;
+  border: 1px solid #888;
+  width: 80%; /* Could be more specific */
+  max-width: 500px; /* Max width */
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #007bff;
+  text-align: center;
+  border: none; /* Remove border from modal heading */
+}
+
+/* Close Button */
+.close-button {
+  color: #aaa;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Modal Form Styling */
+#editRuleFormContent .form-group {
+  margin-bottom: 15px;
+}
+#editRuleFormContent label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+#editRuleFormContent input[type='text'],
+#editRuleFormContent select,
+#editRuleFormContent input[type='number'] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Include padding/border in width */
+}
+#editRuleFormContent span#editRuleTypeDisplay {
+  font-style: italic;
+  color: #333;
+}
+
+/* Reuse time limit layout */
+#editRuleLimitGroup .time-limit-input {
+  display: flex;
+  gap: 10px;
+}
+#editRuleLimitGroup .time-limit-input input[type='number'] {
+  width: 80px; /* Adjust as needed */
+  flex-grow: 0;
+}
+#editRuleLimitGroup .time-limit-input select {
+  width: auto;
+  flex-grow: 1;
+}
+
+/* Modal Actions */
+.modal-actions {
+  margin-top: 25px;
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.modal-actions button {
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+.modal-actions button#saveRuleChangesBtn {
+  background-color: #28a745; /* Green */
+  color: white;
+}
+.modal-actions button#saveRuleChangesBtn:hover {
+  background-color: #218838;
+}
+.modal-actions button.cancel-btn {
+  /* Generic cancel */
+  background-color: #6c757d; /* Grey */
+  color: white;
+}
+.modal-actions button.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+/* Tracking Settings Section */
+#tracking-settings-section .form-group {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Space between label and select */
+  flex-wrap: wrap; /* Allow wrapping */
+  margin-bottom: 10px; /* Space below setting */
+}
+
+#tracking-settings-section label {
+  font-weight: bold;
+  color: #555;
+  flex-shrink: 0; /* Prevent label from shrinking */
+}
+
+#tracking-settings-section select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-width: 150px; /* Give dropdown some width */
+  flex-grow: 1; /* Allow it to grow */
+  max-width: 250px; /* But not excessively wide */
+}
+
+.setting-description {
+  font-size: 0.85em;
+  color: #666;
+  margin: 5px 0 0 0; /* Space above description */
+  flex-basis: 100%; /* Make description take full width */
+  font-style: italic;
+}
+
+/* Adjust stats controls for better button alignment */
+.stats-controls {
+  display: flex;
+  justify-content: space-between; /* Space out select and button */
+  align-items: center;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: 15px; /* Space between items if they wrap */
+  margin-bottom: 20px;
+}
+.stats-controls > div {
+  /* Target the divs wrapping select and button */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Export Button Style */
+button.export-button {
+  padding: 8px 15px;
+  background-color: #17a2b8; /* Teal/Info color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+button.export-button:hover {
+  background-color: #138496;
 }

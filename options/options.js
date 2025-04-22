@@ -1,22 +1,31 @@
-// options.js (v19b - Cleaned & innerHTML fixed v2)
-// Contains: Category Mgmt, Assignment Mgmt, Blocking/Limit Rule Mgmt UI, Date Filtering, Domain Pagination, Chart, Calendar View
+// options.js (v19j - Fixed innerHTML Usage)
+// Modified showDayDetails to avoid innerHTML assignment
+
+// --- Storage Keys ---
+const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
+const DEFAULT_IDLE_SECONDS = 1800;
 
 // --- Global variables ---
+// ... (same as v19i) ...
 let categories = ['Other'];
 let categoryAssignments = {};
-let trackedData = {}; // All-time domain totals
-let categoryTimeData = {}; // All-time category totals
-let dailyDomainData = {}; // Daily domain data {'YYYY-MM-DD': {...}}
-let dailyCategoryData = {}; // Daily category data {'YYYY-MM-DD': {...}}
-let hourlyData = {}; // Added in v14 background
-let rules = []; // Combined list for block and limit rules
-let timeChart = null; // Chart.js instance
+let trackedData = {};
+let categoryTimeData = {};
+let dailyDomainData = {};
+let dailyCategoryData = {};
+let hourlyData = {};
+let rules = [];
+let timeChart = null;
 let domainCurrentPage = 1;
-const domainItemsPerPage = 10; // User preference
+const domainItemsPerPage = 10;
 let fullDomainDataSorted = [];
-let calendarDate = new Date(); // Tracks the month/year being displayed
+let calendarDate = new Date();
+let selectedDateStr = getCurrentDateString();
+let currentChartViewMode = 'domain';
+let editingRuleIndex = -1;
 
 // --- UI Element References ---
+// ... (same as v19i, including exportCsvBtn) ...
 let detailedTimeList, categoryTimeList, categoryList, assignmentList, ruleList;
 let newCategoryNameInput, addCategoryBtn, domainPatternInput, categorySelect, assignDomainBtn;
 let ruleTypeSelect, rulePatternInput, ruleCategorySelect, ruleLimitInput, ruleUnitSelect, addRuleBtn;
@@ -25,10 +34,28 @@ let dateRangeSelect;
 let statsPeriodSpans;
 let domainPaginationDiv, domainPrevBtn, domainNextBtn, domainPageInfo;
 let calendarGrid, prevMonthBtn, nextMonthBtn, currentMonthYearSpan;
+let calendarDetailPopup;
+let chartTitleElement;
+let chartViewRadios;
+let editRuleModal, closeEditModalBtn, editRuleFormContent, editRuleIndexInput;
+let editRuleTypeDisplay, editRulePatternGroup, editRulePatternInput;
+let editRuleCategoryGroup, editRuleCategorySelect;
+let editRuleLimitGroup, editRuleLimitInput, editRuleUnitSelect;
+let saveRuleChangesBtn, cancelEditRuleBtn;
+let idleThresholdSelect;
+let exportCsvBtn;
 
 // --- Helper Functions ---
-function formatTime(seconds, includeSeconds = true) {
-  if (seconds < 0) seconds = 0;
+function formatTime(seconds, includeSeconds = true, forceHMS = false) {
+  /* ... same as v19i ... */ if (seconds < 0) seconds = 0;
+  if (forceHMS) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
+  }
   if (seconds < 60 && includeSeconds) return `${seconds}s`;
   if (seconds < 60 && !includeSeconds) return `<1m`;
   const totalMinutes = Math.floor(seconds / 60);
@@ -38,27 +65,46 @@ function formatTime(seconds, includeSeconds = true) {
   let parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (remainingMinutes > 0) parts.push(`${remainingMinutes}m`);
-  if (hours === 0 && remainingSeconds > 0 && includeSeconds) parts.push(`${remainingSeconds}s`);
-  if (hours === 0 && remainingMinutes === 0 && remainingSeconds > 0 && includeSeconds)
+  if (totalMinutes === 0 && remainingSeconds > 0) {
     parts.push(`${remainingSeconds}s`);
+  }
   if (parts.length === 0) return includeSeconds ? '0s' : '<1m';
   return parts.join(' ');
 }
 function formatDate(date) {
+  /* ... same as v19i ... */ if (!(date instanceof Date)) {
+    try {
+      date = new Date(date);
+    } catch (e) {
+      return null;
+    }
+  }
+  if (isNaN(date.getTime())) return null;
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 function getCurrentDateString() {
-  return formatDate(new Date());
+  /* ... same as v19i ... */ return formatDate(new Date());
+}
+function formatDisplayDate(dateStr) {
+  /* ... same as v19i ... */ if (!dateStr) return 'Date';
+  try {
+    const date = new Date(dateStr + 'T00:00:00');
+    if (isNaN(date.getTime())) return dateStr;
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString(navigator.language || 'en-US', options);
+  } catch (e) {
+    return dateStr;
+  }
 }
 
 // --- Data Loading & Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[Options v19b] DOMContentLoaded');
+  /* ... same as v19i ... */
+  console.log('[Options v19j] DOMContentLoaded');
   try {
-    // Get all element references
     detailedTimeList = document.getElementById('detailedTimeList');
     categoryTimeList = document.getElementById('categoryTimeList');
     categoryList = document.getElementById('categoryList');
@@ -86,23 +132,43 @@ document.addEventListener('DOMContentLoaded', () => {
     prevMonthBtn = document.getElementById('prevMonthBtn');
     nextMonthBtn = document.getElementById('nextMonthBtn');
     currentMonthYearSpan = document.getElementById('currentMonthYear');
-
-    console.log('[Options v19b] UI element references obtained.');
-    if (!domainPaginationDiv || !domainPrevBtn || !domainNextBtn || !domainPageInfo) {
-      console.warn('[Options v19b] Warning: One or more pagination UI elements might be missing!'); // Keep as warning
+    calendarDetailPopup = document.getElementById('calendarDetailPopup');
+    chartTitleElement = document.getElementById('chartTitle');
+    chartViewRadios = document.querySelectorAll('input[name="chartView"]');
+    editRuleModal = document.getElementById('editRuleModal');
+    closeEditModalBtn = document.getElementById('closeEditModalBtn');
+    editRuleFormContent = document.getElementById('editRuleFormContent');
+    editRuleIndexInput = document.getElementById('editRuleIndex');
+    editRuleTypeDisplay = document.getElementById('editRuleTypeDisplay');
+    editRulePatternGroup = document.getElementById('editRulePatternGroup');
+    editRulePatternInput = document.getElementById('editRulePatternInput');
+    editRuleCategoryGroup = document.getElementById('editRuleCategoryGroup');
+    editRuleCategorySelect = document.getElementById('editRuleCategorySelect');
+    editRuleLimitGroup = document.getElementById('editRuleLimitGroup');
+    editRuleLimitInput = document.getElementById('editRuleLimitInput');
+    editRuleUnitSelect = document.getElementById('editRuleUnitSelect');
+    saveRuleChangesBtn = document.getElementById('saveRuleChangesBtn');
+    cancelEditRuleBtn = document.getElementById('cancelEditRuleBtn');
+    idleThresholdSelect = document.getElementById('idleThresholdSelect');
+    exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (!exportCsvBtn) console.error('Export CSV button element not found!');
+    if (!idleThresholdSelect) console.error('Idle threshold select element not found!');
+    if (!editRuleModal || !closeEditModalBtn || !saveRuleChangesBtn || !cancelEditRuleBtn || !editRuleCategorySelect) {
+      console.error('One or more essential modal elements not found!');
     }
+    console.log('[Options v19j] UI element references obtained.');
   } catch (e) {
-    console.error('[Options v19b] Error getting UI elements!', e);
+    console.error('[Options v19j] Error getting UI elements!', e);
     return;
   }
-
   loadAllData();
   setupEventListeners();
-  console.log('Options script loaded (v19b).');
+  console.log('Options script loaded (v19j).');
 });
 
 function loadAllData() {
-  console.log('[Options v19b] loadAllData starting...');
+  /* ... same as v19i ... */
+  console.log('[Options v19j] loadAllData starting...');
   browser.storage.local
     .get([
       'trackedData',
@@ -113,11 +179,11 @@ function loadAllData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
+      STORAGE_KEY_IDLE_THRESHOLD,
     ])
     .then((result) => {
-      console.log('[Options v19b] Data loaded from storage.');
+      console.log('[Options v19j] Data loaded from storage.');
       try {
-        // Load all data...
         trackedData = result.trackedData || {};
         categoryTimeData = result.categoryTimeData || {};
         dailyDomainData = result.dailyDomainData || {};
@@ -127,54 +193,32 @@ function loadAllData() {
         if (!categories.includes('Other')) categories.push('Other');
         categoryAssignments = result.categoryAssignments || {};
         rules = result.rules || [];
-
-        // Populate static lists/dropdowns first
+        const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
+        if (idleThresholdSelect) {
+          idleThresholdSelect.value =
+            savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
+          console.log(`[Options v19j] Idle threshold loaded: ${idleThresholdSelect.value} seconds`);
+        }
         populateCategoryList();
         populateCategorySelect();
         populateAssignmentList();
         populateRuleCategorySelect();
         populateRuleList();
-        console.log('[Options v19b] Static lists populated.');
-
-        // Render Calendar
-        try {
-          console.log('[Options v19b] Rendering calendar...');
-          renderCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
-          console.log('[Options v19b] Calendar render attempted.');
-        } catch (calendarError) {
-          console.error('Error during renderCalendar', calendarError);
-          // FIX for line 330 (previously 321): Use textContent or DOM manipulation
-          if (calendarGrid) {
-            // Create a paragraph element
-            const errorP = document.createElement('p');
-            errorP.textContent = 'Error rendering calendar. Check console.';
-            // Apply styles directly
-            errorP.style.color = 'red';
-            errorP.style.textAlign = 'center';
-            // Clear previous content and add the new paragraph
-            // Use replaceChildren() instead of innerHTML = ''
-            calendarGrid.replaceChildren();
-            calendarGrid.appendChild(errorP);
-          }
-        }
-
-        // Update other displays based on default filter
-        console.log('[Options v19b] Updating display for selected range (initial)...');
+        renderCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
         updateDisplayForSelectedRange();
-        console.log('[Options v19b] Initial display updated.');
+        highlightSelectedCalendarDay(selectedDateStr);
       } catch (processingError) {
-        console.error('[Options v19b] Error during data processing/UI update!', processingError);
+        console.error('[Options v19j] Error during data processing/UI update!', processingError);
       }
     })
     .catch((error) => {
-      console.error('[Options v19b] storage.local.get FAILED!', error);
+      console.error('[Options v19j] storage.local.get FAILED!', error);
     });
 }
 
 // --- Get Filtered Data Functions ---
 function getFilteredDataForRange(range) {
-  console.log(`\n--- [Filter Debug v19b] START getFilteredDataForRange(range = "${range}") ---`);
-  let filteredDomainData = {};
+  /* ... same as v19i ... */ let filteredDomainData = {};
   let filteredCategoryData = {};
   let periodLabel = 'All Time';
   const today = new Date();
@@ -185,7 +229,7 @@ function getFilteredDataForRange(range) {
       filteredCategoryData = dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
     } else if (range === 'week') {
-      periodLabel = 'This Week (Last 7 Days)';
+      periodLabel = 'This Week';
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
@@ -207,13 +251,10 @@ function getFilteredDataForRange(range) {
       periodLabel = 'This Month';
       const currentYear = today.getFullYear();
       const currentMonth = today.getMonth();
-      const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-      let loopDay = new Date(firstDayOfMonth);
-      let loopCount = 0;
-      let todayBoundary = new Date(today);
-      todayBoundary.setHours(23, 59, 59, 999);
-      while (loopDay.getMonth() === currentMonth && loopDay <= todayBoundary && loopCount < 32) {
-        const dateStr = formatDate(loopDay);
+      const daysInMonth = today.getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, currentMonth, day);
+        const dateStr = formatDate(date);
         const domainsForDate = dailyDomainData[dateStr];
         if (domainsForDate) {
           for (const domain in domainsForDate) {
@@ -226,111 +267,70 @@ function getFilteredDataForRange(range) {
             filteredCategoryData[category] = (filteredCategoryData[category] || 0) + categoriesForDate[category];
           }
         }
-        loopDay.setDate(loopDay.getDate() + 1);
-        loopCount++;
       }
-      if (loopCount >= 32) console.error('[Options v19b] Loop safety break hit in month filter!');
     } else {
-      // 'all'
       filteredDomainData = trackedData || {};
       filteredCategoryData = categoryTimeData || {};
       periodLabel = 'All Time';
     }
   } catch (filterError) {
-    console.error(`--- [Filter Debug v19b] ERROR occurred during filtering for range "${range}" ---`, filterError);
+    console.error(`Error filtering for range "${range}":`, filterError);
     return { domainData: {}, categoryData: {}, label: `Error (${range})` };
   }
-  console.log(
-    `[Filter Debug v19b] END getFilteredDataForRange. Returning label: "${periodLabel}", Domain keys: ${
-      Object.keys(filteredDomainData).length
-    }, Category keys: ${Object.keys(filteredCategoryData).length}`
-  );
-  console.log(`---`);
   return { domainData: filteredDomainData, categoryData: filteredCategoryData, label: periodLabel };
 }
 
 // --- Central UI Update Function ---
 function updateDisplayForSelectedRange() {
-  if (!dateRangeSelect) {
-    console.error('[Options v19b] Date range select not found!');
-    return;
-  }
+  /* ... same as v19i ... */ if (!dateRangeSelect) return;
   const selectedRange = dateRangeSelect.value;
-  console.log(`[Options v19b] updateDisplayForSelectedRange called for range: ${selectedRange}`);
+  console.log(`[Options v19j] updateDisplayForSelectedRange called for range: ${selectedRange}`);
   try {
     const { domainData, categoryData, label } = getFilteredDataForRange(selectedRange);
-
     if (statsPeriodSpans) statsPeriodSpans.forEach((span) => (span.textContent = label));
-    else console.warn('[Options v19b] Could not find H2 spans to update period label.');
-
     fullDomainDataSorted = Object.entries(domainData)
       .map(([domain, time]) => ({ domain, time }))
       .sort((a, b) => b.time - a.time);
-
-    console.log(`[Options v19b] Total sorted domain items for period "${label}": ${fullDomainDataSorted.length}`);
-
-    domainCurrentPage = 1; // Reset to page 1 when the date range changes
-    updateDomainDisplayAndPagination(); // Update the list and pagination controls
-
+    domainCurrentPage = 1;
+    updateDomainDisplayAndPagination();
     displayCategoryTime(categoryData);
-    renderChart(domainData, label);
-
-    console.log(`[Options v19b] Display updated for range: ${selectedRange}`);
+    renderChartForSelectedDate();
+    console.log(`[Options v19j] Display updated for range: ${selectedRange}`);
   } catch (e) {
-    console.error(`[Options v19b] Error updating display for range ${selectedRange}:`, e);
-    alert('Error updating display.');
+    console.error(`Error updating display for range ${selectedRange}:`, e);
   }
 }
 
 // --- Pagination Display Update ---
 function updateDomainDisplayAndPagination() {
-  if (!detailedTimeList || !domainPaginationDiv || !domainPrevBtn || !domainNextBtn || !domainPageInfo) {
-    console.error('[Options v19b] Missing elements needed for domain pagination.');
-    if (domainPaginationDiv) domainPaginationDiv.style.display = 'none';
+  /* ... same as v19i ... */ if (
+    !detailedTimeList ||
+    !domainPaginationDiv ||
+    !domainPrevBtn ||
+    !domainNextBtn ||
+    !domainPageInfo
+  )
     return;
-  }
-
   const totalItems = fullDomainDataSorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / domainItemsPerPage));
-
-  // Clamp currentPage to valid range
   domainCurrentPage = Math.max(1, Math.min(domainCurrentPage, totalPages));
-
   const startIndex = (domainCurrentPage - 1) * domainItemsPerPage;
-  const endIndex = startIndex + domainItemsPerPage; // slice end index is exclusive
+  const endIndex = startIndex + domainItemsPerPage;
   const itemsToShow = fullDomainDataSorted.slice(startIndex, endIndex);
-
-  displayDomainTime(itemsToShow); // Update the list display
-
-  // Update pagination controls text and state
+  displayDomainTime(itemsToShow);
   domainPageInfo.textContent = `Page ${domainCurrentPage} of ${totalPages}`;
-
-  try {
-    domainPrevBtn.disabled = domainCurrentPage <= 1;
-    domainNextBtn.disabled = domainCurrentPage >= totalPages;
-  } catch (e) {
-    console.error('[Options v19b] Error updating pagination button state:', e);
-    domainPrevBtn.disabled = true;
-    domainNextBtn.disabled = true;
-  }
-
-  // Show pagination controls only if needed
+  domainPrevBtn.disabled = domainCurrentPage <= 1;
+  domainNextBtn.disabled = domainCurrentPage >= totalPages;
   domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
-
-  console.log(`[Options v19b] Pagination Controls updated. Total pages: ${totalPages}`);
 }
 
 // --- UI Population/Display Functions ---
 function displayDomainTime(itemsToDisplay) {
-  if (!detailedTimeList) {
-    console.error('displayDomainTime: detailedTimeList missing');
-    return;
-  }
-  detailedTimeList.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (!detailedTimeList) return;
+  detailedTimeList.replaceChildren();
   if (!itemsToDisplay || itemsToDisplay.length === 0) {
     const li = document.createElement('li');
-    li.textContent =
-      fullDomainDataSorted.length === 0 ? 'No domain data for this period.' : 'No domains to display on this page.';
+    li.textContent = fullDomainDataSorted.length === 0 ? 'No domain data for this period.' : 'No domains on this page.';
     detailedTimeList.appendChild(li);
     return;
   }
@@ -348,12 +348,8 @@ function displayDomainTime(itemsToDisplay) {
   });
 }
 function displayCategoryTime(dataToDisplay) {
-  console.log('[Options v19b] Displaying category time data:', JSON.stringify(dataToDisplay));
-  if (!categoryTimeList) {
-    console.error('displayCategoryTime: categoryTimeList missing');
-    return;
-  }
-  categoryTimeList.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (!categoryTimeList) return;
+  categoryTimeList.replaceChildren();
   if (!dataToDisplay || Object.keys(dataToDisplay).length === 0) {
     const li = document.createElement('li');
     li.textContent = 'No category data for this period.';
@@ -362,8 +358,14 @@ function displayCategoryTime(dataToDisplay) {
   }
   const sortedData = Object.entries(dataToDisplay)
     .map(([category, time]) => ({ category, time }))
+    .filter((item) => item.time > 0.1)
     .sort((a, b) => b.time - a.time);
-  console.log('[Options v19b] Sorted category data for display:', sortedData);
+  if (sortedData.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No category data for this period.';
+    categoryTimeList.appendChild(li);
+    return;
+  }
   sortedData.forEach((item) => {
     const li = document.createElement('li');
     const nameSpan = document.createElement('span');
@@ -378,11 +380,8 @@ function displayCategoryTime(dataToDisplay) {
   });
 }
 function populateCategoryList() {
-  if (!categoryList) {
-    console.error('populateCategoryList: categoryList missing');
-    return;
-  }
-  categoryList.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (!categoryList) return;
+  categoryList.replaceChildren();
   if (categories.length === 0) {
     const li = document.createElement('li');
     li.textContent = 'No categories defined.';
@@ -403,16 +402,12 @@ function populateCategoryList() {
   });
 }
 function populateCategorySelect() {
-  if (!categorySelect) {
-    console.error('populateCategorySelect: categorySelect missing');
-    return;
-  }
-  categorySelect.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (!categorySelect) return;
+  categorySelect.replaceChildren();
   const defaultOption = document.createElement('option');
   defaultOption.value = '';
   defaultOption.textContent = 'Select Category';
   categorySelect.appendChild(defaultOption);
-
   categories.forEach((cat) => {
     const option = document.createElement('option');
     option.value = cat;
@@ -421,11 +416,8 @@ function populateCategorySelect() {
   });
 }
 function populateAssignmentList() {
-  if (!assignmentList) {
-    console.error('populateAssignmentList: assignmentList missing');
-    return;
-  }
-  assignmentList.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (!assignmentList) return;
+  assignmentList.replaceChildren();
   if (Object.keys(categoryAssignments).length === 0) {
     const li = document.createElement('li');
     li.textContent = 'No domains assigned yet.';
@@ -446,6 +438,8 @@ function populateAssignmentList() {
     deleteBtn.className = 'delete-btn';
     deleteBtn.dataset.domain = domain;
     const controlsDiv = document.createElement('div');
+    controlsDiv.style.display = 'flex';
+    controlsDiv.style.alignItems = 'center';
     controlsDiv.appendChild(categorySpan);
     controlsDiv.appendChild(deleteBtn);
     li.appendChild(domainSpan);
@@ -454,38 +448,39 @@ function populateAssignmentList() {
   });
 }
 function populateRuleCategorySelect() {
-  console.log('[Options v19b] populateRuleCategorySelect executing...');
-  try {
-    if (!ruleCategorySelect) {
-      console.error('populateRuleCategorySelect: ruleCategorySelect element reference missing!');
-      return;
-    }
-    ruleCategorySelect.replaceChildren(); // Use replaceChildren to clear
+  /* ... same as v19i ... */ if (ruleCategorySelect) {
+    ruleCategorySelect.replaceChildren();
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = 'Select Category';
     ruleCategorySelect.appendChild(defaultOption);
-
     categories.forEach((cat) => {
       const option = document.createElement('option');
       option.value = cat;
       option.textContent = cat;
       ruleCategorySelect.appendChild(option);
     });
-  } catch (e) {
-    console.error('Error in populateRuleCategorySelect:', e);
+  }
+  if (editRuleCategorySelect) {
+    editRuleCategorySelect.replaceChildren();
+    const defaultEditOption = document.createElement('option');
+    defaultEditOption.value = '';
+    defaultEditOption.textContent = 'Select Category';
+    editRuleCategorySelect.appendChild(defaultEditOption);
+    categories.forEach((cat) => {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      editRuleCategorySelect.appendChild(option);
+    });
+  } else {
+    console.error('Edit rule category select element not found during population!');
   }
 }
 function populateRuleList() {
-  console.log('[Options v19b] populateRuleList: Started. Rules count:', rules ? rules.length : 'null/undefined');
-  if (!ruleList) {
-    console.error('populateRuleList: ruleList element missing');
-    return;
-  }
-  ruleList.replaceChildren(); // Use replaceChildren to clear
-
+  /* ... same as v19i ... */ if (!ruleList) return;
+  ruleList.replaceChildren();
   if (!rules || !Array.isArray(rules)) {
-    console.error("[Options v19b] populateRuleList: 'rules' variable is not a valid array!", rules);
     const li = document.createElement('li');
     li.textContent = 'Error: Rule data is invalid.';
     ruleList.appendChild(li);
@@ -495,25 +490,18 @@ function populateRuleList() {
     const li = document.createElement('li');
     li.textContent = 'No blocking or limiting rules are currently set.';
     ruleList.appendChild(li);
-    console.log('[Options v19b] populateRuleList: No rules to display.');
     return;
   }
   try {
     rules.forEach((rule, index) => {
-      if (!rule || typeof rule.type !== 'string' || typeof rule.value !== 'string') {
-        console.warn(`[Options v19b] populateRuleList: Skipping invalid rule at index ${index}:`, rule);
-        return;
-      }
+      if (!rule || typeof rule.type !== 'string' || typeof rule.value !== 'string') return;
       const li = document.createElement('li');
       const infoSpan = document.createElement('span');
       infoSpan.className = 'rule-info';
-
       let typeText = '',
-        targetText = rule.value;
-      // Determine detailText content based on rule type (no direct HTML assignment yet)
-      let detailContent = '';
-      let detailClass = '';
-
+        targetText = rule.value,
+        detailContent = '',
+        detailClass = '';
       if (rule.type === 'block-url') {
         typeText = 'Block URL';
         detailContent = '(Blocked)';
@@ -532,61 +520,48 @@ function populateRuleList() {
         detailClass = 'rule-limit';
       } else {
         typeText = 'Unknown Rule';
-        targetText = JSON.stringify(rule.value); // Safely display unknown rule value
+        targetText = JSON.stringify(rule.value);
       }
-
-      // FIX for line 524 (previously 494): Use DOM manipulation instead of innerHTML
-      // Clear existing content first using replaceChildren() for safety
-      infoSpan.replaceChildren();
-
-      // Create and append the type span
       const typeSpan = document.createElement('span');
       typeSpan.className = 'rule-type';
       typeSpan.textContent = `${typeText}:`;
-      infoSpan.appendChild(typeSpan);
-      infoSpan.appendChild(document.createTextNode(' ')); // Add space
-
-      // Create and append the target span
       const targetSpan = document.createElement('span');
       targetSpan.className = 'rule-target';
       targetSpan.textContent = targetText;
+      infoSpan.appendChild(typeSpan);
+      infoSpan.appendChild(document.createTextNode(' '));
       infoSpan.appendChild(targetSpan);
-      infoSpan.appendChild(document.createTextNode(' ')); // Add space
-
-      // Create and append the detail span *only if* there's content
       if (detailClass && detailContent) {
+        infoSpan.appendChild(document.createTextNode(' '));
         const detailSpan = document.createElement('span');
         detailSpan.className = detailClass;
         detailSpan.textContent = detailContent;
         infoSpan.appendChild(detailSpan);
       }
-      // END FIX for line 524
-
+      const buttonsDiv = document.createElement('div');
+      buttonsDiv.style.whiteSpace = 'nowrap';
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.className = 'edit-btn';
+      editBtn.dataset.ruleIndex = index;
+      buttonsDiv.appendChild(editBtn);
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
       deleteBtn.className = 'delete-btn';
       deleteBtn.dataset.ruleIndex = index;
+      buttonsDiv.appendChild(deleteBtn);
       li.appendChild(infoSpan);
-      li.appendChild(deleteBtn);
+      li.appendChild(buttonsDiv);
       ruleList.appendChild(li);
     });
-    console.log(`[Options v19b] populateRuleList: Successfully populated ${rules.length} rules.`);
   } catch (e) {
-    console.error('Error inside populateRuleList loop:', e);
-    const li = document.createElement('li');
-    li.textContent = 'Error displaying rules! Check console.';
-    ruleList.appendChild(li);
+    console.error('Error populating rule list:', e);
   }
 }
 
-// --- Calendar Rendering Function ---
+// --- Calendar Rendering & Interaction (MODIFIED showDayDetails) ---
 function renderCalendar(year, month) {
-  console.log(`[Calendar] Rendering for ${year}-${month + 1}`);
-  if (!calendarGrid || !currentMonthYearSpan) {
-    console.error('Cannot render calendar - grid or month/year span not found.');
-    return;
-  }
-
+  /* ... same as v19i ... */ if (!calendarGrid || !currentMonthYearSpan) return;
   const todayStr = getCurrentDateString();
   const monthNames = [
     'January',
@@ -603,101 +578,239 @@ function renderCalendar(year, month) {
     'December',
   ];
   currentMonthYearSpan.textContent = `${monthNames[month]} ${year}`;
-
-  // Keep headers, clear rest
-  const headers = Array.from(calendarGrid.querySelectorAll('.calendar-header'));
-  // Use replaceChildren() for safety after saving headers
-  const childrenToRemove = Array.from(calendarGrid.children).filter((el) => !el.classList.contains('calendar-header'));
-  childrenToRemove.forEach((child) => calendarGrid.removeChild(child));
-
+  const dayCells = Array.from(calendarGrid.querySelectorAll('.calendar-day'));
+  dayCells.forEach((cell) => cell.remove());
+  const emptyCells = Array.from(calendarGrid.querySelectorAll('.empty'));
+  emptyCells.forEach((cell) => cell.remove());
   const firstDayOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startingDayOfWeek = firstDayOfMonth.getDay(); // 0=Sun
-
-  // Create fragment to batch appends
+  const startingDayOfWeek = firstDayOfMonth.getDay();
   const fragment = document.createDocumentFragment();
-
-  // Add empty cells before the 1st
   for (let i = 0; i < startingDayOfWeek; i++) {
     const emptyCell = document.createElement('div');
     emptyCell.classList.add('calendar-day', 'empty');
     fragment.appendChild(emptyCell);
   }
-
-  // Add cells for each day
   for (let day = 1; day <= daysInMonth; day++) {
     const dayCell = document.createElement('div');
     dayCell.classList.add('calendar-day');
     const date = new Date(year, month, day);
     const dateStr = formatDate(date);
-
-    if (dateStr === todayStr) {
-      dayCell.classList.add('today');
-    }
-
+    if (dateStr === todayStr) dayCell.classList.add('today');
+    dayCell.dataset.date = dateStr;
     const dayNumberSpan = document.createElement('span');
     dayNumberSpan.classList.add('day-number');
     dayNumberSpan.textContent = day;
     dayCell.appendChild(dayNumberSpan);
-
     const dailyTotalSeconds = Object.values(dailyDomainData[dateStr] || {}).reduce((sum, time) => sum + time, 0);
     const timeSpan = document.createElement('span');
     timeSpan.classList.add('day-time');
     if (dailyTotalSeconds > 0) {
-      timeSpan.textContent = formatTime(dailyTotalSeconds, false); // Show compact time
+      timeSpan.textContent = formatTime(dailyTotalSeconds, false);
     } else {
       timeSpan.textContent = '-';
       timeSpan.classList.add('no-data');
     }
     dayCell.appendChild(timeSpan);
-
+    if (dailyTotalSeconds > 0) {
+      dayCell.addEventListener('mouseover', showDayDetails);
+      dayCell.addEventListener('focus', showDayDetails);
+      dayCell.addEventListener('mouseout', hideDayDetails);
+      dayCell.addEventListener('blur', hideDayDetails);
+      dayCell.addEventListener('click', handleDayClick);
+      dayCell.setAttribute('tabindex', '0');
+    } else {
+      dayCell.style.cursor = 'default';
+    }
     fragment.appendChild(dayCell);
   }
-  calendarGrid.appendChild(fragment); // Append all at once
-  console.log(`[Calendar] Render complete for ${year}-${month + 1}`);
+  calendarGrid.appendChild(fragment);
+}
+
+// MODIFIED: Use safe DOM methods instead of innerHTML
+function showDayDetails(event) {
+  const dayCell = event.target.closest('.calendar-day');
+  if (!dayCell || !calendarDetailPopup) return;
+  const dateStr = dayCell.dataset.date;
+  if (!dateStr) return;
+
+  const dayDomainData = dailyDomainData[dateStr] || {};
+  const dayCategoryData = dailyCategoryData[dateStr] || {}; // Keep fetching this
+  const totalSeconds = Object.values(dayDomainData).reduce((s, t) => s + t, 0);
+  const topDomains = Object.entries(dayDomainData)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  // const topCategories = Object.entries(dayCategoryData).sort((a, b) => b[1] - a[1]).slice(0, 3); // Can use later
+
+  // --- Build Content using DOM methods ---
+  calendarDetailPopup.replaceChildren(); // Clear previous content safely
+
+  // Heading (Date)
+  const heading = document.createElement('strong');
+  heading.textContent = formatDisplayDate(dateStr);
+  calendarDetailPopup.appendChild(heading);
+
+  // Total Time
+  const totalText = document.createTextNode(`Total: ${formatTime(totalSeconds, true)}`); // Include seconds
+  calendarDetailPopup.appendChild(totalText);
+  calendarDetailPopup.appendChild(document.createElement('br')); // Line break
+
+  // Top Sites List
+  if (topDomains.length > 0) {
+    const sitesHeading = document.createTextNode('Top Sites:');
+    const sitesList = document.createElement('ul');
+    topDomains.forEach(([domain, time]) => {
+      const listItem = document.createElement('li');
+      // Sanitize domain? Generally okay, but textContent is safe.
+      listItem.textContent = `${domain}: ${formatTime(time, false)}`; // Compact time
+      sitesList.appendChild(listItem);
+    });
+    calendarDetailPopup.appendChild(document.createElement('br')); // Space before list
+    calendarDetailPopup.appendChild(sitesHeading);
+    calendarDetailPopup.appendChild(sitesList);
+  } else {
+    const noDataText = document.createTextNode('No site data recorded.');
+    calendarDetailPopup.appendChild(noDataText);
+  }
+
+  // --- Positioning Logic (same as v19f) ---
+  const container = document.querySelector('.calendar-container');
+  if (!container) return;
+  let targetTop = dayCell.offsetTop + dayCell.offsetHeight + 5;
+  let targetLeft = dayCell.offsetLeft + dayCell.offsetWidth / 2;
+  calendarDetailPopup.style.position = 'absolute';
+  calendarDetailPopup.style.top = `${targetTop}px`;
+  calendarDetailPopup.style.left = `${targetLeft}px`;
+  calendarDetailPopup.style.transform = 'translateX(-50%)';
+  calendarDetailPopup.style.display = 'block';
+  const popupRect = calendarDetailPopup.getBoundingClientRect();
+  if (popupRect.bottom > window.innerHeight) {
+    targetTop = dayCell.offsetTop - popupRect.height - 5;
+    calendarDetailPopup.style.top = `${targetTop}px`;
+  }
+  if (calendarDetailPopup.getBoundingClientRect().top < 0) {
+    targetTop = dayCell.offsetTop + dayCell.offsetHeight + 5;
+    calendarDetailPopup.style.top = `${targetTop}px`;
+  }
+  const finalPopupRect = calendarDetailPopup.getBoundingClientRect();
+  if (finalPopupRect.right > window.innerWidth) {
+    targetLeft = dayCell.offsetLeft + dayCell.offsetWidth - popupRect.width;
+    calendarDetailPopup.style.left = `${targetLeft}px`;
+    calendarDetailPopup.style.transform = 'translateX(0)';
+  } else if (finalPopupRect.left < 0) {
+    targetLeft = dayCell.offsetLeft;
+    calendarDetailPopup.style.left = `${targetLeft}px`;
+    calendarDetailPopup.style.transform = 'translateX(0)';
+  } else {
+    calendarDetailPopup.style.transform = 'translateX(-50%)';
+  }
+  // --- Positioning Logic Ends ---
+}
+
+function hideDayDetails() {
+  /* ... same as v19f ... */ if (calendarDetailPopup) {
+    calendarDetailPopup.style.display = 'none';
+  }
+}
+function handleDayClick(event) {
+  /* ... same as v19f ... */ const dayCell = event.target.closest('.calendar-day');
+  if (!dayCell) return;
+  const dateStr = dayCell.dataset.date;
+  if (!dateStr) return;
+  console.log(`[Calendar] Day clicked: ${dateStr}`);
+  selectedDateStr = dateStr;
+  highlightSelectedCalendarDay(dateStr);
+  renderChartForSelectedDate();
+}
+function highlightSelectedCalendarDay(dateStrToSelect) {
+  /* ... same as v19f ... */ if (!calendarGrid) return;
+  const allDays = calendarGrid.querySelectorAll('.calendar-day');
+  allDays.forEach((day) => {
+    if (day.dataset.date === dateStrToSelect) {
+      day.classList.add('selected');
+    } else {
+      day.classList.remove('selected');
+    }
+  });
+}
+function renderChartForSelectedDate() {
+  /* ... same as v19f ... */ if (!selectedDateStr) {
+    clearChartOnError('Select a date from the calendar.');
+    return;
+  }
+  const data =
+    currentChartViewMode === 'domain'
+      ? dailyDomainData[selectedDateStr] || {}
+      : dailyCategoryData[selectedDateStr] || {};
+  const displayDate = formatDisplayDate(selectedDateStr);
+  renderChart(data, displayDate, currentChartViewMode);
+  if (chartTitleElement) {
+    chartTitleElement.textContent = `Usage Chart (${displayDate})`;
+  }
 }
 
 // --- Event Listener Setup ---
 function setupEventListeners() {
+  /* ... same as v19i ... */
   try {
-    // Existing listeners...
     if (addCategoryBtn) addCategoryBtn.addEventListener('click', handleAddCategory);
     if (assignDomainBtn) assignDomainBtn.addEventListener('click', handleAssignDomain);
     if (categoryList) categoryList.addEventListener('click', handleDeleteCategory);
     if (assignmentList) assignmentList.addEventListener('click', handleDeleteAssignment);
     if (ruleTypeSelect) ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
     if (addRuleBtn) addRuleBtn.addEventListener('click', handleAddRule);
-    if (ruleList) ruleList.addEventListener('click', handleDeleteRule);
+    if (ruleList) {
+      ruleList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) {
+          handleDeleteRule(event);
+        } else if (event.target.classList.contains('edit-btn')) {
+          handleEditRuleClick(event);
+        }
+      });
+    } else {
+      console.error('Rule list element not found for event listener setup!');
+    }
     if (dateRangeSelect) dateRangeSelect.addEventListener('change', updateDisplayForSelectedRange);
-
-    // Pagination Listeners
-    if (domainPrevBtn) {
-      domainPrevBtn.addEventListener('click', handleDomainPrev);
-    } else {
-      console.error('[Options v19b] Prev button not found for listener.');
-    }
-    if (domainNextBtn) {
-      domainNextBtn.addEventListener('click', handleDomainNext);
-    } else {
-      console.error('[Options v19b] Next button not found for listener.');
-    }
-
-    // Calendar Listeners
+    if (domainPrevBtn) domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (domainNextBtn) domainNextBtn.addEventListener('click', handleDomainNext);
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', handlePrevMonth);
-    else console.warn('[Options v19b] prevMonthBtn missing');
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', handleNextMonth);
-    else console.warn('[Options v19b] nextMonthBtn missing');
-
-    handleRuleTypeChange(); // Initial setup
-    console.log('[Options v19b] Event listeners set up.');
+    if (chartViewRadios) {
+      chartViewRadios.forEach((radio) => {
+        radio.addEventListener('change', (event) => {
+          currentChartViewMode = event.target.value;
+          console.log(`Chart view changed to: ${currentChartViewMode}`);
+          renderChartForSelectedDate();
+        });
+      });
+    }
+    if (closeEditModalBtn) closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (cancelEditRuleBtn) cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (saveRuleChangesBtn) saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (editRuleModal) {
+      editRuleModal.addEventListener('click', (event) => {
+        if (event.target === editRuleModal) {
+          handleCancelEditClick();
+        }
+      });
+    }
+    if (idleThresholdSelect) {
+      idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
+    }
+    if (exportCsvBtn) {
+      exportCsvBtn.addEventListener('click', handleExportCsv);
+    }
+    handleRuleTypeChange();
+    console.log('[Options v19j] Event listeners set up.');
   } catch (e) {
-    console.error('[Options v19b] Error setting up event listeners:', e);
+    console.error('[Options v19j] Error setting up event listeners:', e);
   }
 }
 
 // --- Event Handlers ---
+// (All handlers except showDayDetails are the same as v19i)
 function handleAddCategory() {
-  try {
+  /* ... same ... */ try {
     const name = newCategoryNameInput.value.trim();
     if (!name) {
       alert('Please enter a category name.');
@@ -720,7 +833,7 @@ function handleAddCategory() {
   }
 }
 function handleAssignDomain() {
-  try {
+  /* ... same ... */ try {
     const domain = domainPatternInput.value.trim();
     const category = categorySelect.value;
     if (!domain) {
@@ -742,7 +855,7 @@ function handleAssignDomain() {
   }
 }
 function handleDeleteCategory(event) {
-  try {
+  /* ... same ... */ try {
     if (event.target.classList.contains('delete-btn') && event.target.closest('#categoryList')) {
       const categoryToDelete = event.target.dataset.category;
       if (categoryToDelete && categoryToDelete !== 'Other') {
@@ -778,7 +891,7 @@ function handleDeleteCategory(event) {
   }
 }
 function handleDeleteAssignment(event) {
-  try {
+  /* ... same ... */ try {
     if (event.target.classList.contains('delete-btn') && event.target.closest('#assignmentList')) {
       const domainToDelete = event.target.dataset.domain;
       if (domainToDelete && categoryAssignments.hasOwnProperty(domainToDelete)) {
@@ -794,7 +907,7 @@ function handleDeleteAssignment(event) {
   }
 }
 function handleRuleTypeChange() {
-  try {
+  /* ... same ... */ try {
     if (!ruleTypeSelect || !rulePatternInput || !ruleCategorySelect || !timeLimitInputDiv) return;
     const selectedType = ruleTypeSelect.value;
     rulePatternInput.style.display = selectedType.includes('-url') ? '' : 'none';
@@ -806,7 +919,7 @@ function handleRuleTypeChange() {
   }
 }
 function handleAddRule() {
-  try {
+  /* ... same ... */ try {
     if (!ruleTypeSelect || !rulePatternInput || !ruleCategorySelect || !ruleLimitInput || !ruleUnitSelect) return;
     const type = ruleTypeSelect.value;
     let value = '';
@@ -843,7 +956,7 @@ function handleAddRule() {
     const newRule = { type, value };
     if (limitSeconds !== null) newRule.limitSeconds = limitSeconds;
     rules.push(newRule);
-    console.log('[Options v19b] Added rule:', newRule);
+    console.log('[Options v19j] Added rule:', newRule);
     saveRules();
     populateRuleList();
     rulePatternInput.value = '';
@@ -856,111 +969,343 @@ function handleAddRule() {
   }
 }
 function handleDeleteRule(event) {
-  try {
-    if (event.target.classList.contains('delete-btn') && event.target.closest('#ruleList')) {
-      const ruleIndex = parseInt(event.target.dataset.ruleIndex, 10);
-      if (!isNaN(ruleIndex) && ruleIndex >= 0 && ruleIndex < rules.length) {
-        const ruleToDelete = rules[ruleIndex];
-        let confirmMessage = `DELETE RULE?\n\nType: ${ruleToDelete.type}\nTarget: ${ruleToDelete.value}`;
-        if (ruleToDelete.limitSeconds !== undefined)
-          confirmMessage += `\nLimit: ${formatTime(ruleToDelete.limitSeconds, false)}/day`;
-        if (confirm(confirmMessage)) {
-          rules.splice(ruleIndex, 1);
-          console.log('[Options v19b] Deleted rule at index:', ruleIndex);
-          saveRules();
-          populateRuleList();
-        }
+  /* ... same ... */ try {
+    const ruleIndex = parseInt(event.target.dataset.ruleIndex, 10);
+    if (!isNaN(ruleIndex) && ruleIndex >= 0 && ruleIndex < rules.length) {
+      const ruleToDelete = rules[ruleIndex];
+      let confirmMessage = `DELETE RULE?\n\nType: ${ruleToDelete.type}\nTarget: ${ruleToDelete.value}`;
+      if (ruleToDelete.limitSeconds !== undefined)
+        confirmMessage += `\nLimit: ${formatTime(ruleToDelete.limitSeconds, false)}/day`;
+      if (confirm(confirmMessage)) {
+        rules.splice(ruleIndex, 1);
+        console.log('[Options v19j] Deleted rule at index:', ruleIndex);
+        saveRules();
+        populateRuleList();
       }
+    } else {
+      console.warn('Delete button clicked, but rule index not found or invalid:', event.target.dataset.ruleIndex);
     }
   } catch (e) {
     console.error('Error deleting rule:', e);
   }
 }
 function handleDomainPrev() {
-  if (domainCurrentPage > 1) {
+  /* ... same ... */ if (domainCurrentPage > 1) {
     domainCurrentPage--;
     updateDomainDisplayAndPagination();
   }
 }
 function handleDomainNext() {
-  const totalItems = fullDomainDataSorted.length;
+  /* ... same ... */ const totalItems = fullDomainDataSorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / domainItemsPerPage));
   if (domainCurrentPage < totalPages) {
     domainCurrentPage++;
     updateDomainDisplayAndPagination();
   }
 }
-
-// Calendar Navigation Handlers
 function handlePrevMonth() {
-  calendarDate.setMonth(calendarDate.getMonth() - 1);
+  /* ... same ... */ calendarDate.setMonth(calendarDate.getMonth() - 1);
   renderCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
+  highlightSelectedCalendarDay(selectedDateStr);
 }
 function handleNextMonth() {
-  calendarDate.setMonth(calendarDate.getMonth() + 1);
+  /* ... same ... */ calendarDate.setMonth(calendarDate.getMonth() + 1);
   renderCalendar(calendarDate.getFullYear(), calendarDate.getMonth());
+  highlightSelectedCalendarDay(selectedDateStr);
+}
+function handleEditRuleClick(event) {
+  /* ... same ... */ const ruleIndex = parseInt(event.target.dataset.ruleIndex, 10);
+  if (isNaN(ruleIndex) || ruleIndex < 0 || ruleIndex >= rules.length) {
+    console.error('Invalid rule index for edit:', ruleIndex);
+    alert('Could not find rule to edit.');
+    return;
+  }
+  editingRuleIndex = ruleIndex;
+  const rule = rules[ruleIndex];
+  console.log('Editing rule:', rule);
+  if (
+    !editRuleModal ||
+    !editRuleTypeDisplay ||
+    !editRulePatternGroup ||
+    !editRulePatternInput ||
+    !editRuleCategoryGroup ||
+    !editRuleCategorySelect ||
+    !editRuleLimitGroup ||
+    !editRuleLimitInput ||
+    !editRuleUnitSelect ||
+    !editRuleIndexInput
+  ) {
+    console.error('Cannot open edit modal - one or more form elements are missing.');
+    alert('Error opening edit form.');
+    return;
+  }
+  editRuleIndexInput.value = ruleIndex;
+  editRuleTypeDisplay.textContent = rule.type;
+  editRulePatternGroup.style.display = rule.type.includes('-url') ? '' : 'none';
+  editRuleCategoryGroup.style.display = rule.type.includes('-category') ? '' : 'none';
+  editRuleLimitGroup.style.display = rule.type.includes('limit-') ? '' : 'none';
+  if (rule.type.includes('-url')) {
+    editRulePatternInput.value = rule.value;
+  } else if (rule.type.includes('-category')) {
+    populateRuleCategorySelect();
+    editRuleCategorySelect.value = rule.value;
+    if (!categories.includes(rule.value)) {
+      console.warn(`Category "${rule.value}" for rule no longer exists. User must select a new one.`);
+      const tempOption = document.createElement('option');
+      tempOption.value = rule.value;
+      tempOption.textContent = `${rule.value} (Deleted)`;
+      tempOption.disabled = true;
+      editRuleCategorySelect.appendChild(tempOption);
+      editRuleCategorySelect.value = rule.value;
+    }
+  }
+  if (rule.type.includes('limit-')) {
+    const limitSec = rule.limitSeconds || 0;
+    if (limitSec > 0 && limitSec % 3600 === 0 && limitSec / 3600 >= 1) {
+      editRuleLimitInput.value = limitSec / 3600;
+      editRuleUnitSelect.value = 'hours';
+    } else {
+      editRuleLimitInput.value = Math.round(limitSec / 60);
+      editRuleUnitSelect.value = 'minutes';
+    }
+    if (limitSec > 0 && editRuleLimitInput.value == 0) {
+      editRuleLimitInput.value = 1;
+      editRuleUnitSelect.value = 'minutes';
+    }
+  } else {
+    editRuleLimitInput.value = '';
+    editRuleUnitSelect.value = 'minutes';
+  }
+  editRuleModal.style.display = 'flex';
+}
+function handleCancelEditClick() {
+  /* ... same ... */ if (editRuleModal) {
+    editRuleModal.style.display = 'none';
+  }
+  editingRuleIndex = -1;
+}
+function handleSaveChangesClick() {
+  /* ... same ... */ if (editingRuleIndex < 0 || editingRuleIndex >= rules.length) {
+    console.error('Invalid editingRuleIndex:', editingRuleIndex);
+    alert('Error: No rule selected for saving.');
+    return;
+  }
+  const originalRule = rules[editingRuleIndex];
+  const updatedRule = { type: originalRule.type };
+  if (originalRule.type.includes('-url')) {
+    const newValue = editRulePatternInput.value.trim();
+    if (!newValue) {
+      alert('Please enter a URL or pattern.');
+      return;
+    }
+    updatedRule.value = newValue;
+  } else if (originalRule.type.includes('-category')) {
+    const newValue = editRuleCategorySelect.value;
+    const selectedOption = editRuleCategorySelect.options[editRuleCategorySelect.selectedIndex];
+    if (!newValue || selectedOption.disabled) {
+      alert('Please select a valid category.');
+      return;
+    }
+    updatedRule.value = newValue;
+  }
+  if (originalRule.type.includes('limit-')) {
+    const limitValue = parseInt(editRuleLimitInput.value, 10);
+    const unit = editRuleUnitSelect.value;
+    if (isNaN(limitValue) || limitValue <= 0) {
+      alert('Please enter a valid positive time limit.');
+      return;
+    }
+    updatedRule.limitSeconds = unit === 'hours' ? limitValue * 3600 : limitValue * 60;
+  }
+  const exists = rules.some(
+    (rule, index) =>
+      index !== editingRuleIndex &&
+      rule.type === updatedRule.type &&
+      rule.value.toLowerCase() === updatedRule.value.toLowerCase()
+  );
+  if (exists) {
+    alert(`Another rule for this exact type and target ("${updatedRule.value}") already exists.`);
+    return;
+  }
+  rules[editingRuleIndex] = updatedRule;
+  console.log(`Rule at index ${editingRuleIndex} updated:`, updatedRule);
+  saveRules();
+  populateRuleList();
+  handleCancelEditClick();
+}
+function handleIdleThresholdChange() {
+  /* ... same ... */ if (!idleThresholdSelect) return;
+  const selectedValue = parseInt(idleThresholdSelect.value, 10);
+  if (isNaN(selectedValue)) {
+    console.error('Invalid idle threshold value selected:', idleThresholdSelect.value);
+    idleThresholdSelect.value = DEFAULT_IDLE_SECONDS;
+    return;
+  }
+  console.log(`[Options] Idle threshold changed to: ${selectedValue} seconds`);
+  browser.storage.local
+    .set({ [STORAGE_KEY_IDLE_THRESHOLD]: selectedValue })
+    .then(() => {
+      console.log('[Options] Idle threshold saved successfully.');
+    })
+    .catch((error) => {
+      console.error('Error saving idle threshold:', error);
+      alert('Failed to save idle threshold setting.');
+    });
+}
+function handleExportCsv() {
+  /* ... same ... */ console.log('Export CSV requested.');
+  if (!dateRangeSelect) {
+    alert('Error: Cannot determine selected date range.');
+    return;
+  }
+  const selectedRange = dateRangeSelect.value;
+  const { domainData, categoryData, label } = getFilteredDataForRange(selectedRange);
+  const dataToExport = domainData;
+  if (!dataToExport || Object.keys(dataToExport).length === 0) {
+    alert(`No domain data to export for the selected period: ${label}`);
+    return;
+  }
+  const csvString = convertDataToCsv(dataToExport);
+  const filename = `focusflow_export_${label.toLowerCase().replace(/\s+/g, '_')}_${formatDate(new Date())}.csv`;
+  triggerCsvDownload(csvString, filename);
+}
+function escapeCsvValue(value) {
+  /* ... same ... */ if (value === null || value === undefined) {
+    return '';
+  }
+  const stringValue = String(value);
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    const escapedValue = stringValue.replace(/"/g, '""');
+    return `"${escapedValue}"`;
+  }
+  return stringValue;
+}
+function convertDataToCsv(dataObject) {
+  /* ... same ... */ if (!dataObject) return '';
+  const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
+  const sortedData = Object.entries(dataObject)
+    .map(([domain, seconds]) => ({ domain, seconds }))
+    .sort((a, b) => b.seconds - a.seconds);
+  sortedData.forEach((item) => {
+    const domain = item.domain;
+    const seconds = item.seconds;
+    const category = categoryAssignments[domain] || 'Other';
+    const timeHMS = formatTime(seconds, true, true);
+    const row = [domain, category, timeHMS, seconds];
+    csvString += row.map(escapeCsvValue).join(',') + '\n';
+  });
+  return csvString;
+}
+function triggerCsvDownload(csvString, filename) {
+  /* ... same ... */ try {
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log('CSV download triggered:', filename);
+    } else {
+      alert('CSV export might not be fully supported by your browser.');
+    }
+  } catch (e) {
+    console.error('Error triggering CSV download:', e);
+    alert('An error occurred while trying to export the data.');
+  }
 }
 
 // --- Data Saving Functions ---
 function saveCategoriesAndAssignments() {
-  browser.storage.local
+  /* ... same ... */ browser.storage.local
     .set({ categories, categoryAssignments })
     .then(() => browser.runtime.sendMessage({ action: 'categoriesUpdated' }))
-    .then((response) => console.log('[Options v19b] Bg notified (categories):', response ? 'OK' : 'No response'))
+    .then((response) => console.log('[Options v19j] Bg notified (categories):', response ? 'OK' : 'No response'))
     .catch((error) => {
-      console.error('[Options v19b] Error saving categories/assignments:', error);
+      console.error('[Options v19j] Error saving categories/assignments:', error);
     });
 }
 function saveRules() {
-  browser.storage.local
+  /* ... same ... */ browser.storage.local
     .set({ rules })
     .then(() => browser.runtime.sendMessage({ action: 'rulesUpdated' }))
-    .then((response) => console.log('[Options v19b] Bg notified (rules):', response ? 'OK' : 'No response'))
+    .then((response) => console.log('[Options v19j] Bg notified (rules):', response ? 'OK' : 'No response'))
     .catch((error) => {
-      console.error('[Options v19b] Error saving rules:', error);
+      console.error('[Options v19j] Error saving rules:', error);
     });
 }
 
 // --- Chart Rendering ---
-function renderChart(dataToDisplay, periodLabel = 'All Time') {
-  if (typeof Chart === 'undefined') {
-    console.error('[Options v19b] Chart.js not loaded.');
+function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain') {
+  /* ... same as v19i ... */ if (typeof Chart === 'undefined') {
+    console.error('Chart.js not loaded.');
     clearChartOnError('Chart library not loaded.');
     return;
   }
-  const ctx = document.getElementById('timeChartCanvas')?.getContext('2d');
+  const canvas = document.getElementById('timeChartCanvas');
+  const ctx = canvas?.getContext('2d');
   if (!ctx) {
-    console.error('[Options v19b] Canvas element not found.');
+    console.error('Canvas element not found.');
     return;
   }
   if (timeChart) {
     timeChart.destroy();
     timeChart = null;
   }
-  const domainData = dataToDisplay;
-  if (!domainData || Object.keys(domainData).length === 0) {
-    clearChartOnError(`No domain data for ${periodLabel}`);
+  if (!data || Object.keys(data).length === 0) {
+    clearChartOnError(`No data for ${periodLabel}`);
     return;
   }
-  const sortedDomainData = Object.entries(domainData)
-    .map(([domain, time]) => ({ domain, time }))
-    .sort((a, b) => b.time - a.time);
   const maxSlices = 10;
-  let labels = sortedDomainData.map((item) => item.domain);
-  let times = sortedDomainData.map((item) => item.time);
-  if (sortedDomainData.length > maxSlices) {
-    const topData = sortedDomainData.slice(0, maxSlices - 1);
-    labels = topData.map((item) => item.domain);
+  let sortedData, otherLabel;
+  if (viewMode === 'category') {
+    sortedData = Object.entries(data)
+      .map(([name, time]) => ({ name, time }))
+      .filter((item) => item.time > 0.1)
+      .sort((a, b) => b.time - a.time);
+    otherLabel = 'Other Categories';
+  } else {
+    sortedData = Object.entries(data)
+      .map(([name, time]) => ({ name, time }))
+      .filter((item) => item.time > 0.1)
+      .sort((a, b) => b.time - a.time);
+    otherLabel = 'Other Domains';
+  }
+  if (sortedData.length === 0) {
+    clearChartOnError(`No significant data for ${periodLabel}`);
+    return;
+  }
+  let labels = sortedData.map((item) => item.name);
+  let times = sortedData.map((item) => item.time);
+  if (sortedData.length > maxSlices) {
+    const topData = sortedData.slice(0, maxSlices - 1);
+    labels = topData.map((item) => item.name);
     times = topData.map((item) => item.time);
-    const otherTime = sortedDomainData.slice(maxSlices - 1).reduce((sum, item) => sum + item.time, 0);
-    if (otherTime > 0) {
-      labels.push('Other Domains');
+    const otherTime = sortedData.slice(maxSlices - 1).reduce((sum, item) => sum + item.time, 0);
+    if (otherTime > 0.1) {
+      labels.push(otherLabel);
       times.push(otherTime);
     }
   }
-  const backgroundColors = [
-    'rgba(255, 99, 132, 0.8)',
+  const categoryColors = {
+    'Work/Productivity': 'rgba(54, 162, 235, 0.8)',
+    'Social Media': 'rgba(255, 99, 132, 0.8)',
+    'News & Info': 'rgba(255, 159, 64, 0.8)',
+    Entertainment: 'rgba(153, 102, 255, 0.8)',
+    Shopping: 'rgba(255, 205, 86, 0.8)',
+    'Reference & Learning': 'rgba(75, 192, 192, 0.8)',
+    Technology: 'rgba(100, 255, 64, 0.8)',
+    Finance: 'rgba(40, 100, 120, 0.8)',
+    Other: 'rgba(201, 203, 207, 0.8)',
+  };
+  const defaultColorPalette = [
     'rgba(54, 162, 235, 0.8)',
+    'rgba(255, 99, 132, 0.8)',
     'rgba(255, 206, 86, 0.8)',
     'rgba(75, 192, 192, 0.8)',
     'rgba(153, 102, 255, 0.8)',
@@ -971,26 +1316,33 @@ function renderChart(dataToDisplay, periodLabel = 'All Time') {
     'rgba(255, 100, 100, 0.8)',
     'rgba(40, 100, 120, 0.8)',
   ];
+  let backgroundColors;
+  if (viewMode === 'category') {
+    backgroundColors = labels.map((label) => categoryColors[label] || categoryColors['Other']);
+    if (labels.includes(otherLabel)) {
+      const otherIndex = labels.indexOf(otherLabel);
+      backgroundColors[otherIndex] = categoryColors['Other'];
+    }
+  } else {
+    backgroundColors = labels.map((_, index) => defaultColorPalette[index % defaultColorPalette.length]);
+    if (labels.includes(otherLabel)) {
+      const otherIndex = labels.indexOf(otherLabel);
+      backgroundColors[otherIndex] = categoryColors['Other'];
+    }
+  }
   try {
     timeChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels: labels,
-        datasets: [
-          {
-            label: 'Time Spent',
-            data: times,
-            backgroundColor: backgroundColors.slice(0, labels.length),
-            hoverOffset: 4,
-          },
-        ],
+        datasets: [{ label: 'Time Spent', data: times, backgroundColor: backgroundColors, hoverOffset: 4 }],
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 15 } },
-          title: { display: true, text: `Website Time (${periodLabel})` },
+          legend: { position: 'right', labels: { boxWidth: 12, padding: 15 } },
+          title: { display: false },
           tooltip: {
             callbacks: {
               label: function (context) {
@@ -998,8 +1350,8 @@ function renderChart(dataToDisplay, periodLabel = 'All Time') {
                 if (label) {
                   label += ': ';
                 }
-                if (context.parsed !== null) {
-                  label += formatTime(context.parsed);
+                if (context.parsed !== null && context.parsed !== undefined) {
+                  label += formatTime(context.parsed, true);
                 }
                 return label;
               },
@@ -1009,23 +1361,39 @@ function renderChart(dataToDisplay, periodLabel = 'All Time') {
       },
     });
   } catch (error) {
-    console.error('[Options v19b] Error creating chart:', error);
+    console.error('[Options v19j] Error creating chart:', error);
     clearChartOnError('Error rendering chart.');
   }
 }
-
 function clearChartOnError(message = 'Error loading chart data') {
-  const ctx = document.getElementById('timeChartCanvas')?.getContext('2d');
+  /* ... same as v19i ... */ const canvas = document.getElementById('timeChartCanvas');
+  const ctx = canvas?.getContext('2d');
   if (ctx) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (timeChart) {
       timeChart.destroy();
       timeChart = null;
     }
-    ctx.font = '16px sans-serif';
+    ctx.font = '14px sans-serif';
     ctx.fillStyle = '#aaa';
     ctx.textAlign = 'center';
-    ctx.fillText(message, ctx.canvas.width / 2, 50);
+    const maxWidth = canvas.width * 0.8;
+    const words = message.split(' ');
+    let line = '';
+    let y = canvas.height / 2 - 10;
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + ' ';
+      let metrics = ctx.measureText(testLine);
+      let testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += 18;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, canvas.width / 2, y);
   }
 }
 
