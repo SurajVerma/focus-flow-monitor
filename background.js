@@ -1,24 +1,20 @@
-// background.js (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED FOR Undercounting Fix)
+// background.js (v15.2 - Added Detailed Logging in updateTrackingState)
 
-console.log('[System] Background script STARTING (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED).');
+console.log('[System] Background script STARTING (v15.2 - Detailed Logging).');
 
-// --- Core Tracking Variables ---
-let currentTabId = null;
-let currentTabUrl = null;
-let startTime = null; // Timestamp when tracking for currentTabUrl started
-let lastSavedTime = null; // Timestamp when time was last calculated/saved by updateTime
+// --- Storage Keys ---
+const STORAGE_KEY_TRACKING_STATE = 'currentTrackingState'; // Stores { timestamp: number, domain: string } | null
+
+// --- Core Data Variables (Loaded from storage) ---
 let trackedData = {}; // All-time domain totals {'domain.com': totalSeconds}
 let categoryTimeData = {}; // All-time category totals {'Category': totalSeconds}
 let dailyDomainData = {}; // Daily domain data {'YYYY-MM-DD': {'domain.com': secs, ...}}
 let dailyCategoryData = {}; // Daily category data {'YYYY-MM-DD': {'Category': secs, ...}}
 let hourlyData = {}; // Hourly totals {'YYYY-MM-DD': {'HH': totalSeconds, ...}}
-let idleState = 'active'; // Still track the state
-const idleThreshold = 1800; // Keep the constant, though not used by updateTime's core logic anymore
 
-// --- Configuration (loaded from storage or JSON defaults) ---
+// --- Configuration (Loaded from storage or JSON defaults) ---
 let categories = ['Other'];
 let categoryAssignments = {};
-// Use 'rules' to store both block and limit rules
 let rules = [];
 const defaultCategory = 'Other';
 
@@ -28,23 +24,23 @@ function getCurrentDateString() {
   const year = now.getFullYear();
   const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
   const day = now.getDate().toString().padStart(2, '0');
-  return `<span class="math-inline">\{year\}\-</span>{month}-${day}`; // YYYY-MM-DD format
+  return `${year}-${month}-${day}`; //<y_bin_46>-MM-DD format
 }
 
 // --- Load stored data or fetch defaults ---
 async function loadData() {
   console.log('[System] loadData started.');
   try {
-    // Load combined 'rules' key now AND hourlyData
+    // Load all persistent data EXCEPT the tracking state which is managed separately
     const result = await browser.storage.local.get([
       'trackedData',
       'categoryTimeData',
       'categories',
       'categoryAssignments',
-      'rules', // Use 'rules' key
+      'rules',
       'dailyDomainData',
       'dailyCategoryData',
-      'hourlyData', // *** ADDED Loading hourlyData ***
+      'hourlyData',
     ]);
     console.log('[System] Data loaded from storage:', result ? 'OK' : 'Empty/Error');
 
@@ -54,7 +50,7 @@ async function loadData() {
     // Determine if defaults are needed
     const needDefaultCategories = !result.categories || result.categories.length === 0;
     const needDefaultAssignments = !result.categoryAssignments || Object.keys(result.categoryAssignments).length === 0;
-    const needDefaultRules = !result.rules; // Check if combined 'rules' key exists
+    const needDefaultRules = !result.rules;
 
     // Fetch defaults ONLY if categories/assignments are missing
     if (needDefaultCategories || needDefaultAssignments) {
@@ -87,7 +83,7 @@ async function loadData() {
       : {};
 
     // Ensure all assigned categories exist
-    let categoriesChanged = false; // Track if categories list itself was changed
+    let categoriesChanged = false;
     Object.values(categoryAssignments).forEach((catName) => {
       if (!categories.includes(catName)) {
         console.warn(`Assignment uses category "${catName}" which is not in list. Adding.`);
@@ -95,36 +91,32 @@ async function loadData() {
         categoriesChanged = true;
       }
     });
-    if (categoriesChanged) needsSave = true; // Mark for saving if categories were added
+    if (categoriesChanged) needsSave = true;
 
-    // Load Rules (combined block/limit)
+    // Load Rules
     if (result.rules && Array.isArray(result.rules)) {
       rules = result.rules;
     } else {
       rules = [];
-      if (result.rules) {
-        console.warn("[System] Loaded 'rules' from storage was not an array, resetting. Value:", result.rules);
-      }
-      needsSave = true; // Mark for saving if rules were missing/invalid
+      if (result.rules) console.warn('[System] Loaded rules invalid, resetting.');
+      needsSave = true;
     }
 
-    // Load Tracking Data (Cumulative, Daily, and Hourly)
+    // Load Tracking Data
     trackedData = result.trackedData || {};
     categoryTimeData = result.categoryTimeData || {};
     dailyDomainData = result.dailyDomainData || {};
     dailyCategoryData = result.dailyCategoryData || {};
-    hourlyData = result.hourlyData || {}; // *** ADDED Loading hourlyData ***
-    if (!result.hourlyData) needsSave = true; // Mark for saving if hourlyData was missing
+    hourlyData = result.hourlyData || {};
+    if (!result.hourlyData) needsSave = true;
 
     console.log(
       `[System] State loaded: ${categories.length} cats, ${Object.keys(categoryAssignments).length} assigns, ${
         rules.length
-      } rules. Daily data for ${Object.keys(dailyDomainData).length} days. Hourly data for ${
-        Object.keys(hourlyData).length
-      } days.`
+      } rules.`
     );
 
-    // Save if defaults were needed OR if rules/hourlyData were missing/invalid or categories changed
+    // Save if defaults were needed or structures were missing/invalid
     if (
       needsSave ||
       needDefaultCategories ||
@@ -133,9 +125,15 @@ async function loadData() {
       categoriesChanged ||
       !result.hourlyData
     ) {
-      console.log('[System] Saving initial/updated state to storage.');
-      await saveData(); // Ensure new structures are saved
+      console.log('[System] Saving initial/updated non-tracking state to storage.');
+      // Note: saveData now only saves the main data, not the tracking state
+      await saveData();
     }
+
+    // Initialize tracking state if necessary (e.g., after browser restart)
+    // We check the actual browser state rather than assuming based on stored data
+    await updateTrackingState('loadDataInit'); // Add context for logging
+
     console.log('[System] loadData finished.');
   } catch (error) {
     console.error('CRITICAL Error during loadData:', error);
@@ -148,20 +146,23 @@ async function loadData() {
     dailyDomainData = {};
     dailyCategoryData = {};
     hourlyData = {};
+    // Attempt to clear potentially corrupted tracking state
+    try {
+      await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
+    } catch (clearError) {
+      console.error('Failed to clear tracking state during error handling:', clearError);
+    }
   }
 }
 // Initialize on startup
 loadData();
 
-// --- Save ALL current data state to storage ---
-let isSaving = false; // Simple lock to prevent concurrent saves
+// --- Save Main Data State (excluding tracking state) ---
+let isSaving = false;
 async function saveData() {
-  if (isSaving) {
-    // console.warn('[Save Check] Save already in progress, skipping.');
-    return;
-  }
+  if (isSaving) return;
   isSaving = true;
-  // console.log('[Save Check] Starting save operation...'); // Verbose log
+  // console.log('[Save Check] Saving main data...'); // Verbose
   try {
     await browser.storage.local.set({
       trackedData,
@@ -173,408 +174,348 @@ async function saveData() {
       categoryAssignments,
       rules,
     });
-    // console.log("[System] saveData Succeeded."); // Verbose success
+    // console.log("[System] saveData Succeeded."); // Verbose
   } catch (error) {
-    console.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
-    console.error('CRITICAL Error during saveData operation:', error);
-    console.error('Data snapshot (counts):', {
-      trackedKeys: Object.keys(trackedData).length,
-      catTimeKeys: Object.keys(categoryTimeData).length,
-      dailyDomainKeys: Object.keys(dailyDomainData).length,
-      dailyCatKeys: Object.keys(dailyCategoryData).length,
-      hourlyKeys: Object.keys(hourlyData).length,
-      catCount: categories.length,
-      assignCount: Object.keys(categoryAssignments).length,
-      ruleCount: rules.length,
-    });
-    console.error('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
+    console.error('CRITICAL Error during saveData:', error);
   } finally {
     isSaving = false;
-    // console.log('[Save Check] Save operation finished.'); // Verbose log
+    // console.log('[Save Check] Main data save finished.'); // Verbose
   }
 }
 
 // --- Get Domain & Category ---
 function getDomain(url) {
-  if (!url || !url.startsWith('http')) {
-    // console.log(`[Debug] getDomain: Invalid URL provided: ${url}`);
-    return null;
+  // Added logging within getDomain
+  // console.log(`[Debug getDomain] Input URL: ${url}`);
+  if (!url || !(url.startsWith('http:') || url.startsWith('https:'))) {
+    // console.log(`[Debug getDomain] Invalid scheme or null URL.`);
+    return null; // Only track http/https
   }
   try {
     const hostname = new URL(url).hostname;
-    // console.log(`[Debug] getDomain: URL=<span class="math-inline">\{url\}, Hostname\=</span>{hostname}`);
+    // console.log(`[Debug getDomain] Extracted hostname: ${hostname}`);
     return hostname;
   } catch (e) {
-    console.error(`[Debug] getDomain: Error parsing URL ${url}:`, e);
+    console.error(`[Util] Error parsing URL ${url}:`, e);
     return null;
   }
 }
 
 function getCategoryForDomain(domain) {
   if (!domain) return null;
-  // Exact match first
   if (categoryAssignments.hasOwnProperty(domain)) {
-    // console.log(`[Debug] getCategory: Exact match found for ${domain}: ${categoryAssignments[domain]}`);
     return categoryAssignments[domain];
   }
-  // Wildcard matching
   const parts = domain.split('.');
   for (let i = 0; i < parts.length - 1; i++) {
     const parentDomain = parts.slice(i).join('.');
     const wildcardPattern = '*.' + parentDomain;
     if (categoryAssignments.hasOwnProperty(wildcardPattern)) {
-      // console.log(`[Debug] getCategory: Wildcard match found for ${domain} via ${wildcardPattern}: ${categoryAssignments[wildcardPattern]}`);
       return categoryAssignments[wildcardPattern];
     }
-    // Check non-wildcard parent (e.g., for "mail.google.com" check "google.com" if "*.google.com" wasn't found)
     if (i > 0 && categoryAssignments.hasOwnProperty(parentDomain)) {
-      // console.log(`[Debug] getCategory: Parent domain match found for ${domain} via ${parentDomain}: ${categoryAssignments[parentDomain]}`);
       return categoryAssignments[parentDomain];
     }
   }
-  // console.log(`[Debug] getCategory: No specific assignment found for ${domain}, returning default: ${defaultCategory}`);
   return defaultCategory;
 }
 
-// --- Update Time Tracking (Simpler Logic V3) ---
-function updateTime() {
-  console.log(
-    `[Debug updateTime V3] Called. currentTabUrl=<span class="math-inline">\{currentTabUrl\}, startTime\=</span>{startTime}, lastSavedTime=${lastSavedTime}`
-  );
-  // Only proceed if the timer is actually running (startTime is set)
-  if (currentTabUrl && startTime) {
-    const domain = getDomain(currentTabUrl);
-    if (domain) {
-      const now = Date.now(); // Use simple timestamp
-      // Calculate time since the last save OR since the timer started if no save yet
-      const previousTime = lastSavedTime || startTime;
-      const elapsedSeconds = Math.round((now - previousTime) / 1000);
+// --- Core Time Tracking Logic (State Machine driven by events/alarms) ---
 
+/**
+ * Determines the current intended tracking state based on browser status
+ * and updates the stored state in browser.storage.local.
+ * Calculates and saves time difference if the state changes from active to inactive
+ * or if the active domain changes.
+ * @param {string} [context="Unknown"] - Optional context for logging (e.g., "Alarm", "onActivated").
+ */
+async function updateTrackingState(context = 'Unknown') {
+  console.log(`[Debug updateTrackingState] Called from context: ${context}`); // LOG: Entry point
+  const now = Date.now();
+  let currentDomain = null;
+  let isActive = false; // Assume inactive initially
+  let finalDomainToRecord = null; // Domain for which time might be recorded
+
+  try {
+    // 1. Check Idle State
+    const idleState = await browser.idle.queryState(1800); // 30 minutes * 60 seconds/min
+    console.log(`[Debug updateTrackingState] Idle state: ${idleState}`); // LOG: Idle state result
+
+    // 2. Check Window Focus & Active Tab
+    let activeTab = null;
+    let focusedWindow = null;
+    let windowInfo = null; // Use this for logging later
+    try {
+      const windows = await browser.windows.getAll({ populate: true, windowTypes: ['normal'] });
+      focusedWindow = windows.find((w) => w.focused); // Assign to the outer scope variable
+
+      if (focusedWindow) {
+        windowInfo = { id: focusedWindow.id, focused: focusedWindow.focused }; // Log basic info
+        activeTab = focusedWindow.tabs.find((t) => t.active);
+      }
       console.log(
-        `[Debug updateTime V3] Domain=<span class="math-inline">\{domain\}, elapsedSeconds\=</span>{elapsedSeconds} (since ${previousTime})`
-      );
+        `[Debug updateTrackingState] Focused window: ${windowInfo ? windowInfo.id : 'None'}, Active tab: ${
+          activeTab ? activeTab.id : 'None'
+        }`
+      ); // LOG: Window/Tab result
+    } catch (browserApiError) {
+      console.error('[Debug updateTrackingState] Error accessing browser windows/tabs:', browserApiError);
+      // Keep isActive = false if we can't query state
+    }
 
-      if (elapsedSeconds > 0) {
-        const nowDate = new Date(now); // Create Date object only if needed for hour
-        const todayStr = getCurrentDateString();
-        const currentHourStr = nowDate.getHours().toString().padStart(2, '0');
-
-        // --- Ensure data structures exist ---
-        if (!dailyDomainData[todayStr]) dailyDomainData[todayStr] = {};
-        if (!dailyCategoryData[todayStr]) dailyCategoryData[todayStr] = {};
-        if (!hourlyData[todayStr]) hourlyData[todayStr] = {};
-        if (!hourlyData[todayStr][currentHourStr]) hourlyData[todayStr][currentHourStr] = 0;
-        // --- End Init Checks ---
-
-        // Log current values BEFORE incrementing (Optional Verbose Log)
-        // console.log(`[Debug updateTime V3] Before Inc: trackedData[<span class="math-inline">\{domain\}\]\=</span>{trackedData[domain]||0}, dailyDomain[<span class="math-inline">\{todayStr\}\]\[</span>{domain}]=<span class="math-inline">\{\(dailyDomainData\[todayStr\]\|\|\{\}\)\[domain\]\|\|0\}, hourly\[</span>{todayStr}][<span class="math-inline">\{currentHourStr\}\]\=</span>{(hourlyData[todayStr]||{})[currentHourStr]||0}`);
-
-        // --- Increment times ---
-        trackedData[domain] = (trackedData[domain] || 0) + elapsedSeconds;
-        dailyDomainData[todayStr][domain] = (dailyDomainData[todayStr][domain] || 0) + elapsedSeconds;
-        hourlyData[todayStr][currentHourStr] = (hourlyData[todayStr][currentHourStr] || 0) + elapsedSeconds;
-
-        // --- Category Tracking ---
-        const category = getCategoryForDomain(domain);
-        console.log(
-          `[Tracking V3] Domain: ${domain} -> Cat: ${
-            category || 'None'
-          } -> Hour: <span class="math-inline">\{currentHourStr\} \(\+</span>{elapsedSeconds}s)`
-        );
-        if (category) {
-          categoryTimeData[category] = (categoryTimeData[category] || 0) + elapsedSeconds;
-          dailyCategoryData[todayStr][category] = (dailyCategoryData[todayStr][category] || 0) + elapsedSeconds;
-        }
-
-        // Update lastSavedTime to NOW, but DO NOT reset startTime
-        lastSavedTime = now;
-        console.log(`[Debug updateTime V3] Updated lastSavedTime to ${lastSavedTime}. startTime remains ${startTime}`);
-        saveData(); // Save accumulated data
+    // 3. Determine Activity Status based on checks
+    if (idleState === 'active' && focusedWindow && activeTab) {
+      // Requires 'active', not 'idle' or 'locked'
+      const domain = getDomain(activeTab.url); // Call getDomain
+      console.log(`[Debug updateTrackingState] Domain from active tab URL (${activeTab.url}): ${domain}`); // LOG: Domain result
+      if (domain) {
+        isActive = true;
+        currentDomain = domain; // This is the domain if we are active NOW
       } else {
-        console.log('[Debug updateTime V3] elapsedSeconds was 0 or less, not saving time. lastSavedTime not updated.');
-        // If no time passed, no need to update lastSavedTime
+        // Active tab is not a trackable URL
+        console.log(`[Debug updateTrackingState] Domain is null, setting isActive=false.`);
+        isActive = false;
       }
     } else {
-      // Domain is null
-      console.log('[Debug updateTime V3] Domain was null, stopping timer.');
-      startTime = null;
-      lastSavedTime = null;
-    }
-  } else {
-    // Timer wasn't running
-    console.log('[Debug updateTime V3] currentTabUrl or startTime is null, timer is stopped or not started.');
-    // Ensure timer is marked as stopped if conditions aren't met
-    startTime = null;
-    lastSavedTime = null;
-  }
-}
-
-// --- Event Handlers for Tabs, Windows, Idle ---
-function handleTabActivation(activeInfo) {
-  console.log(`[Event handleTabActivation] Fired. Tab ID: ${activeInfo.tabId}, Window ID: ${activeInfo.windowId}`);
-  updateTime(); // Save time from previous tab first
-  // --- Stop previous timer state explicitly ---
-  currentTabUrl = null;
-  startTime = null;
-  lastSavedTime = null;
-  console.log('[Event handleTabActivation] Explicitly stopped timer state for previous tab.');
-  // --- Attempt to start timer for new tab ---
-  currentTabId = activeInfo.tabId;
-  browser.tabs
-    .get(currentTabId)
-    .then((tab) => {
-      if (!browser.runtime.lastError && tab && tab.active && tab.windowId !== browser.windows.WINDOW_ID_NONE) {
-        console.log(
-          `[Event handleTabActivation] Tab ${tab.id} confirmed active in window ${tab.windowId}. URL: ${tab.url}`
-        );
-        browser.windows
-          .get(tab.windowId)
-          .then((windowInfo) => {
-            if (!browser.runtime.lastError && windowInfo.focused) {
-              const newDomain = getDomain(tab.url);
-              if (newDomain) {
-                // Only start if the URL gives a valid domain
-                console.log(
-                  `[Event handleTabActivation] Window ${tab.windowId} IS focused. Starting timer for domain ${newDomain}.`
-                );
-                currentTabUrl = tab.url;
-                startTime = Date.now();
-                lastSavedTime = startTime; // Initialize lastSavedTime
-                console.log(
-                  `[Event handleTabActivation] NEW startTime = ${startTime}, NEW lastSavedTime = ${lastSavedTime}`
-                );
-              } else {
-                console.log(
-                  `[Event handleTabActivation] Window focused but URL ${tab.url} yields no domain. Timer not started.`
-                );
-              }
-            } else {
-              console.log(`[Event handleTabActivation] Window ${tab.windowId} is NOT focused. Timer remains stopped.`);
-            }
-          })
-          .catch((err) => {
-            console.error('[Event handleTabActivation] Error getting window info:', err);
-          });
-      } else {
-        console.log(
-          `[Event handleTabActivation] Tab ${tab ? tab.id : 'N/A'} is not active or invalid. Timer remains stopped.`
-        );
-      }
-    })
-    .catch((error) => {
-      console.error('[Event handleTabActivation] Error getting tab info:', error);
-    });
-}
-
-function handleTabUpdate(tabId, changeInfo, tab) {
-  console.log(`[Event handleTabUpdate] Fired. Tab ID: ${tabId}, Active: ${tab.active}, ChangeInfo:`, changeInfo);
-  // Only act if it's the currently tracked tab AND the tab is still reported as active
-  if (tabId === currentTabId && tab.active) {
-    if (changeInfo.url && changeInfo.url !== currentTabUrl) {
-      // Check if URL actually changed
-      console.log(`[Event handleTabUpdate] URL changed for active tab ${tabId}. New URL: ${changeInfo.url}`);
-      browser.windows
-        .get(tab.windowId)
-        .then((windowInfo) => {
-          if (!browser.runtime.lastError && windowInfo.focused) {
-            console.log(
-              `[Event handleTabUpdate] Window ${tab.windowId} focused. Saving old time, starting timer for new URL.`
-            );
-            updateTime(); // Save time for old URL
-            const newDomain = getDomain(changeInfo.url);
-            if (newDomain) {
-              currentTabUrl = changeInfo.url;
-              startTime = Date.now(); // Reset timer START
-              lastSavedTime = startTime; // Reset last saved time
-              console.log(
-                `[Event handleTabUpdate] NEW startTime = ${startTime}, NEW lastSavedTime = ${lastSavedTime} for domain ${newDomain}`
-              );
-            } else {
-              console.log(`[Event handleTabUpdate] New URL ${changeInfo.url} yields no domain. Stopping timer.`);
-              currentTabUrl = null;
-              startTime = null;
-              lastSavedTime = null;
-            }
-          } else {
-            console.log(`[Event handleTabUpdate] Window ${tab.windowId} NOT focused. Stopping timer.`);
-            updateTime(); // Save old time
-            currentTabUrl = null;
-            startTime = null;
-            lastSavedTime = null;
-          }
-        })
-        .catch((error) => {
-          console.error('[Event handleTabUpdate] Error getting window info:', error);
-          updateTime(); // Save old time
-          currentTabUrl = null;
-          startTime = null;
-          lastSavedTime = null;
-        });
-    } else if (changeInfo.status === 'loading') {
+      // Not active for other reasons
       console.log(
-        `[Event handleTabUpdate] Active tab ${tabId} started loading. Saving time for previous URL. Timer continuity depends on next URL.`
+        `[Debug updateTrackingState] Conditions not met for active state (idle=${idleState}, focused=${!!focusedWindow}, activeTab=${!!activeTab}). Setting isActive=false.`
       );
-      updateTime(); // Save time for the old URL state
-      // Important: DO NOT reset startTime or currentTabUrl here. Wait for the URL change event.
+      isActive = false;
     }
-  } else if (tabId === currentTabId && !tab.active) {
-    console.log(`[Event handleTabUpdate] Tracked tab ${tabId} became inactive. Stopping timer.`);
-    updateTime(); // Save time
-    currentTabUrl = null;
-    startTime = null;
-    lastSavedTime = null;
-  } else {
-    // console.log(`[Event handleTabUpdate] Update for non-current or already inactive tab ${tabId}. Ignoring timer.`);
+    console.log(
+      `[Debug updateTrackingState] Final isActive determination: ${isActive}, Current Domain (if active): ${currentDomain}`
+    ); // LOG: Final isActive
+
+    // 4. Get Previous Tracking State from Storage
+    const storageResult = await browser.storage.local.get(STORAGE_KEY_TRACKING_STATE);
+    const previousState = storageResult[STORAGE_KEY_TRACKING_STATE] || null; // { timestamp: number, domain: string } | null
+    console.log(`[Debug updateTrackingState] Previous tracking state from storage:`, previousState); // LOG: Previous state
+
+    // 5. Process State Change / Update Time
+    let elapsedSeconds = 0;
+    if (previousState) {
+      elapsedSeconds = Math.round((now - previousState.timestamp) / 1000);
+      finalDomainToRecord = previousState.domain; // The domain we *were* tracking
+      console.log(
+        `[Debug updateTrackingState] Calculated elapsed: ${elapsedSeconds}s for previous domain: ${finalDomainToRecord}`
+      ); // LOG: Elapsed time calc
+    }
+
+    if (isActive) {
+      console.log(`[Debug updateTrackingState] Branch: Currently Active (isActive=true)`); // LOG: Branch taken
+      // --- Currently Active ---
+      if (previousState) {
+        // --- Was Active Before ---
+        console.log(`[Debug updateTrackingState] Sub-Branch: Was Active Before (previousState exists)`);
+        if (elapsedSeconds > 0) {
+          // Record time for the domain we *were* on (previousState.domain)
+          console.log(
+            `[Debug updateTrackingState] Calling recordTime for ${finalDomainToRecord} with ${elapsedSeconds}s`
+          );
+          recordTime(finalDomainToRecord, elapsedSeconds);
+          await saveData(); // Save cumulative totals
+        } else {
+          console.log(`[Debug updateTrackingState] Elapsed seconds <= 0, not recording time.`);
+        }
+        // Update storage with current time and potentially new domain
+        const newState = { timestamp: now, domain: currentDomain };
+        console.log(`[Debug updateTrackingState] Setting NEW tracking state in storage:`, newState);
+        await browser.storage.local.set({ [STORAGE_KEY_TRACKING_STATE]: newState });
+      } else {
+        // --- Was Inactive Before ---
+        console.log(`[Debug updateTrackingState] Sub-Branch: Was Inactive Before (previousState is null)`);
+        // Start tracking the new domain
+        const newState = { timestamp: now, domain: currentDomain };
+        console.log(`[Debug updateTrackingState] Setting INITIAL tracking state in storage:`, newState);
+        await browser.storage.local.set({ [STORAGE_KEY_TRACKING_STATE]: newState });
+        // Log explicit start message only when transitioning from inactive
+        console.log(`[Tracking] State started. Now tracking: ${currentDomain} (Timestamp: ${now})`);
+      }
+    } else {
+      console.log(`[Debug updateTrackingState] Branch: Currently Inactive (isActive=false)`); // LOG: Branch taken
+      // --- Currently Inactive ---
+      if (previousState) {
+        // --- Was Active Before ---
+        console.log(`[Debug updateTrackingState] Sub-Branch: Was Active Before (previousState exists)`);
+        // Record final time chunk for the domain that *was* active
+        if (elapsedSeconds > 0) {
+          console.log(
+            `[Debug updateTrackingState] Calling recordTime for final chunk on ${finalDomainToRecord} with ${elapsedSeconds}s`
+          );
+          recordTime(finalDomainToRecord, elapsedSeconds);
+          await saveData(); // Save cumulative totals
+          // Log explicit stop message only when transitioning from active
+          console.log(`[Tracking] Recorded final ${elapsedSeconds}s for ${finalDomainToRecord} (became inactive)`);
+        } else {
+          console.log(`[Debug updateTrackingState] Elapsed seconds <= 0, not recording final time.`);
+        }
+        // Clear the tracking state from storage
+        console.log(`[Debug updateTrackingState] Removing tracking state from storage.`);
+        await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
+        // Log explicit stop message only when transitioning from active
+        console.log(`[Tracking] State stopped (became inactive).`);
+      } else {
+        // --- Was Inactive Before ---
+        console.log(
+          `[Debug updateTrackingState] Sub-Branch: Was Inactive Before (previousState is null) - Doing nothing.`
+        );
+        // Do nothing, already inactive. Double-check clarity.
+        const check = await browser.storage.local.get(STORAGE_KEY_TRACKING_STATE);
+        if (check[STORAGE_KEY_TRACKING_STATE]) {
+          console.warn('[Debug updateTrackingState] Found lingering tracking state while inactive. Clearing.');
+          await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
+        }
+      }
+    }
+    console.log(`[Debug updateTrackingState] Finished processing.`); // LOG: Exit point
+  } catch (error) {
+    console.error('[Debug updateTrackingState] Error during execution:', error);
+    // Attempt to clear tracking state on error to prevent inconsistent counts
+    try {
+      await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
+      console.error('[Tracking] Cleared tracking state due to error in updateTrackingState.');
+    } catch (clearError) {
+      console.error('Failed to clear tracking state during error handling:', clearError);
+    }
   }
 }
 
-function handleWindowFocusChange(windowId) {
-  console.log(`[Event handleWindowFocusChange] Fired. New Window ID: ${windowId}`);
-  if (windowId === browser.windows.WINDOW_ID_NONE) {
-    // Window lost focus
-    console.log('[Event handleWindowFocusChange] Browser lost focus. Stopping timer.');
-    updateTime(); // Save any pending time
-    currentTabUrl = null; // Mark as not tracking
-    startTime = null;
-    lastSavedTime = null;
-  } else {
-    // Window gained focus
-    console.log(`[Event handleWindowFocusChange] Browser gained focus on window ${windowId}. Querying active tab.`);
-    browser.tabs
-      .query({ active: true, windowId: windowId })
-      .then((tabs) => {
-        if (!browser.runtime.lastError && tabs.length > 0) {
-          // Check if this tab is different OR if the timer wasn't running
-          if (tabs[0].id !== currentTabId || !startTime) {
-            console.log(
-              `[Event handleWindowFocusChange] Active tab ${tabs[0].id} in focused window is new or timer was stopped. Activating...`
-            );
-            handleTabActivation({ tabId: tabs[0].id, windowId: windowId }); // Let activation handle starting timer
-          } else {
-            // --- MODIFICATION START ---
-            console.log(
-              `[Event handleWindowFocusChange] Active tab ${tabs[0].id} is the same and timer was running. Calling updateTime to record any pending duration.`
-            );
-            // Call updateTime immediately to capture time since last save before doing anything else.
-            updateTime();
-            // No need to manually reset lastSavedTime here, updateTime handles it.
-            console.log(`[Event handleWindowFocusChange] updateTime called. startTime remains ${startTime}`);
-            // --- MODIFICATION END ---
-          }
-        } else {
-          console.log('[Event handleWindowFocusChange] No active tab found in focused window? Stopping timer.');
-          updateTime(); // Save any pending time from previous state
-          currentTabUrl = null;
-          startTime = null;
-          lastSavedTime = null;
-        }
-      })
-      .catch((error) => {
-        console.error('[Event handleWindowFocusChange] Error querying tabs:', error);
-        currentTabUrl = null;
-        startTime = null;
-        lastSavedTime = null;
-      });
+/**
+ * Helper function to add elapsed seconds to the tracked data structures.
+ * @param {string} domain The domain to record time for.
+ * @param {number} seconds The number of seconds to add.
+ */
+function recordTime(domain, seconds) {
+  // console.log(`[Debug recordTime] Input: domain=${domain}, seconds=${seconds}`); // LOG: recordTime entry
+  if (!domain || seconds <= 0) {
+    console.warn(`[Debug recordTime] Invalid input, skipping.`);
+    return;
   }
+
+  const todayStr = getCurrentDateString();
+  const currentHourStr = new Date().getHours().toString().padStart(2, '0'); // Get hour when recording
+
+  // Ensure data structures exist
+  if (!dailyDomainData[todayStr]) dailyDomainData[todayStr] = {};
+  if (!dailyCategoryData[todayStr]) dailyCategoryData[todayStr] = {};
+  if (!hourlyData[todayStr]) hourlyData[todayStr] = {};
+  if (!hourlyData[todayStr][currentHourStr]) hourlyData[todayStr][currentHourStr] = 0;
+
+  // Increment times
+  // console.log(`[Debug recordTime] Before: trackedData[${domain}]=${trackedData[domain]||0}, dailyDomainData[${todayStr}][${domain}]=${(dailyDomainData[todayStr]||{})[domain]||0}`); // LOG: Before increment
+  trackedData[domain] = (trackedData[domain] || 0) + seconds;
+  dailyDomainData[todayStr][domain] = (dailyDomainData[todayStr][domain] || 0) + seconds;
+  hourlyData[todayStr][currentHourStr] = (hourlyData[todayStr][currentHourStr] || 0) + seconds;
+  // console.log(`[Debug recordTime] After: trackedData[${domain}]=${trackedData[domain]||0}, dailyDomainData[${todayStr}][${domain}]=${(dailyDomainData[todayStr]||{})[domain]||0}`); // LOG: After increment
+
+  // Category Tracking
+  const category = getCategoryForDomain(domain);
+  if (category) {
+    // console.log(`[Debug recordTime] Category: ${category}. Before: categoryTimeData[${category}]=${categoryTimeData[category]||0}, dailyCategoryData[${todayStr}][${category}]=${(dailyCategoryData[todayStr]||{})[category]||0}`); // LOG: Before category increment
+    categoryTimeData[category] = (categoryTimeData[category] || 0) + seconds;
+    dailyCategoryData[todayStr][category] = (dailyCategoryData[todayStr][category] || 0) + seconds;
+    // console.log(`[Debug recordTime] Category: ${category}. After: categoryTimeData[${category}]=${categoryTimeData[category]||0}, dailyCategoryData[${todayStr}][${category}]=${(dailyCategoryData[todayStr]||{})[category]||0}`); // LOG: After category increment
+  }
+  // console.log(`[Debug recordTime] Finished for domain ${domain}`); // LOG: recordTime exit
 }
 
-// Modified Idle Listener
-browser.idle.onStateChanged.addListener((newState) => {
-  console.log(`[Idle] State changed from ${idleState} to ${newState}`);
-  const oldState = idleState;
-  idleState = newState;
+// --- Event Handlers ---
 
-  if (newState === 'active' && oldState !== 'active') {
-    console.log('[Idle] State became active. Re-checking active tab/window focus.');
-    browser.tabs
-      .query({ active: true, currentWindow: true })
-      .then((tabs) => {
-        if (!browser.runtime.lastError && tabs.length > 0) {
-          browser.windows
-            .get(tabs[0].windowId)
-            .then((windowInfo) => {
-              if (!browser.runtime.lastError && windowInfo.focused) {
-                // Only restart timer if it was previously stopped (startTime is null)
-                if (!startTime) {
-                  console.log('[Idle] User active and window focused. Timer was stopped, calling handleTabActivation.');
-                  handleTabActivation({ tabId: tabs[0].id, windowId: tabs[0].windowId });
-                } else {
-                  // --- MODIFICATION START ---
-                  console.log(
-                    '[Idle] User active and window focused, and timer was already running. Calling updateTime to record any pending duration.'
-                  );
-                  // Call updateTime immediately to capture time since last save.
-                  updateTime();
-                  console.log(`[Idle] updateTime called. startTime remains ${startTime}`);
-                  // --- MODIFICATION END ---
-                }
-              } else {
-                console.log('[Idle] User active BUT window NOT focused. Timer remains stopped.');
-                // Ensure timer is marked stopped if window isn't focused
-                currentTabUrl = null;
-                startTime = null;
-                lastSavedTime = null;
-              }
-            })
-            .catch((err) => {
-              console.error('[Idle] Error checking window focus on becoming active:', err);
-              currentTabUrl = null;
-              startTime = null;
-              lastSavedTime = null;
-            });
-        } else {
-          console.log('[Idle] User active but no active tab found. Timer remains stopped.');
-          currentTabUrl = null;
-          startTime = null;
-          lastSavedTime = null;
+// Tabs: Activated (switching tabs)
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+  // console.log(`[Event] tabs.onActivated: Tab ${activeInfo.tabId}`); // Keep event logs less verbose if debug logs are detailed
+  await updateTrackingState('tabs.onActivated');
+});
+
+// Tabs: Updated (URL change, loading state)
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Only trigger if URL or status changes, as these affect trackability
+  if (changeInfo.url || changeInfo.status) {
+    // console.log(`[Event] tabs.onUpdated: Tab ${tabId}, Change: ${Object.keys(changeInfo).join(', ')}`);
+    // Check if the update is for the *currently active* tab in the *focused* window before calling updateTrackingState
+    try {
+      const windows = await browser.windows.getAll({ populate: true, windowTypes: ['normal'] });
+      const focusedWindow = windows.find((w) => w.focused);
+      if (focusedWindow) {
+        const activeTab = focusedWindow.tabs.find((t) => t.active);
+        if (activeTab && activeTab.id === tabId) {
+          await updateTrackingState('tabs.onUpdated (active tab)');
         }
-      })
-      .catch((error) => {
-        console.error('[Idle] Err query tabs on becoming active:', error);
-        currentTabUrl = null;
-        startTime = null;
-        lastSavedTime = null;
-      });
-  } else if (newState === 'locked') {
-    // Stop timer ONLY if the screen is locked
-    console.log('[Idle] Screen locked. Stopping timer.');
-    updateTime(); // Save any pending time before stopping
-    startTime = null;
-    lastSavedTime = null;
-  } else if (newState === 'idle') {
-    // User is idle, but screen isn't locked.
-    console.log('[Idle] Idle state detected, timer continues. Saving progress via updateTime.');
-    updateTime(); // Save potentially accumulated time, doesn't stop timer
+      }
+    } catch (e) {
+      console.error('[Event] tabs.onUpdated - Error checking active tab:', e);
+      // Don't necessarily call updateTrackingState on error here, wait for next alarm/event
+    }
   }
 });
 
-// Register event listeners
-browser.tabs.onActivated.addListener(handleTabActivation);
-browser.tabs.onUpdated.addListener(handleTabUpdate, { properties: ['status', 'url'] });
-browser.windows.onFocusChanged.addListener(handleWindowFocusChange);
+// Windows: Focus Changed (switching windows, minimizing/maximizing)
+browser.windows.onFocusChanged.addListener(async (windowId) => {
+  // console.log(`[Event] windows.onFocusChanged: Window ${windowId === browser.windows.WINDOW_ID_NONE ? 'NONE' : windowId}`);
+  await updateTrackingState('windows.onFocusChanged');
+});
 
-// --- Periodic Save Alarm ---
-browser.alarms.create('periodicSave', { periodInMinutes: 1 });
-browser.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'periodicSave') {
-    console.log('[Alarm periodicSave] Fired. Calling updateTime.');
-    updateTime(); // Calls updateTime to save progress if timer is running
+// Idle: State Changed (user active, idle, or locked)
+browser.idle.onStateChanged.addListener(async (newState) => {
+  // console.log(`[Event] idle.onStateChanged: ${newState}`);
+  await updateTrackingState('idle.onStateChanged');
+});
+
+// --- Periodic Save/Check Alarm ---
+const ALARM_NAME = 'periodicStateCheck';
+const ALARM_PERIOD_MINUTES = 0.25; // 15 seconds
+
+async function setupAlarm() {
+  try {
+    const alarm = await browser.alarms.get(ALARM_NAME);
+    if (!alarm) {
+      browser.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
+      console.log(`[Alarm] Created: ${ALARM_NAME}, Period: ${ALARM_PERIOD_MINUTES} min`);
+    } else {
+      console.log(`[Alarm] Already exists: ${ALARM_NAME}, Period: ${alarm.periodInMinutes} min`);
+      if (alarm.periodInMinutes !== ALARM_PERIOD_MINUTES) {
+        console.warn(`[Alarm] Period mismatch (${alarm.periodInMinutes}). Recreating.`);
+        await browser.alarms.clear(ALARM_NAME);
+        browser.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
+      }
+    }
+  } catch (error) {
+    console.error('[Alarm] Error setting up alarm:', error);
+  }
+}
+setupAlarm(); // Setup alarm on script start
+
+// Alarm listener
+browser.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === ALARM_NAME) {
+    // console.log(`[Alarm] ${ALARM_NAME} Fired.`); // Keep alarm log minimal
+    await updateTrackingState('Alarm');
   }
 });
 
-// --- Message Listener ---
+// --- Message Listener (for updates from options page) ---
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log(`[Message Listener] Received message: action=${request.action}`);
+  // console.log(`[Message Listener] Received message: action=${request.action}`); // Keep message log minimal
   if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {
-    console.log(`[System] Reloading data due to ${request.action} message.`);
-    loadData(); // Reload categories, assignments, and rules
-    sendResponse({ success: true, message: 'Data reloaded by background script.' });
-    return true; // Indicates asynchronous response is possible
+    console.log(`[System] Reloading config data due to ${request.action} message.`);
+    // Reload only config, not tracking data
+    loadData()
+      .then(() => {
+        sendResponse({ success: true, message: 'Config data reloaded by background script.' });
+      })
+      .catch((err) => {
+        console.error('Error reloading config data:', err);
+        sendResponse({ success: false, message: 'Error reloading config.' });
+      });
+    return true; // Indicates asynchronous response
   }
-  return false; // No asynchronous response for other messages
+  // Handle other potential messages if needed
+  return false;
 });
 
-// --- Blocking & Limiting Logic (Assume unchanged) ---
+// --- Blocking & Limiting Logic (Assumed unchanged, ensure it uses loaded data) ---
+// Make sure this logic correctly reads the up-to-date dailyDomainData and dailyCategoryData
 function urlMatchesPattern(url, pattern) {
   if (!url || !pattern) return false;
   const normalize = (u) => {
@@ -589,8 +530,12 @@ function urlMatchesPattern(url, pattern) {
     }
   };
   const normalizedUrlHost = normalize(url);
-  const normalizedPattern = normalize(pattern);
-  if (pattern.startsWith('*.')) {
+  const normalizedPattern = pattern
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '');
+
+  if (normalizedPattern.startsWith('*.')) {
     const basePattern = normalizedPattern.substring(2);
     return normalizedUrlHost === basePattern || normalizedUrlHost.endsWith('.' + basePattern);
   } else {
@@ -598,7 +543,6 @@ function urlMatchesPattern(url, pattern) {
   }
 }
 function formatTimeBlocking(seconds) {
-  /* Use a separate formatTime if needed, or reuse main one */
   if (seconds < 0) seconds = 0;
   if (seconds < 60) return `<1m`;
   const totalMinutes = Math.floor(seconds / 60);
@@ -607,6 +551,7 @@ function formatTimeBlocking(seconds) {
   let parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (remainingMinutes > 0) parts.push(`${remainingMinutes}m`);
+  if (parts.length === 0 && totalMinutes > 0) return `${totalMinutes}m`;
   if (parts.length === 0) return '<1m';
   return parts.join(' ');
 }
@@ -621,32 +566,31 @@ function handleBlockingRequest(requestDetails) {
 
   const requestedUrl = requestDetails.url;
   const requestedDomain = getDomain(requestedUrl);
-  let determinedCategory = null;
+  if (!requestedDomain) return {};
+
   const todayStr = getCurrentDateString();
   const todaysDomainData = dailyDomainData[todayStr] || {};
   const todaysCategoryData = dailyCategoryData[todayStr] || {};
   const blockPageBaseUrl = browser.runtime.getURL('blocked/blocked.html');
+  let determinedCategory = null;
 
-  console.log(
-    `\n[Request Handler START] URL: ${requestedUrl} (Domain: ${requestedDomain}). Checking ${rules.length} rules.`
-  );
-
-  // Check LIMIT rules
+  // Check LIMIT rules first
   for (const rule of rules) {
-    if (!rule.type.includes('limit-')) continue;
+    if (!rule.type || !rule.type.startsWith('limit-') || !rule.value) continue;
     let ruleMatches = false;
-    let timeSpentToday = -1;
-    let limitSeconds = rule.limitSeconds || 0;
+    let timeSpentToday = 0;
+    let limitSeconds = parseInt(rule.limitSeconds, 10) || 0;
     let targetValue = rule.value;
     if (limitSeconds <= 0) continue;
+
     try {
       if (rule.type === 'limit-url') {
-        if (requestedDomain && urlMatchesPattern(requestedUrl, targetValue)) {
+        if (urlMatchesPattern(requestedUrl, targetValue)) {
           ruleMatches = true;
           timeSpentToday = todaysDomainData[requestedDomain] || 0;
         }
       } else if (rule.type === 'limit-category') {
-        if (!determinedCategory && requestedDomain) determinedCategory = getCategoryForDomain(requestedDomain);
+        if (!determinedCategory) determinedCategory = getCategoryForDomain(requestedDomain);
         if (determinedCategory && determinedCategory === targetValue) {
           ruleMatches = true;
           timeSpentToday = todaysCategoryData[determinedCategory] || 0;
@@ -654,13 +598,8 @@ function handleBlockingRequest(requestDetails) {
       }
       if (ruleMatches) {
         const limitReached = timeSpentToday >= limitSeconds;
-        console.log(
-          `    [Limit Result] For <span class="math-inline">\{rule\.type\}\='</span>{targetValue}': Limit=<span class="math-inline">\{formatTimeBlocking\(
-limitSeconds
-\)\}, Spent\=</span>{formatTimeBlocking(timeSpentToday)}. Limit reached: ${limitReached}`
-        );
         if (limitReached) {
-          console.log(`    [!!! LIMIT ENFORCED !!!] Limit EXCEEDED. REDIRECTING.`);
+          console.log(`[Blocking] LIMIT enforced for ${rule.type}='${targetValue}'.`);
           const params = new URLSearchParams();
           params.append('url', requestedUrl);
           params.append('reason', 'limit');
@@ -668,47 +607,45 @@ limitSeconds
           params.append('value', targetValue);
           params.append('limit', limitSeconds.toString());
           params.append('spent', timeSpentToday.toString());
-          return { redirectUrl: `<span class="math-inline">\{blockPageBaseUrl\}?</span>{params.toString()}` };
+          return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
         }
       }
     } catch (e) {
-      console.error(`[Limit Check Error] Rule ${JSON.stringify(rule)} for URL ${requestedUrl}`, e);
+      console.error(`[Blocking] Limit Check Error: ${e}`);
     }
   }
-  // Check BLOCK rules
+
+  // Check BLOCK rules if no limit was hit
   for (const rule of rules) {
-    if (!rule.type.includes('block-')) continue;
+    if (!rule.type || !rule.type.startsWith('block-') || !rule.value) continue;
     let ruleMatches = false;
     let targetValue = rule.value;
     try {
       if (rule.type === 'block-url') {
         if (urlMatchesPattern(requestedUrl, targetValue)) ruleMatches = true;
       } else if (rule.type === 'block-category') {
-        if (!determinedCategory && requestedDomain) determinedCategory = getCategoryForDomain(requestedDomain);
+        if (!determinedCategory) determinedCategory = getCategoryForDomain(requestedDomain);
         if (determinedCategory && determinedCategory === targetValue) ruleMatches = true;
       }
       if (ruleMatches) {
-        console.log(
-          `    [!!! BLOCK ENFORCED !!!] Rule matched: <span class="math-inline">\{rule\.type\}\='</span>{targetValue}'. REDIRECTING.`
-        );
+        console.log(`[Blocking] BLOCK enforced for ${rule.type}='${targetValue}'.`);
         const params = new URLSearchParams();
         params.append('url', requestedUrl);
         params.append('reason', 'block');
         params.append('type', rule.type);
         params.append('value', targetValue);
-        return { redirectUrl: `<span class="math-inline">\{blockPageBaseUrl\}?</span>{params.toString()}` };
+        return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
       }
     } catch (e) {
-      console.error(`[Block Check Error] Rule ${JSON.stringify(rule)} for URL ${requestedUrl}`, e);
+      console.error(`[Blocking] Block Check Error: ${e}`);
     }
   }
-  console.log(`[Request Handler END] Allowing request for ${requestedUrl}`);
   return {};
 }
 
 // Register the blocking/limiting listener
 try {
-  if (browser.webRequest) {
+  if (browser.webRequest && browser.webRequest.onBeforeRequest) {
     browser.webRequest.onBeforeRequest.addListener(
       handleBlockingRequest,
       { urls: ['<all_urls>'], types: ['main_frame'] },
@@ -722,5 +659,5 @@ try {
   console.error('CRITICAL: Failed to register request listener.', error);
 }
 
-console.log('[System] Background script finished loading (v14 - DEBUG LOGGING - Simpler Timer Logic v3 - MODIFIED).');
+console.log('[System] Background script finished loading (v15.2 - Detailed Logging).');
 // --- End of background.js ---
