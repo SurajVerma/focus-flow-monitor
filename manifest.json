@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "FocusFlow Monitor",
-  "version": "0.6.2",
+  "version": "0.6.2.2",
   "description": "Tracks time, provides insights, allows blocking & limiting.",
   "permissions": ["tabs", "storage", "idle", "alarms", "webRequest", "webRequestBlocking", "<all_urls>"],
   "background": {
@@ -27,7 +27,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "focusflow-monitor@bleuflex.com",
-      "update_url": "https://github.com/SurajVerma/focus-flow-monitor/blob/main/updates.json"
+      "update_url": "https://raw.githubusercontent.com/SurajVerma/focus-flow-monitor/refs/heads/main/updates.json"
     }
   }
 }
