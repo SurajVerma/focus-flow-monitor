@@ -3,16 +3,16 @@
     "focusflow-monitor@bleuflex.com": {
       "updates": [
         {
-          "version": "0.6.1",
-          "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/v0.6.1/359e173d93d4421eb63d-0.6.1.xpi",
-          "update_hash": "sha256:3643CACECDD8595F7A8924CA7FB72A7611F3956013A4CB30E9A6D3A6E8F5E8C5",
-          "update_info_url": "https://github.com/SurajVerma/focus-flow-monitor/releases/tag/v0.6.1"
-        },
-        {
           "version": "0.6.2.2",
           "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/0.6.2.2/359e173d93d4421eb63d-0.6.2.2.xpi",
           "update_hash": "sha256:0AB67C970F6DD51B2A6C7FBB72F4197C7FE7332E44A14A3F7712BC38F9B812B5",
           "update_info_url": "https://github.com/SurajVerma/focus-flow-monitor/releases/tag/v0.6.2.2"
+        },
+        {
+          "version": "0.6.1",
+          "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/v0.6.1/359e173d93d4421eb63d-0.6.1.xpi",
+          "update_hash": "sha256:3643CACECDD8595F7A8924CA7FB72A7611F3956013A4CB30E9A6D3A6E8F5E8C5",
+          "update_info_url": "https://github.com/SurajVerma/focus-flow-monitor/releases/tag/v0.6.1"
         }
       ]
     }
