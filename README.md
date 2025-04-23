@@ -15,3 +15,4 @@ The app is under active development, so features may change over time.
 
 ![options](https://github.com/user-attachments/assets/e20c1095-3eca-4f6c-9b04-0ffa02e649e8)
 
+![image](https://github.com/user-attachments/assets/22586725-ef27-4240-8b21-85e32b7146be)
