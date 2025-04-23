@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/bleuflex/public_html/bleuflex.com/addons-updates
+    - export DEPLOYPATH=/home/bleuflex/public_html/bleuflex.com/addons-update
     - /bin/cp updates.json $DEPLOYPATH/
