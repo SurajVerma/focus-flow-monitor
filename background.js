@@ -1,20 +1,20 @@
-// background.js (v15.3 - Use Configurable Idle Threshold)
+// background.js (v15.4 - Clear Stale State on Startup)
 
-console.log('[System] Background script STARTING (v15.3 - Config Idle).');
+console.log('[System] Background script STARTING (v15.4 - Clear Stale State).');
 
 // --- Storage Keys ---
-const STORAGE_KEY_TRACKING_STATE = 'currentTrackingState'; // Stores { timestamp: number, domain: string } | null
-const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds'; // NEW Key
-const DEFAULT_IDLE_SECONDS = 1800; // Default 30 minutes (used if setting not found)
+const STORAGE_KEY_TRACKING_STATE = 'currentTrackingState';
+const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
+const DEFAULT_IDLE_SECONDS = 1800;
 
-// --- Core Data Variables (Loaded from storage) ---
+// --- Core Data Variables ---
 let trackedData = {};
 let categoryTimeData = {};
 let dailyDomainData = {};
 let dailyCategoryData = {};
 let hourlyData = {};
 
-// --- Configuration (Loaded from storage or JSON defaults) ---
+// --- Configuration ---
 let categories = ['Other'];
 let categoryAssignments = {};
 let rules = [];
@@ -29,11 +29,15 @@ function getCurrentDateString() {
   return `${year}-${month}-${day}`;
 }
 
-// --- Load stored data or fetch defaults ---
+// --- Load stored data or fetch defaults (MODIFIED) ---
 async function loadData() {
-  /* ... Same logic as v15.2, ensure it doesn't load the idle threshold key here unless needed for other init ... */
   console.log('[System] loadData started.');
   try {
+    // *** NEW: Clear any potentially stale tracking state first ***
+    await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
+    console.log('[System] Cleared potentially stale tracking state on startup.');
+
+    // Load all persistent data EXCEPT the tracking state
     const result = await browser.storage.local.get([
       'trackedData',
       'categoryTimeData',
@@ -43,8 +47,11 @@ async function loadData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
+      // Do NOT load STORAGE_KEY_IDLE_THRESHOLD here, background reads it when needed
     ]);
-    console.log('[System] Data loaded from storage:', result ? 'OK' : 'Empty/Error');
+    console.log('[System] Config/History Data loaded from storage:', result ? 'OK' : 'Empty/Error');
+
+    // --- Process loaded config/history data (same as v15.3) ---
     let needsSave = false;
     let defaults = null;
     const needDefaultCategories = !result.categories || result.categories.length === 0;
@@ -113,10 +120,15 @@ async function loadData() {
       console.log('[System] Saving initial/updated non-tracking state.');
       await saveData();
     }
-    await updateTrackingState('loadDataInit');
+    // --- End Processing loaded data ---
+
+    // Removed initial updateTrackingState call from here, let events/alarms handle it naturally after startup clear.
+    // await updateTrackingState("loadDataInit");
+
     console.log('[System] loadData finished.');
   } catch (error) {
     console.error('CRITICAL Error during loadData:', error);
+    // Reset state on critical load error
     trackedData = {};
     categoryTimeData = {};
     categories = ['Other'];
@@ -125,10 +137,11 @@ async function loadData() {
     dailyDomainData = {};
     dailyCategoryData = {};
     hourlyData = {};
+    // Attempt to clear tracking state as well
     try {
       await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
     } catch (clearError) {
-      console.error('Failed to clear tracking state during error handling:', clearError);
+      console.error('Failed to clear tracking state during loadData error handling:', clearError);
     }
   }
 }
@@ -189,56 +202,46 @@ function getCategoryForDomain(domain) {
   return defaultCategory;
 }
 
-// --- Core Time Tracking Logic (MODIFIED updateTrackingState) ---
+// --- Core Time Tracking Logic (Uses Idle Threshold) ---
 async function updateTrackingState(context = 'Unknown') {
-  // console.log(`[Debug updateTrackingState] Called from context: ${context}`); // Keep logging minimal now
   const now = Date.now();
   let currentDomain = null;
   let isActive = false;
   let finalDomainToRecord = null;
 
   try {
-    // *** 1. Get Idle Threshold Setting ***
-    let idleState = 'active'; // Assume active if check is skipped
-    let thresholdSeconds = DEFAULT_IDLE_SECONDS; // Default value
+    // 1. Get Idle Threshold Setting
+    let idleState = 'active';
+    let thresholdSeconds = DEFAULT_IDLE_SECONDS;
     try {
       const settings = await browser.storage.local.get(STORAGE_KEY_IDLE_THRESHOLD);
       const savedValue = settings[STORAGE_KEY_IDLE_THRESHOLD];
       if (savedValue !== undefined && savedValue !== null) {
-        thresholdSeconds = parseInt(savedValue, 10); // Ensure it's a number
+        thresholdSeconds = parseInt(savedValue, 10);
         if (isNaN(thresholdSeconds)) {
-          // Fallback if stored value is invalid
-          console.warn(`Invalid idle threshold found in storage (${savedValue}). Using default.`);
           thresholdSeconds = DEFAULT_IDLE_SECONDS;
         }
       }
-      // console.log(`[Idle Check] Using threshold: ${thresholdSeconds}s`); // Verbose log
     } catch (err) {
-      console.error('Error fetching idle threshold setting:', err);
-      // Use default if fetching fails
       thresholdSeconds = DEFAULT_IDLE_SECONDS;
+      console.error('Error fetching idle setting:', err);
     }
 
-    // *** 2. Check Idle State (Conditional) ***
+    // 2. Check Idle State (Conditional)
     if (thresholdSeconds === -1) {
-      // -1 means idle checking is disabled
-      idleState = 'active'; // Force active state
-      // console.log("[Idle Check] Skipped (disabled by setting).");
+      idleState = 'active';
     } else if (thresholdSeconds >= 1) {
-      // Only query if threshold is valid (>= 1 second)
       try {
         idleState = await browser.idle.queryState(thresholdSeconds);
       } catch (idleError) {
         console.error('Error querying idle state:', idleError);
-        idleState = 'active'; // Assume active on error? Or inactive? Let's assume active.
+        idleState = 'active';
       }
     } else {
-      console.warn(`Invalid idle threshold (${thresholdSeconds}s), assuming active.`);
-      idleState = 'active'; // Treat 0 or negative (other than -1) as active/disabled check
+      idleState = 'active';
     }
-    // console.log(`[Idle Check] Result: ${idleState}`);
 
-    // *** 3. Check Window Focus & Active Tab ***
+    // 3. Check Window Focus & Active Tab
     let activeTab = null;
     let focusedWindow = null;
     try {
@@ -249,28 +252,26 @@ async function updateTrackingState(context = 'Unknown') {
       }
     } catch (browserApiError) {
       console.error('Error accessing browser windows/tabs:', browserApiError);
-      // Keep isActive = false (default)
     }
 
-    // *** 4. Determine Activity Status ***
+    // 4. Determine Activity Status
     if (idleState === 'active' && focusedWindow && activeTab) {
       const domain = getDomain(activeTab.url);
       if (domain) {
         isActive = true;
         currentDomain = domain;
       } else {
-        isActive = false; // Not a trackable URL
+        isActive = false;
       }
     } else {
-      isActive = false; // Idle, locked, no focus, or no active tab
+      isActive = false;
     }
-    // console.log(`[State Check] isActive=${isActive}, currentDomain=${currentDomain}`);
 
-    // *** 5. Get Previous Tracking State ***
+    // 5. Get Previous Tracking State
     const storageResult = await browser.storage.local.get(STORAGE_KEY_TRACKING_STATE);
     const previousState = storageResult[STORAGE_KEY_TRACKING_STATE] || null;
 
-    // *** 6. Process State Change / Update Time ***
+    // 6. Process State Change / Update Time
     let elapsedSeconds = 0;
     if (previousState) {
       elapsedSeconds = Math.round((now - previousState.timestamp) / 1000);
@@ -278,41 +279,33 @@ async function updateTrackingState(context = 'Unknown') {
     }
 
     if (isActive) {
-      // --- Currently Active ---
+      // Active Now
       if (previousState) {
         // Was Active Before
         if (elapsedSeconds > 0) {
-          recordTime(finalDomainToRecord, elapsedSeconds); // Record for previous domain
+          recordTime(finalDomainToRecord, elapsedSeconds);
           await saveData();
         }
-        // Update storage with current time and potentially new domain
         const newState = { timestamp: now, domain: currentDomain };
         await browser.storage.local.set({ [STORAGE_KEY_TRACKING_STATE]: newState });
       } else {
-        // Was Inactive Before -> Start tracking
+        // Was Inactive Before -> Start
         const newState = { timestamp: now, domain: currentDomain };
         await browser.storage.local.set({ [STORAGE_KEY_TRACKING_STATE]: newState });
         console.log(`[Tracking] State started. Now tracking: ${currentDomain}`);
       }
     } else {
-      // --- Currently Inactive ---
+      // Inactive Now
       if (previousState) {
-        // Was Active Before -> Stop tracking
+        // Was Active Before -> Stop
         if (elapsedSeconds > 0) {
-          recordTime(finalDomainToRecord, elapsedSeconds); // Record final chunk
+          recordTime(finalDomainToRecord, elapsedSeconds);
           await saveData();
           console.log(`[Tracking] Recorded final ${elapsedSeconds}s for ${finalDomainToRecord}`);
         }
         await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
         console.log(`[Tracking] State stopped (became inactive).`);
-      } else {
-        // Was Inactive Before -> Still inactive (do nothing unless cleanup needed)
-        const check = await browser.storage.local.get(STORAGE_KEY_TRACKING_STATE);
-        if (check[STORAGE_KEY_TRACKING_STATE]) {
-          console.warn('[State Check] Found lingering tracking state while inactive. Clearing.');
-          await browser.storage.local.remove(STORAGE_KEY_TRACKING_STATE);
-        }
-      }
+      } // else: Was Inactive Before -> Still inactive (do nothing)
     }
   } catch (error) {
     console.error('Error in updateTrackingState:', error);
@@ -346,7 +339,7 @@ function recordTime(domain, seconds) {
   }
 }
 
-// --- Event Handlers ---
+// --- Event Handlers & Alarm (Unchanged) ---
 browser.tabs.onActivated.addListener(async (activeInfo) => {
   await updateTrackingState('tabs.onActivated');
 });
@@ -372,10 +365,8 @@ browser.windows.onFocusChanged.addListener(async (windowId) => {
 browser.idle.onStateChanged.addListener(async (newState) => {
   await updateTrackingState('idle.onStateChanged');
 });
-
-// --- Periodic Save/Check Alarm ---
 const ALARM_NAME = 'periodicStateCheck';
-const ALARM_PERIOD_MINUTES = 0.25; // 15 seconds
+const ALARM_PERIOD_MINUTES = 0.25;
 async function setupAlarm() {
   /* ... same ... */ try {
     const alarm = await browser.alarms.get(ALARM_NAME);
@@ -400,9 +391,9 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-// --- Message Listener (NO CHANGE NEEDED HERE for idle setting) ---
+// --- Message Listener ---
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {
+  /* ... same ... */ if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {
     console.log(`[System] Reloading config data due to ${request.action} message.`);
     loadData()
       .then(() => {
@@ -550,5 +541,5 @@ try {
   console.error('CRITICAL: Failed to register request listener.', error);
 }
 
-console.log('[System] Background script finished loading (v15.3 - Config Idle).');
+console.log('[System] Background script finished loading (v15.4 - Clear Stale State).');
 // --- End of background.js ---
