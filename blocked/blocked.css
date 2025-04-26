@@ -1,8 +1,42 @@
-/* blocked/blocked.css */
+/* blocked/blocked.css (v2 - Dark Mode Support) */
+:root {
+  --blocked-bg: #f8f9fa;
+  --blocked-card-bg: #ffffff;
+  --blocked-text-primary: #343a40;
+  --blocked-text-secondary: #495057;
+  --blocked-text-muted: #6c757d;
+  --blocked-icon-color: #dc3545; /* Red */
+  --blocked-heading-color: #dc3545; /* Red */
+  --blocked-button-bg: #007bff; /* Blue */
+  --blocked-button-hover-bg: #0056b3;
+  --blocked-button-text: #ffffff;
+  --blocked-strong-text: #007bff;
+  --blocked-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --blocked-focus-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --blocked-bg: #121212; /* Very dark */
+    --blocked-card-bg: #1e1e1e; /* Dark card */
+    --blocked-text-primary: #e0e0e0; /* Light text */
+    --blocked-text-secondary: #b0b0b0;
+    --blocked-text-muted: #888888;
+    --blocked-icon-color: #ff453a; /* Brighter Red */
+    --blocked-heading-color: #ff453a; /* Brighter Red */
+    --blocked-button-bg: #0a84ff; /* Brighter Blue */
+    --blocked-button-hover-bg: #339cff;
+    --blocked-button-text: #ffffff;
+    --blocked-strong-text: #0a84ff;
+    --blocked-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Darker shadow */
+    --blocked-focus-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4);
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f8f9fa;
-  color: #343a40;
+  background-color: var(--blocked-bg);
+  color: var(--blocked-text-primary);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -14,22 +48,23 @@ body {
 }
 
 .container {
-  background-color: #ffffff;
+  background-color: var(--blocked-card-bg);
   padding: 40px 50px;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--blocked-card-shadow);
   max-width: 500px;
   width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for dark mode */
 }
 
 .icon {
-  font-size: 4rem; /* Large warning icon */
-  color: #dc3545; /* Red color */
+  font-size: 4rem;
+  color: var(--blocked-icon-color);
   margin-bottom: 20px;
 }
 
 h1 {
-  color: #dc3545; /* Red color */
+  color: var(--blocked-heading-color);
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 1.8em;
@@ -39,23 +74,41 @@ h1 {
 p {
   font-size: 1.1em;
   line-height: 1.6;
-  color: #495057;
+  color: var(--blocked-text-secondary);
   margin-bottom: 30px;
 }
 
 p strong {
-  color: #007bff; /* Blue highlight for extension name */
+  color: var(--blocked-strong-text); /* Extension name highlight */
 }
 
 .details {
-  /* Style for optional details later */
   font-size: 0.9em;
-  color: #6c757d;
+  color: var(--blocked-text-muted);
+  text-align: left; /* Align details left */
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(128, 128, 128, 0.2); /* Subtle separator */
+}
+.details p {
+  margin-bottom: 8px; /* Less margin for detail lines */
+  font-size: 1em; /* Match details font size */
+  color: inherit; /* Inherit muted color */
+}
+.details p strong {
+  color: inherit; /* Details strong use muted color too */
+  font-weight: 600;
+}
+.details span {
+  /* The actual values */
+  font-weight: 500;
+  color: var(--blocked-text-primary); /* Make values stand out slightly */
+  word-break: break-all; /* Prevent long URLs/values overflowing */
 }
 
 button#goBackButton {
-  background-color: #007bff;
-  color: white;
+  background-color: var(--blocked-button-bg);
+  color: var(--blocked-button-text);
   border: none;
   padding: 12px 25px;
   border-radius: 5px;
@@ -63,13 +116,19 @@ button#goBackButton {
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-weight: 500;
+  margin-top: 20px; /* Add some space above button */
 }
 
 button#goBackButton:hover {
-  background-color: #0056b3;
+  background-color: var(--blocked-button-hover-bg);
 }
 
 button#goBackButton:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+  box-shadow: var(--blocked-focus-shadow);
+}
+button#goBackButton:disabled {
+  background-color: var(--blocked-text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
 }

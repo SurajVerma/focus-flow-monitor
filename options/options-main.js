@@ -1,0 +1,544 @@
+// options/options-main.js (v0.8.1 - Load Retention Setting) - Recalculation Fix
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[Options Main] DOMContentLoaded');
+  if (!queryUIElements()) {
+    console.error('Failed to initialize UI elements. Aborting setup.');
+    return;
+  }
+  try {
+    const defaultChartView = AppState.currentChartViewMode || 'domain';
+    const radioToCheck = document.querySelector(`input[name="chartView"][value="${defaultChartView}"]`);
+    if (radioToCheck) radioToCheck.checked = true;
+    else {
+      const fallback = document.querySelector('input[name="chartView"][value="domain"]');
+      if (fallback) fallback.checked = true;
+    }
+  } catch (e) {
+    console.error('Error setting initial chart view radio button:', e);
+  }
+  loadAllData();
+  setupEventListeners(); // Call setupEventListeners
+  console.log('Options Main script initialized (v0.8.1 - Recalculation Fix).');
+});
+
+// --- Data Loading ---
+function loadAllData() {
+  console.log('[Options Main] loadAllData starting...');
+  browser.storage.local
+    .get([
+      'trackedData',
+      'categoryTimeData',
+      'categories',
+      'categoryAssignments',
+      'rules',
+      'dailyDomainData',
+      'dailyCategoryData',
+      'hourlyData',
+      STORAGE_KEY_IDLE_THRESHOLD,
+      STORAGE_KEY_DATA_RETENTION_DAYS,
+    ])
+    .then((result) => {
+      console.log('[Options Main] Data loaded from storage.');
+      try {
+        // Update AppState
+        AppState.trackedData = result.trackedData || {};
+        AppState.categoryTimeData = result.categoryTimeData || {};
+        AppState.dailyDomainData = result.dailyDomainData || {};
+        AppState.dailyCategoryData = result.dailyCategoryData || {};
+        AppState.hourlyData = result.hourlyData || {};
+        AppState.categories = result.categories || ['Other'];
+        if (!AppState.categories.includes('Other')) AppState.categories.push('Other');
+        AppState.categoryAssignments = result.categoryAssignments || {};
+        AppState.rules = result.rules || [];
+
+        // Set idle threshold dropdown
+        const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
+        if (UIElements.idleThresholdSelect) {
+          UIElements.idleThresholdSelect.value =
+            savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
+        }
+
+        // Set data retention dropdown
+        const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
+        if (UIElements.dataRetentionSelect) {
+          UIElements.dataRetentionSelect.value =
+            savedRetentionDays !== undefined && savedRetentionDays !== null
+              ? savedRetentionDays
+              : DEFAULT_DATA_RETENTION_DAYS;
+          console.log(`[Options Main] Data retention loaded: ${UIElements.dataRetentionSelect.value} days`);
+        }
+
+        // Initial UI Population
+        populateCategoryList();
+        populateCategorySelect();
+        populateAssignmentList();
+        populateRuleCategorySelect();
+        populateRuleList();
+        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
+        updateDisplayForSelectedRangeUI();
+        highlightSelectedCalendarDay(AppState.selectedDateStr);
+      } catch (processingError) {
+        console.error('[Options Main] Error during data processing/UI update!', processingError);
+        if (UIElements.categoryTimeList) {
+          UIElements.categoryTimeList.replaceChildren();
+          const errorLi = document.createElement('li');
+          errorLi.textContent = 'Error loading data.';
+          UIElements.categoryTimeList.appendChild(errorLi);
+        }
+        if (UIElements.detailedTimeList) {
+          UIElements.detailedTimeList.replaceChildren();
+          const errorLi = document.createElement('li');
+          errorLi.textContent = 'Error loading data.';
+          UIElements.detailedTimeList.appendChild(errorLi);
+        }
+        clearChartOnError('Error processing data');
+      }
+    })
+    .catch((error) => {
+      console.error('[Options Main] storage.local.get FAILED!', error);
+      if (UIElements.categoryTimeList) {
+        UIElements.categoryTimeList.replaceChildren();
+        const errorLi = document.createElement('li');
+        errorLi.textContent = 'Failed to load data.';
+        UIElements.categoryTimeList.appendChild(errorLi);
+      }
+      if (UIElements.detailedTimeList) {
+        UIElements.detailedTimeList.replaceChildren();
+        const errorLi = document.createElement('li');
+        errorLi.textContent = 'Failed to load data.';
+        UIElements.detailedTimeList.appendChild(errorLi);
+      }
+      clearChartOnError('Failed to load data');
+    });
+}
+
+// --- UI Update Wrappers ---
+function updateDisplayForSelectedRangeUI() {
+  if (!UIElements.dateRangeSelect) {
+    console.warn('Date range select element not found.');
+    return;
+  }
+  const selectedRange = UIElements.dateRangeSelect.value;
+  const loader = document.getElementById('statsLoader');
+  const dashboard = document.querySelector('.stats-dashboard');
+
+  const showLoader = ['week', 'month', 'all'].includes(selectedRange);
+
+  if (showLoader && loader) {
+    loader.style.display = 'block';
+    if (dashboard) dashboard.style.visibility = 'hidden';
+  } else if (loader) {
+    loader.style.display = 'none';
+  }
+
+  setTimeout(() => {
+    try {
+      console.log(`[Options Main] Updating display for range: ${selectedRange}`);
+      const { domainData, categoryData, label } = getFilteredDataForRange(selectedRange);
+
+      if (UIElements.statsPeriodSpans) {
+        UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label));
+      }
+
+      AppState.fullDomainDataSorted = Object.entries(domainData)
+        .map(([d, t]) => ({ domain: d, time: t }))
+        .sort((a, b) => b.time - a.time);
+      AppState.domainCurrentPage = 1;
+
+      updateDomainDisplayAndPagination();
+      displayCategoryTime(categoryData);
+      renderChartForSelectedDateUI();
+
+      console.log(`[Options Main] Display updated for range: ${selectedRange}`);
+    } catch (e) {
+      console.error(`Error updating display for range ${selectedRange}:`, e);
+      if (UIElements.categoryTimeList) {
+        UIElements.categoryTimeList.replaceChildren();
+        const errorLi = document.createElement('li');
+        errorLi.textContent = `Error loading ${selectedRange} data.`;
+        UIElements.categoryTimeList.appendChild(errorLi);
+      }
+      if (UIElements.detailedTimeList) {
+        UIElements.detailedTimeList.replaceChildren();
+        const errorLi = document.createElement('li');
+        errorLi.textContent = `Error loading ${selectedRange} data.`;
+        UIElements.detailedTimeList.appendChild(errorLi);
+      }
+      clearChartOnError(`Error loading ${selectedRange} data`);
+    } finally {
+      if (loader) loader.style.display = 'none';
+      if (dashboard) dashboard.style.visibility = 'visible';
+    }
+  }, 10);
+}
+function updateDomainDisplayAndPagination() {
+  if (
+    !UIElements.detailedTimeList ||
+    !UIElements.domainPaginationDiv ||
+    !UIElements.domainPrevBtn ||
+    !UIElements.domainNextBtn ||
+    !UIElements.domainPageInfo
+  ) {
+    console.warn('Pagination or detailed list elements not found.');
+    return;
+  }
+  const totalItems = AppState.fullDomainDataSorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / AppState.domainItemsPerPage));
+  AppState.domainCurrentPage = Math.max(1, Math.min(AppState.domainCurrentPage, totalPages));
+
+  const startIndex = (AppState.domainCurrentPage - 1) * AppState.domainItemsPerPage;
+  const endIndex = startIndex + AppState.domainItemsPerPage;
+  const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex);
+
+  displayDomainTime(itemsToShow);
+
+  UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`;
+  UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1;
+  UIElements.domainNextBtn.disabled = AppState.domainCurrentPage >= totalPages;
+  UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+}
+function renderChartForSelectedDateUI() {
+  if (!AppState.selectedDateStr) {
+    clearChartOnError('Select a date from the calendar.');
+    return;
+  }
+  const data =
+    AppState.currentChartViewMode === 'domain'
+      ? AppState.dailyDomainData[AppState.selectedDateStr] || {}
+      : AppState.dailyCategoryData[AppState.selectedDateStr] || {};
+
+  const displayDate = formatDisplayDate(AppState.selectedDateStr);
+  renderChart(data, displayDate, AppState.currentChartViewMode);
+
+  if (UIElements.chartTitleElement) {
+    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
+  }
+}
+
+// --- Get Filtered Data ---
+function getFilteredDataForRange(range) {
+  let filteredDomainData = {};
+  let filteredCategoryData = {};
+  let periodLabel = 'All Time';
+  const today = new Date();
+
+  try {
+    if (range === 'today') {
+      const todayStr = formatDate(today);
+      filteredDomainData = AppState.dailyDomainData[todayStr] || {};
+      filteredCategoryData = AppState.dailyCategoryData[todayStr] || {};
+      periodLabel = 'Today';
+    } else if (range === 'week') {
+      periodLabel = 'This Week';
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr = formatDate(date);
+        const dF = AppState.dailyDomainData[dateStr];
+        if (dF) {
+          for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+        }
+        const cF = AppState.dailyCategoryData[dateStr];
+        if (cF) {
+          for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+        }
+      }
+    } else if (range === 'month') {
+      periodLabel = 'This Month';
+      const y = today.getFullYear();
+      const m = today.getMonth();
+      const dIM = today.getDate();
+      for (let day = 1; day <= dIM; day++) {
+        const date = new Date(y, m, day);
+        const dateStr = formatDate(date);
+        const dF = AppState.dailyDomainData[dateStr];
+        if (dF) {
+          for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+        }
+        const cF = AppState.dailyCategoryData[dateStr];
+        if (cF) {
+          for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+        }
+      }
+    } else {
+      // 'all'
+      // Note: AppState.trackedData/categoryTimeData are *loaded* but not necessarily
+      // recalculated in the options page itself after every assignment change unless triggered.
+      // For consistency, recalculate 'all time' from daily data IF daily data exists.
+      // If daily data is empty (e.g., user deleted it), fall back to stored totals.
+      if (Object.keys(AppState.dailyDomainData).length > 0) {
+        console.log("[Options Main] Recalculating 'All Time' from daily data for display.");
+        filteredDomainData = {};
+        filteredCategoryData = {};
+        for (const dateStr in AppState.dailyDomainData) {
+          const dF = AppState.dailyDomainData[dateStr];
+          if (dF) {
+            for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+          }
+        }
+        for (const dateStr in AppState.dailyCategoryData) {
+          const cF = AppState.dailyCategoryData[dateStr];
+          if (cF) {
+            for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+          }
+        }
+      } else {
+        console.warn("[Options Main] Daily data is empty, falling back to stored 'All Time' totals.");
+        filteredDomainData = AppState.trackedData || {};
+        filteredCategoryData = AppState.categoryTimeData || {};
+      }
+      periodLabel = 'All Time';
+    }
+  } catch (filterError) {
+    console.error(`Error filtering for range "${range}":`, filterError);
+    return { domainData: {}, categoryData: {}, label: `Error (${range})` };
+  }
+  return { domainData: filteredDomainData, categoryData: filteredCategoryData, label: periodLabel };
+}
+
+// --- Event Listener Setup ---
+function setupEventListeners() {
+  console.log('[Options Main] Setting up event listeners...');
+  try {
+    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
+    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.categoryList) {
+      UIElements.categoryList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
+        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
+        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
+        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
+      });
+    }
+    if (UIElements.assignmentList) {
+      UIElements.assignmentList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
+        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
+      });
+    }
+    if (UIElements.ruleList) {
+      UIElements.ruleList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
+        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
+      });
+    }
+    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
+    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
+    if (UIElements.dateRangeSelect)
+      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
+    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
+    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
+    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
+    if (UIElements.chartViewRadios) {
+      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
+    }
+    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+    // Rule Modal
+    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (UIElements.editRuleModal)
+      UIElements.editRuleModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
+      });
+    // Assignment Modal
+    if (UIElements.closeEditAssignmentModalBtn)
+      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.cancelEditAssignmentBtn)
+      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.saveAssignmentChangesBtn)
+      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
+    if (UIElements.editAssignmentModal)
+      UIElements.editAssignmentModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
+      });
+    // Settings
+    if (UIElements.idleThresholdSelect)
+      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
+    if (UIElements.dataRetentionSelect) {
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+    } else {
+      console.warn('Data retention select element not found, cannot add listener.');
+    }
+
+    handleRuleTypeChange(); // Initialize rule input display
+    console.log('[Options Main] Event listeners setup complete.');
+  } catch (e) {
+    console.error('[Options Main] Error setting up event listeners:', e);
+  }
+}
+
+// --- Data Saving Functions ---
+function saveCategoriesAndAssignments() {
+  return browser.storage.local
+    .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments })
+    .then(() => {
+      console.log('[Options Main] Categories/Assignments saved to storage.');
+      return browser.runtime.sendMessage({ action: 'categoriesUpdated' });
+    })
+    .then((response) =>
+      console.log('[Options Main] Background notified (categories):', response ? 'OK' : 'No response/Error')
+    )
+    .catch((error) => {
+      console.error('[Options Main] Error saving categories/assignments or notifying background:', error);
+      throw error;
+    });
+}
+function saveRules() {
+  return browser.storage.local
+    .set({ rules: AppState.rules })
+    .then(() => {
+      console.log('[Options Main] Rules saved to storage.');
+      return browser.runtime.sendMessage({ action: 'rulesUpdated' });
+    })
+    .then((response) =>
+      console.log('[Options Main] Background notified (rules):', response ? 'OK' : 'No response/Error')
+    )
+    .catch((error) => {
+      console.error('[Options Main] Error saving rules or notifying background:', error);
+      throw error;
+    });
+}
+
+// --- CSV Generation/Download ---
+function convertDataToCsv(dataObject) {
+  if (!dataObject) return '';
+  const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
+
+  const sortedData = Object.entries(dataObject)
+    .map(([d, s]) => ({ domain: d, seconds: s }))
+    .sort((a, b) => b.seconds - a.seconds);
+
+  // Helper function to get category (avoids calling background utils)
+  const getCategory = (domain) => {
+    // Direct match
+    if (AppState.categoryAssignments.hasOwnProperty(domain)) {
+      return AppState.categoryAssignments[domain];
+    }
+    // Wildcard match
+    const parts = domain.split('.');
+    for (let i = 1; i < parts.length; i++) {
+      const wildcardPattern = '*.' + parts.slice(i).join('.');
+      if (AppState.categoryAssignments.hasOwnProperty(wildcardPattern)) {
+        return AppState.categoryAssignments[wildcardPattern];
+      }
+    }
+    return 'Other'; // Default category
+  };
+
+  sortedData.forEach((item) => {
+    const category = getCategory(item.domain);
+    const timeHMS = formatTime(item.seconds, true, true); // from options-utils.js
+    const row = [item.domain, category, timeHMS, item.seconds];
+    csvString += row.map(escapeCsvValue).join(',') + '\n'; // from options-utils.js
+  });
+  return csvString;
+}
+function triggerCsvDownload(csvString, filename) {
+  try {
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log('CSV download triggered:', filename);
+    } else {
+      alert('CSV export might not be fully supported by your browser.');
+    }
+  } catch (e) {
+    console.error('Error triggering CSV download:', e);
+    alert('An error occurred while trying to export the data.');
+  }
+}
+
+// --- Recalculation Logic (REWRITTEN) ---
+async function recalculateAndUpdateCategoryTotals(changeDetails) {
+  console.log('[Options Main] REBUILDING category totals STARTING', changeDetails);
+  try {
+    // Fetch the most current domain data directly from storage within this function
+    // to ensure we're working with the latest persisted data.
+    const result = await browser.storage.local.get(['trackedData', 'dailyDomainData', 'categoryAssignments']);
+    const currentTrackedData = result.trackedData || {};
+    const currentDailyDomainData = result.dailyDomainData || {};
+    const currentAssignments = result.categoryAssignments || {}; // Use fetched assignments
+
+    // Helper function to get category using the current assignments
+    const getCategoryForDomain = (domain, assignments) => {
+      if (!domain) return 'Other';
+      if (assignments.hasOwnProperty(domain)) {
+        return assignments[domain];
+      }
+      const parts = domain.split('.');
+      for (let i = 1; i < parts.length; i++) {
+        const wildcardPattern = '*.' + parts.slice(i).join('.');
+        if (assignments.hasOwnProperty(wildcardPattern)) {
+          return assignments[wildcardPattern];
+        }
+      }
+      return 'Other';
+    };
+
+    // 1. Rebuild All-Time Category Totals (categoryTimeData)
+    const rebuiltCategoryTimeData = {};
+    for (const domain in currentTrackedData) {
+      const time = currentTrackedData[domain];
+      if (time > 0) {
+        const category = getCategoryForDomain(domain, currentAssignments);
+        rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
+      }
+    }
+
+    // 2. Rebuild Daily Category Totals (dailyCategoryData)
+    const rebuiltDailyCategoryData = {};
+    for (const date in currentDailyDomainData) {
+      rebuiltDailyCategoryData[date] = {};
+      const domainsForDate = currentDailyDomainData[date];
+      for (const domain in domainsForDate) {
+        const time = domainsForDate[domain];
+        if (time > 0) {
+          const category = getCategoryForDomain(domain, currentAssignments);
+          rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
+        }
+      }
+      // Clean up dates with no category data after rebuild
+      if (Object.keys(rebuiltDailyCategoryData[date]).length === 0) {
+        delete rebuiltDailyCategoryData[date];
+      }
+    }
+
+    // 3. Save the rebuilt data
+    console.log('[Recalc] Saving REBUILT category totals...');
+    await browser.storage.local.set({
+      categoryTimeData: rebuiltCategoryTimeData,
+      dailyCategoryData: rebuiltDailyCategoryData,
+    });
+
+    // 4. Update AppState with the newly saved data
+    AppState.categoryTimeData = rebuiltCategoryTimeData;
+    AppState.dailyCategoryData = rebuiltDailyCategoryData;
+    // AppState.trackedData and AppState.dailyDomainData were already up-to-date
+    // AppState.categoryAssignments was updated before calling this function
+
+    console.log('[Recalc] Category totals rebuilt and saved.');
+  } catch (error) {
+    console.error('[Options Main] Error during category recalculation (rebuild):', error);
+    alert('An error occurred while recalculating category totals.');
+    // Consider a full reload as a fallback
+    // loadAllData();
+  } finally {
+    console.log('[Options Main] REBUILDING category totals FINISHED');
+    // The UI update should happen *after* this function completes in the calling handler
+  }
+}
+
+console.log('[System] options-main.js loaded (v0.8.1 - Recalculation Fix)');

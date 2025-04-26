@@ -1,12 +1,43 @@
-/* popup/popup.css (v2 - New Layout) */
+/* popup/popup.css (v3 - Dark Mode Support) */
+:root {
+  --popup-bg: #f0f2f5;
+  --popup-text-primary: #1c1e21;
+  --popup-text-secondary: #606770;
+  --popup-text-muted: #8a8d91;
+  --popup-text-total: #1c1e21;
+  --popup-header-border: #e0e0e0;
+  --popup-header-button-bg: #e4e6eb;
+  --popup-header-button-hover-bg: #dcdde1;
+  --popup-progress-bg: #e4e6eb;
+  --popup-chart-placeholder: #aaa;
+  --popup-logo-filter: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --popup-bg: #1c1c1e;
+    --popup-text-primary: #f5f5f7;
+    --popup-text-secondary: #aeaeb2;
+    --popup-text-muted: #8d8d91;
+    --popup-text-total: #ffffff;
+    --popup-header-border: #3a3a3c;
+    --popup-header-button-bg: #3a3a3c;
+    --popup-header-button-hover-bg: #4a4a4c;
+    --popup-progress-bg: #3a3a3c;
+    --popup-chart-placeholder: #888;
+    --popup-logo-filter: brightness(0) invert(1); /* Make logo white */
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f0f2f5; /* Light background */
-  color: #1c1e21; /* Dark text */
-  min-width: 320px; /* Slightly wider */
+  background-color: var(--popup-bg);
+  color: var(--popup-text-primary);
+  min-width: 320px;
   max-width: 350px;
+  box-sizing: border-box;
 }
 
 .popup-container {
@@ -20,7 +51,7 @@ body {
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--popup-header-border);
 }
 
 .title-area {
@@ -30,18 +61,20 @@ body {
 }
 
 .logo {
-  width: 24px; /* Adjust size as needed */
+  width: 24px;
   height: 24px;
+  filter: var(--popup-logo-filter); /* Apply filter for dark mode */
 }
 
 .title-text {
   font-size: 1.1em;
   font-weight: 600;
-  color: #050505;
+  color: var(--popup-text-primary); /* Use variable */
 }
 
 .header-btn {
-  background-color: #e4e6eb;
+  background-color: var(--popup-header-button-bg);
+  color: var(--popup-text-primary); /* Use variable */
   border: none;
   border-radius: 6px;
   padding: 6px 10px;
@@ -51,11 +84,11 @@ body {
   transition: background-color 0.2s ease;
 }
 .header-btn:hover {
-  background-color: #dcdde1;
+  background-color: var(--popup-header-button-hover-bg);
 }
 
 .icon-btn {
-  font-size: 1.2em; /* Make cog bigger */
+  font-size: 1.2em;
   padding: 4px 6px;
   line-height: 1;
 }
@@ -68,62 +101,37 @@ body {
 
 .date-display {
   font-size: 0.85em;
-  color: #606770;
+  color: var(--popup-text-secondary);
   margin-bottom: 5px;
 }
 
 .total-time {
-  font-size: 2.1em; /* Prominent total time */
+  font-size: 2.1em;
   font-weight: 700;
-  color: #1c1e21;
+  color: var(--popup-text-total);
   margin-bottom: 15px;
 }
 
 .today-summary {
-  /* Placeholder - styles for category list later */
-  font-size: 0.9em;
-  color: #606770;
-}
-
-/* Progress Bar Placeholder Style */
-.progress-bar-container {
-  height: 10px;
-  background-color: #e4e6eb;
-  border-radius: 5px;
-  margin-top: 15px;
-  overflow: hidden; /* Clip segments */
-  display: flex; /* Will use flex for segments */
-}
-
-/* Optional: Remove default list styling if needed later */
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* Add to end of popup/popup.css */
-
-/* Category Summary List */
-.today-summary {
-  text-align: left; /* Align text to the left */
+  text-align: left;
   margin-top: 15px;
   font-size: 0.9em;
-  padding: 0 5px; /* Add some padding */
+  padding: 0 5px;
 }
 
+/* Category List in Summary */
 .category-item {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Push time/percent to the right */
-  margin-bottom: 8px; /* Space between items */
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 .category-info {
   display: flex;
   align-items: center;
-  flex-grow: 1; /* Allow category name to take space */
-  margin-right: 10px; /* Space before time/percent */
+  flex-grow: 1;
+  margin-right: 10px;
 }
 
 .category-dot {
@@ -132,77 +140,53 @@ ul {
   height: 10px;
   border-radius: 50%;
   margin-right: 8px;
-  flex-shrink: 0; /* Prevent dot from shrinking */
+  flex-shrink: 0;
 }
 
 .category-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #333;
+  color: var(--popup-text-primary); /* Use variable */
 }
 
 .category-time-percent {
-  white-space: nowrap; /* Keep time and percent together */
-  color: #606770;
-  flex-shrink: 0; /* Prevent time/percent from shrinking */
+  white-space: nowrap;
+  color: var(--popup-text-secondary);
+  flex-shrink: 0;
   font-size: 0.95em;
 }
 .category-percent {
   margin-left: 5px;
-  color: #8a8d91;
+  color: var(--popup-text-muted);
 }
 
 /* Progress Bar */
 .progress-bar-container {
-  height: 8px; /* Make it slightly thinner */
-  background-color: #e4e6eb;
-  border-radius: 4px; /* Match height */
+  height: 8px;
+  background-color: var(--popup-progress-bg);
+  border-radius: 4px;
   margin-top: 15px;
   overflow: hidden;
-  display: flex; /* Use flex for segments */
-  width: 100%; /* Take full width */
+  display: flex;
+  width: 100%;
 }
 
 .progress-bar-segment {
   height: 100%;
-  /* Transition for potential future updates */
-  /* transition: width 0.3s ease-in-out; */
 }
+/* Colors applied via inline style in JS */
 
-/* Default Segment Colors (can be overridden by JS) */
-.progress-bar-segment:nth-child(1) {
-  background-color: #36a2eb;
-} /* Blue */
-.progress-bar-segment:nth-child(2) {
-  background-color: #ff6384;
-} /* Red */
-.progress-bar-segment:nth-child(3) {
-  background-color: #ff9f40;
-} /* Orange */
-.progress-bar-segment:nth-child(4) {
-  background-color: #ffcd56;
-} /* Yellow */
-.progress-bar-segment:nth-child(5) {
-  background-color: #4bc0c0;
-} /* Teal */
-.progress-bar-segment:nth-child(6) {
-  background-color: #9966ff;
-} /* Purple */
-.progress-bar-segment:nth-child(7) {
-  background-color: #c9cbcf;
-} /* Grey */
-/* Add to end of popup/popup.css */
-
+/* Hourly Chart Section */
 .hourly-chart-section {
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--popup-header-border); /* Use same border color */
 }
 
 .hourly-chart-section h4 {
   font-size: 0.9em;
-  color: #606770;
+  color: var(--popup-text-secondary);
   margin-bottom: 10px;
   text-align: center;
   font-weight: 600;
@@ -210,14 +194,22 @@ ul {
 
 .chart-wrapper {
   position: relative;
-  height: 120px; /* Adjust height as needed */
-  width: 100%;
-}
-
-/* Optional: Style canvas directly if needed */
-#hourlyChartCanvas {
-  display: block;
-  box-sizing: border-box;
   height: 120px;
   width: 100%;
+  color: var(--popup-text-secondary); /* Hint for chart text color */
 }
+
+/* Chart placeholder text */
+.chart-wrapper canvas {
+  /* Ensure canvas inherits color for Chart.js text */
+  color: inherit;
+}
+.chart-wrapper p {
+  /* Style for error messages added via JS */
+  color: var(--popup-chart-placeholder);
+  font-size: small;
+  text-align: center;
+}
+
+/* Chart.js Tooltip Styling (Optional - requires JS config usually) */
+/* You might need Chart.js options to fully style tooltips for dark mode */
