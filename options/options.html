@@ -26,6 +26,20 @@
             are/am watching videos, They/I tend to do an interaction mostly in about 30 minutes.
           </p>
         </div>
+        <div class="form-group">
+          <label for="dataRetentionSelect">Keep tracking history for:</label>
+          <select id="dataRetentionSelect">
+            <option value="30">1 Month</option>
+            <option value="90" selected>3 Months (Default)</option>
+            <option value="180">6 Months</option>
+            <option value="365">1 Year</option>
+            <option value="-1">Forever</option>
+          </select>
+          <p class="setting-description">
+            Automatically delete daily tracking data older than the selected period. Setting a shorter duration can help
+            maintain performance over time. "Forever" keeps all data. (Pruning happens approximately once per day).
+          </p>
+        </div>
       </section>
       <h1>FocusFlow Monitor Settings & Stats</h1>
 
@@ -35,10 +49,10 @@
           <div>
             <label for="dateRangeSelect">Select Period:</label>
             <select id="dateRangeSelect">
-              <option value="today">Today</option>
+              <option value="today" selected>Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
-              <option value="all" selected>All Time</option>
+              <option value="all">All Time</option>
             </select>
           </div>
           <div><button id="exportCsvBtn" class="export-button">Export to CSV</button></div>
@@ -167,17 +181,14 @@
             <label>Type:</label>
             <span id="editRuleTypeDisplay"></span>
           </div>
-
           <div class="form-group" id="editRulePatternGroup">
             <label for="editRulePatternInput">Pattern/URL:</label>
             <input type="text" id="editRulePatternInput" />
           </div>
-
           <div class="form-group" id="editRuleCategoryGroup">
             <label for="editRuleCategorySelect">Category:</label>
             <select id="editRuleCategorySelect"></select>
           </div>
-
           <div class="form-group" id="editRuleLimitGroup">
             <label>Limit (per day):</label>
             <div class="time-limit-input">
@@ -195,7 +206,34 @@
         </div>
       </div>
     </div>
+
+    <div id="editAssignmentModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-button" id="closeEditAssignmentModalBtn">&times;</span>
+        <h3>Edit Assignment</h3>
+        <div id="editAssignmentFormContent">
+          <input type="hidden" id="editAssignmentOriginalDomain" />
+          <div class="form-group">
+            <label for="editAssignmentDomainInput">Domain Pattern:</label>
+            <input type="text" id="editAssignmentDomainInput" placeholder="e.g., google.com or *.example.com" />
+          </div>
+          <div class="form-group">
+            <label for="editAssignmentCategorySelect">Assign to Category:</label>
+            <select id="editAssignmentCategorySelect"></select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="saveAssignmentChangesBtn">Save Changes</button>
+          <button id="cancelEditAssignmentBtn" class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <script src="../libs/chart.umd.js"></script>
-    <script src="options.js"></script>
+    <script src="options-utils.js"></script>
+    <script src="options-state.js"></script>
+    <script src="options-ui.js"></script>
+    <script src="options-handlers.js"></script>
+    <script src="options-main.js"></script>
   </body>
 </html>

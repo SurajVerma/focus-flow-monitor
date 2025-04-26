@@ -1,83 +1,131 @@
-// blocked/blocked.js
+// blocked/blocked.js (v0.7.1 - Consolidated Utils)
 
-// Helper function to format time (similar to options.js)
-function formatTimeBlocked(seconds) {
+// --- Consolidated Helper Functions ---
+
+/**
+ * Formats seconds into a human-readable string (h, m, s).
+ * Consistent across popup, options, and blocked pages.
+ *
+ * @param {number} seconds - The total seconds to format.
+ * @param {boolean} [includeSeconds=true] - Whether to include seconds for times < 1 hour.
+ * @param {boolean} [forceHMS=false] - Whether to force HH:MM:SS format.
+ * @returns {string} Formatted time string. Returns '<1m' if seconds < 60 and includeSeconds is false. Returns '0s' for 0 seconds. Returns '--h --m' for negative input.
+ */
+function formatTime(seconds, includeSeconds = true, forceHMS = false) {
+  if (seconds === null || seconds === undefined || isNaN(seconds)) seconds = 0;
+
+  // Note: blocked page doesn't need the '--h --m' error case, default to 0s
   if (seconds < 0) seconds = 0;
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
+
+  if (forceHMS) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  if (seconds === 0) return '0s'; // Explicit 0s
+
+  // Handle '<1m' case specifically for blocked page display where seconds might be omitted
+  if (seconds < 60 && !includeSeconds) return '<1m';
+
+  const totalMinutes = Math.floor(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+  const remainingSeconds = Math.floor(seconds % 60);
   let parts = [];
+
   if (hours > 0) parts.push(`${hours}h`);
   if (remainingMinutes > 0) parts.push(`${remainingMinutes}m`);
-  if (hours === 0 && remainingSeconds > 0) parts.push(`${remainingSeconds}s`); // Show seconds if under 1h
-  if (parts.length === 0) return '0s'; // Handle 0 case
-  return parts.join(' ');
+
+  // Include seconds only if:
+  // 1) includeSeconds is true AND duration is less than 1 hour
+  // OR
+  // 2) It's the only unit left (i.e., duration is < 1 minute)
+  if ((includeSeconds && hours === 0) || (hours === 0 && remainingMinutes === 0)) {
+    if (remainingSeconds > 0) {
+      parts.push(`${remainingSeconds}s`);
+    }
+  }
+  // Handle cases like 60s showing as '1m' if includeSeconds is false.
+  if (parts.length === 0) {
+    if (totalMinutes > 0) {
+      parts.push(`${totalMinutes}m`);
+    } else if (remainingSeconds > 0) {
+      parts.push(`${remainingSeconds}s`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' ') : '0s'; // Default to '0s'
 }
+// --- END Consolidated ---
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Block page loaded');
   const params = new URLSearchParams(window.location.search);
 
-  const reason = params.get('reason'); // "limit" or "block"
-  const type = params.get('type'); // e.g., "limit-url", "block-category"
-  const value = params.get('value'); // e.g., "reddit.com", "Social Media"
-  const url = params.get('url'); // The specific URL that was blocked
-  const limit = params.get('limit'); // Limit in seconds (if reason=limit)
-  const spent = params.get('spent'); // Spent time in seconds (if reason=limit)
+  const reason = params.get('reason') || 'unknown';
+  const type = params.get('type') || 'unknown';
+  const value = params.get('value') || 'N/A';
+  const url = params.get('url') || 'N/A';
+  const limit = params.get('limit');
+  const spent = params.get('spent');
 
-  // Get elements to display info
   const urlEl = document.getElementById('display-url');
   const reasonEl = document.getElementById('display-reason');
   const ruleEl = document.getElementById('display-rule');
   const limitInfoEl = document.getElementById('limit-info');
   const spentEl = document.getElementById('display-spent');
   const limitEl = document.getElementById('display-limit');
+  const goBackButton = document.getElementById('goBackButton');
 
-  if (urlEl) {
-    urlEl.textContent = url || 'N/A';
-  }
+  if (urlEl) urlEl.textContent = url;
 
-  let reasonText = 'Permanent Block';
-  let ruleText = '';
+  let reasonText = 'Access Blocked';
+  let ruleText = 'Unknown Rule';
 
   if (reason === 'limit') {
     reasonText = 'Daily Time Limit Reached';
-    if (limitInfoEl && spentEl && limitEl && limit && spent) {
-      spentEl.textContent = formatTimeBlocked(parseInt(spent, 10));
-      limitEl.textContent = formatTimeBlocked(parseInt(limit, 10));
-      limitInfoEl.style.display = 'block'; // Show the time info
+    if (limitInfoEl && spentEl && limitEl && limit !== null && spent !== null) {
+      const limitSec = parseInt(limit, 10);
+      const spentSec = parseInt(spent, 10);
+      if (!isNaN(limitSec) && !isNaN(spentSec)) {
+        // *** Use consolidated formatTime ***
+        spentEl.textContent = formatTime(spentSec, false); // Don't show seconds
+        limitEl.textContent = formatTime(limitSec, false); // Don't show seconds
+        limitInfoEl.style.display = 'block';
+      } else {
+        limitInfoEl.style.display = 'none';
+      }
+    } else if (limitInfoEl) {
+      limitInfoEl.style.display = 'none';
     }
   }
 
-  if (type && value) {
+  if (type !== 'unknown' && value !== 'N/A') {
     if (type.includes('-url')) {
-      ruleText = `URL pattern "${value}"`;
+      ruleText = `URL Pattern: "${value}"`;
     } else if (type.includes('-category')) {
-      ruleText = `Category "${value}"`;
+      ruleText = `Category: "${value}"`;
     } else {
-      ruleText = `Unknown rule type "${type}"`;
+      ruleText = `Rule Type: "${type}"`;
     }
-  } else {
-    ruleText = 'Unknown rule';
   }
 
-  if (reasonEl) {
-    reasonEl.textContent = reasonText;
-  }
-  if (ruleEl) {
-    ruleEl.textContent = ruleText;
-  }
+  if (reasonEl) reasonEl.textContent = reasonText;
+  if (ruleEl) ruleEl.textContent = ruleText;
 
-  // Button functionality
-  const goBackButton = document.getElementById('goBackButton');
   if (goBackButton) {
     goBackButton.addEventListener('click', () => {
-      history.back();
+      if (history.length > 1) {
+        history.back();
+      } else {
+        goBackButton.textContent = 'Cannot Go Back';
+        goBackButton.disabled = true;
+      }
     });
   } else {
-    console.error('Go back button not found');
+    console.error('[Blocked Page] Go back button not found');
   }
 });

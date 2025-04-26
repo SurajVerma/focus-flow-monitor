@@ -1,246 +1,517 @@
-/* options.css - Revert Selection Style, Allow Time Wrapping */
+/* options.css (v0.8.0 - Modern Styling Refresh) */
+
+/* --- Base & Variables --- */
+:root {
+  --bg-page: #f7f8fc; /* Lighter page background */
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+  --bg-alternate-row: #f8f9fa;
+  --bg-hover-row: #eef2f7;
+  --bg-selected-row: #e9f5ff; /* Calendar selected */
+  --bg-button-primary: #007bff;
+  --bg-button-primary-hover: #0056b3;
+  --bg-button-secondary: #6c757d;
+  --bg-button-secondary-hover: #5a6268;
+  --bg-button-success: #28a745;
+  --bg-button-success-hover: #218838;
+  --bg-button-danger: #dc3545;
+  --bg-button-danger-hover: #c82333;
+  --bg-button-warning: #ffc107;
+  --bg-button-warning-hover: #e0a800;
+  --bg-button-info: #17a2b8;
+  --bg-button-info-hover: #138496;
+  --bg-button-disabled: #cccccc;
+
+  --text-color-primary: #212529; /* Darker primary text */
+  --text-color-secondary: #495057; /* Slightly lighter secondary */
+  --text-color-muted: #6c757d;
+  --text-color-heading: #343a40;
+  --text-color-button: #ffffff;
+  --text-color-warning-button: #212529;
+  --text-color-link: var(--bg-button-primary);
+  --text-color-disabled: #666666;
+
+  --border-color-light: #e9ecef; /* Lighter border */
+  --border-color-medium: #dee2e6;
+  --border-color-input: #ced4da;
+  --border-color-input-focus: #80bdff;
+  --border-color-selected: var(--bg-button-primary);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-focus: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+
+  --border-radius: 0.3rem; /* Slightly larger radius */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+
+  --font-family-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --font-size-base: 1rem; /* Typically 16px */
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.125rem;
+  --line-height-base: 1.6;
+}
+
 body {
-  font-family: sans-serif;
-  padding: 20px;
-  background-color: #f4f7f6;
-  color: #333;
-  line-height: 1.5;
+  font-family: var(--font-family-sans-serif);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  background-color: var(--bg-page);
+  color: var(--text-color-primary);
+  padding: var(--spacing-xl);
+  margin: 0;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  background-color: #ffffff;
-  padding: 20px 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: transparent; /* Container is just for max-width now */
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-/* Headings, Sections, HR - unchanged */
+/* --- Section Card Styling --- */
+section {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-color-light);
+}
+
+/* Headings */
 h1 {
   text-align: center;
-  color: #0056b3;
-  margin-bottom: 30px;
+  color: var(--text-color-heading);
+  margin-bottom: var(--spacing-xxl);
+  font-size: 1.8rem;
+  font-weight: 500;
 }
 h2 {
-  color: #007bff;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 5px;
-  margin-top: 30px;
-  margin-bottom: 15px;
+  color: var(--text-color-heading);
+  border-bottom: 1px solid var(--border-color-medium);
+  padding-bottom: var(--spacing-md);
+  margin-top: 0; /* Remove top margin as section provides padding */
+  margin-bottom: var(--spacing-lg); /* More space after H2 */
+  font-size: 1.4rem;
+  font-weight: 500;
 }
 h3 {
-  margin-top: 15px;
-  margin-bottom: 10px;
-  color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-  font-size: 1.1em;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  color: var(--text-color-heading);
+  border-bottom: none; /* Remove border, use spacing */
+  padding-bottom: 0;
+  font-size: 1.15rem; /* Slightly larger */
+  font-weight: 500;
 }
 h4 {
-  margin-top: 15px;
-  margin-bottom: 5px;
-  color: #555;
-  font-size: 0.9em;
-}
-section {
-  margin-bottom: 20px;
-}
-hr {
-  border: 0;
-  height: 1px;
-  background-color: #ddd;
-  margin: 40px 0;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-color-secondary);
+  font-size: 0.95rem; /* Slightly larger */
+  font-weight: 500;
 }
 
-/* --- Settings Section Styles (unchanged) --- */
+hr {
+  display: none; /* Remove HR, use section margins */
+}
+
+/* --- General Form Styles --- */
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
 .form-inline {
   display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
+  align-items: center; /* Align items vertically */
+}
+.form-inline label {
+  margin-bottom: 0; /* Remove bottom margin for inline labels */
+}
+label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  font-size: var(--font-size-sm);
+}
+input[type='text'],
+input[type='number'],
+select {
+  display: block;
+  width: 100%; /* Inputs take full width by default */
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  line-height: var(--line-height-base);
+  color: var(--text-color-primary);
+  background-color: var(--bg-input);
+  background-clip: padding-box;
+  border: 1px solid var(--border-color-input);
+  border-radius: var(--border-radius);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box; /* Include padding in width */
+}
+input[type='text']:focus,
+input[type='number']:focus,
+select:focus {
+  color: var(--text-color-primary);
+  background-color: var(--bg-input-focus);
+  border-color: var(--border-color-input-focus);
+  outline: 0;
+  box-shadow: var(--shadow-focus);
 }
 .form-inline input[type='text'],
 .form-inline select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
   flex-grow: 1;
+  width: auto; /* Allow shrinking in flex */
 }
 .form-inline select {
   min-width: 150px;
 }
 .form-inline button {
-  padding: 8px 15px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  flex-shrink: 0; /* Prevent button shrinking */
+}
+
+/* Buttons */
+button {
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  border-radius: var(--border-radius);
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
 }
-.form-inline button:hover {
-  background-color: #218838;
+button:focus {
+  outline: 0;
+  box-shadow: var(--shadow-focus);
 }
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+button:not(:disabled):active {
+  filter: brightness(95%);
+}
+
+/* Button Variants */
+.form-inline button,
+button#addCategoryBtn,
+button#assignDomainBtn,
+button#addRuleBtn,
+button#saveRuleChangesBtn,
+button#saveAssignmentChangesBtn {
+  background-color: var(--bg-button-primary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-primary);
+}
+.form-inline button:hover,
+button#addCategoryBtn:hover,
+button#assignDomainBtn:hover,
+button#addRuleBtn:hover,
+button#saveRuleChangesBtn:hover,
+button#saveAssignmentChangesBtn:hover {
+  background-color: var(--bg-button-primary-hover);
+  border-color: var(--bg-button-primary-hover);
+}
+
+button.delete-btn {
+  background-color: var(--bg-button-danger);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-danger);
+  padding: 3px 8px;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-sm);
+}
+button.delete-btn:hover {
+  background-color: var(--bg-button-danger-hover);
+  border-color: var(--bg-button-danger-hover);
+}
+button.edit-btn {
+  background-color: var(--bg-button-warning);
+  color: var(--text-color-warning-button);
+  border-color: var(--bg-button-warning);
+  padding: 3px 8px;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
+button.edit-btn:hover {
+  background-color: var(--bg-button-warning-hover);
+  border-color: var(--bg-button-warning-hover);
+}
+button.save-btn {
+  background-color: var(--bg-button-success);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-success);
+  padding: 3px 8px;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
+button.save-btn:hover {
+  background-color: var(--bg-button-success-hover);
+  border-color: var(--bg-button-success-hover);
+}
+button.cancel-btn {
+  background-color: var(--bg-button-secondary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-secondary);
+  padding: 3px 8px;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
+button.cancel-btn:hover {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--bg-button-secondary-hover);
+}
+
+button.export-button {
+  background-color: var(--bg-button-info);
+  color: white;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+button.export-button:hover {
+  background-color: var(--bg-button-info-hover);
+}
+
+.pagination-controls button {
+  background-color: var(--bg-button-primary);
+  color: white;
+  font-size: var(--font-size-sm);
+  padding: 5px 12px;
+}
+.pagination-controls button:hover:not(:disabled) {
+  background-color: var(--bg-button-primary-hover);
+}
+.pagination-controls button:disabled {
+  background-color: var(--bg-button-disabled);
+  color: var(--text-color-disabled);
+}
+
+/* --- List Styles --- */
 #categoryList,
 #assignmentList,
-#ruleList {
+#ruleList,
+.stats-list-container ul {
   list-style: none;
-  padding: 5px;
-  margin: 5px 0 0 0;
-  max-height: 200px;
+  padding: 0;
+  margin: var(--spacing-sm) 0 0 0;
+  max-height: 200px; /* Keep scroll for long lists */
   overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  border: 1px solid var(--border-color-medium);
+  border-radius: var(--border-radius);
 }
+
 #categoryList li,
 #assignmentList li,
-#ruleList li {
+#ruleList li,
+#detailedTimeList li,
+#categoryTimeList li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  border-bottom: 1px dashed #eee;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: none; /* Remove dashed border */
+  transition: background-color 0.15s ease-in-out;
+  font-size: var(--font-size-sm); /* Slightly smaller font in lists */
 }
-#categoryList li:last-child,
-#assignmentList li:last-child,
-#ruleList li:last-child {
-  border-bottom: none;
+
+/* Zebra Striping */
+#categoryList li:nth-child(even),
+#assignmentList li:nth-child(even),
+#ruleList li:nth-child(even),
+#detailedTimeList li:nth-child(even),
+#categoryTimeList li:nth-child(even) {
+  background-color: var(--bg-alternate-row);
 }
-button.delete-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 0.8em;
-  cursor: pointer;
-  margin-left: 10px;
-  transition: background-color 0.2s ease;
+
+/* Hover effect */
+#categoryList li:hover,
+#assignmentList li:hover,
+#ruleList li:hover,
+#detailedTimeList li:hover,
+#categoryTimeList li:hover {
+  background-color: var(--bg-hover-row);
+}
+
+/* List specific content styling */
+.category-list-item .category-name-display {
+  flex-grow: 1;
+  margin-right: var(--spacing-md);
+}
+.category-list-item .category-edit-input {
+  flex-grow: 1;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 0.9em;
+  margin-right: var(--spacing-md);
+  display: none;
+}
+.category-list-item .category-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+  min-width: 120px;
+  justify-content: flex-end;
+}
+.assignment-list-item .assignment-domain {
+  font-weight: 500; /* slightly bolder */
+  color: var(--text-color-primary);
+  margin-right: var(--spacing-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 1;
 }
-button.delete-btn:hover {
-  background-color: #c82333;
+.assignment-list-item .assignment-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
-#assignmentList .assignment-domain {
-  font-weight: bold;
-  color: #0056b3;
-  margin-right: 10px;
-}
-#assignmentList .assignment-category {
-  color: #555;
+.assignment-list-item .assignment-category {
+  color: var(--text-color-secondary);
   background-color: #e9ecef;
   padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
+  border-radius: var(--border-radius);
+  font-size: 0.85em;
+  margin-right: var(--spacing-xs);
 }
+#ruleList li .rule-info {
+  flex-grow: 1;
+  margin-right: var(--spacing-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-sm);
+}
+#ruleList li .rule-info .rule-type {
+  font-weight: 500;
+  margin-right: var(--spacing-xs);
+}
+#ruleList li .rule-info .rule-target {
+  font-style: italic;
+  margin-right: var(--spacing-xs);
+  color: var(--text-color-secondary);
+}
+#ruleList li .rule-info .rule-limit {
+  color: var(--accent-color-green);
+}
+#ruleList li .rule-info .rule-blocked {
+  color: var(--accent-color-red);
+  font-weight: 500;
+}
+#detailedTimeList li .domain,
+#categoryTimeList li .category-name {
+  color: var(--text-color-secondary);
+  margin-right: var(--spacing-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+#categoryTimeList li .category-name {
+  font-weight: 500;
+}
+#detailedTimeList li .time,
+#categoryTimeList li .time {
+  color: var(--text-color-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+/* --- Add Rule Form --- */
 .add-rule-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 5px;
-  margin-bottom: 15px;
-}
-.add-rule-form button {
-  background-color: #007bff;
-  flex-grow: 0;
-}
-.add-rule-form button:hover {
-  background-color: #0056b3;
+  padding: var(--spacing-md);
+  background-color: var(--bg-alternate-row);
+  border: 1px solid var(--border-color-light);
 }
 .time-limit-input {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--spacing-xs);
   flex-grow: 2;
 }
 .time-limit-input input[type='number'] {
   width: 70px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
 }
 .time-limit-input select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
 }
 .time-limit-input span {
   white-space: nowrap;
-  color: #495057;
-}
-#ruleList .rule-info {
-  flex-grow: 1;
-  margin-right: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-#ruleList .rule-info .rule-type {
-  font-weight: bold;
-  margin-right: 5px;
-}
-#ruleList .rule-info .rule-target {
-  color: #333;
-  font-style: italic;
-  margin-right: 5px;
-}
-#ruleList .rule-info .rule-limit {
-  color: #28a745;
-  font-size: 0.9em;
-}
-#ruleList .rule-info .rule-blocked {
-  color: #dc3545;
-  font-size: 0.9em;
-  font-weight: bold;
-}
-#ruleList button.delete-btn {
-  background-color: #6c757d;
-}
-#ruleList button.delete-btn:hover {
-  background-color: #5a6268;
+  color: var(--text-color-secondary);
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
 }
 
-/* --- Statistics Section Styles --- */
-#stats-display-section {
-}
+/* --- Statistics Section --- */
 .stats-controls {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+.stats-controls > div {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 .stats-dashboard {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
-  margin-top: 10px;
-  align-items: stretch;
+  gap: var(--spacing-xl);
+  margin-top: var(--spacing-sm);
+  align-items: flex-start; /* Align tops */
 }
-
-/* Columns */
 .calendar-column {
-  flex: 0 0 400px;
+  flex: 1 1 400px; /* Allow shrinking but prefer 400px */
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+.chart-column {
+  flex: 1 1 500px; /* Allow shrinking but prefer 500px */
   min-width: 350px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
-.chart-column {
-  flex: 1 1 auto;
-  min-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Containers within columns */
+/* Use cards for stats containers */
 .calendar-container,
 .stats-list-container {
-  border: 1px solid #eee;
-  border-radius: 5px;
-  padding: 15px;
-  background-color: #fff;
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-card);
 }
 .calendar-container {
   position: relative;
@@ -252,40 +523,39 @@ button.delete-btn:hover {
 }
 .stats-list-container h3 {
   margin-top: 0;
+  margin-bottom: var(--spacing-md);
   flex-shrink: 0;
 }
 .stats-list-container ul {
   margin: 0;
-  padding: 0 5px 0 0;
+  padding: 0;
   list-style: none;
   overflow-y: auto;
   flex-grow: 1;
   max-height: 250px;
-}
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color-light);
+} /* Add border */
 
 /* --- Calendar Styles --- */
 .calendar-header-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color-light);
 }
 .calendar-header-controls button {
   padding: 3px 8px;
   font-size: 0.85em;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  background-color: var(--bg-button-secondary);
 }
 .calendar-header-controls button:hover {
-  background-color: #5a6268;
+  background-color: var(--bg-button-secondary-hover);
 }
 #currentMonthYear {
-  font-weight: bold;
+  font-weight: 500;
   font-size: 1.1em;
 }
 .calendar-grid {
@@ -294,88 +564,80 @@ button.delete-btn:hover {
   gap: 4px;
 }
 .calendar-day-header {
-  font-weight: bold;
+  font-weight: 500;
   text-align: center;
   font-size: 0.8em;
-  color: #6c757d;
-  padding-bottom: 5px;
+  color: var(--text-color-muted);
+  padding-bottom: var(--spacing-xs);
 }
-
 .calendar-day {
-  border: 1px solid #eee;
-  min-height: 65px; /* Increased height slightly for wrapping */
-  padding: 4px; /* Adjusted padding back */
-  font-size: 0.75em;
+  border: 1px solid var(--border-color-light);
+  min-height: 65px;
+  padding: var(--spacing-xs);
+  font-size: 0.8rem; /* Slightly larger */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  /* overflow: hidden; --- REMOVED to allow wrapping */
+  border-radius: 2px;
 }
 .calendar-day:hover {
   background-color: #e9f5ff;
   border-color: #cce7ff;
 }
 .calendar-day.empty {
-  background-color: #f9f9f9;
-  border: 1px solid #f9f9f9;
+  background-color: var(--bg-alternate-row);
+  border-color: var(--bg-alternate-row);
   cursor: default;
 }
 .calendar-day.today {
-  border-color: #007bff;
+  border-color: var(--accent-color-blue);
+  background-color: #f0f8ff;
 }
 .calendar-day.today .day-number {
   font-weight: bold;
-  color: #fff;
-  background-color: #007bff;
+  color: white;
+  background-color: var(--accent-color-blue);
   border-radius: 50%;
-  width: 1.5em;
-  height: 1.5em;
-  line-height: 1.5em;
+  width: 1.6em;
+  height: 1.6em;
+  line-height: 1.6em;
   text-align: center;
   display: inline-block;
   align-self: flex-end;
-  margin: 0; /* Reset margin if needed */
-} /* Adjusted margin */
-
+  margin: 0;
+}
 .day-number {
   text-align: right;
-  font-size: 1em;
-  color: #666;
+  font-size: 0.9em;
+  color: var(--text-color-secondary);
   align-self: flex-end;
 }
-
 .day-time {
-  font-weight: bold;
-  font-size: 0.9em; /* Slightly smaller font */
+  font-weight: 500;
+  font-size: 0.85em;
   text-align: center;
-  margin-top: 3px;
+  margin-top: var(--spacing-xs);
   align-self: center;
   width: 100%;
-  line-height: 1.2; /* Add line height for wrapping */
-  /* REMOVED: white-space: nowrap; */
-  /* REMOVED: overflow: hidden; */
-  /* REMOVED: text-overflow: ellipsis; */
-  word-wrap: break-word; /* Allow breaking long words if needed, though unlikely */
+  line-height: 1.3;
+  word-wrap: break-word;
+  color: var(--text-color-primary);
 }
 .day-time.no-data {
-  color: #ccc;
-  font-weight: normal;
+  color: #bbb;
+  font-weight: 400;
 }
-
-/* REVERTED Selected Style */
 .calendar-day.selected {
-  border: 1px solid #007bff; /* Use the original border highlight */
-  background-color: #e9f5ff; /* Keep a light background */
+  border: 2px solid var(--border-color-selected);
+  background-color: var(--bg-selected-row);
+  padding: 3px;
 }
-/* (Keep hover style separate or combine if desired) */
 .calendar-day.selected:hover {
   background-color: #cce7ff;
 }
-
-/* Calendar Detail Popup (Unchanged) */
 .calendar-detail-popup {
   position: absolute;
   background-color: white;
@@ -393,7 +655,7 @@ button.delete-btn:hover {
   display: block;
   margin-bottom: 5px;
   font-size: 1.1em;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color-light);
   padding-bottom: 3px;
 }
 .calendar-detail-popup ul {
@@ -408,118 +670,194 @@ button.delete-btn:hover {
   text-overflow: ellipsis;
 }
 
-/* Chart Styles (Unchanged) */
+/* --- Chart Styles --- */
 .chart-column h3 {
   text-align: center;
   margin-top: 0;
-  font-size: 1.1em;
+  margin-bottom: var(--spacing-md);
+  font-size: 1.15rem;
+  font-weight: 500;
 }
 .chart-wrapper {
   position: relative;
   height: 400px;
   width: 100%;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 5px;
-  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: var(--shadow-card);
 }
 #timeChartCanvas {
   max-width: 100%;
   max-height: 100%;
 }
 .chart-view-controls {
-  margin-bottom: 15px;
+  margin-bottom: var(--spacing-lg);
   text-align: center;
-  padding: 5px;
-  background-color: #f8f9fa;
-  border-radius: 5px;
+  padding: var(--spacing-sm);
+  background-color: var(--bg-alternate-row);
+  border-radius: var(--border-radius);
 }
 .chart-view-controls label {
-  margin: 0 10px;
+  margin: 0 var(--spacing-md);
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: var(--font-size-sm);
 }
 
-/* Detailed Lists Styles (Unchanged) */
-#detailedTimeList li,
-#categoryTimeList li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px 8px 5px;
-  border-bottom: 1px dashed #eee;
-  font-size: 0.9em;
-}
-#detailedTimeList li:last-child,
-#categoryTimeList li:last-child {
-  border-bottom: none;
-}
-#detailedTimeList .domain,
-#categoryTimeList .category-name {
-  color: #555;
-  margin-right: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1;
-}
-#categoryTimeList .category-name {
-  font-weight: bold;
-}
-#detailedTimeList .time,
-#categoryTimeList .time {
-  color: #333;
-  font-weight: bold;
-  white-space: nowrap;
-  background-color: #e9ecef;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-  flex-shrink: 0;
-}
-
-/* Pagination (Unchanged) */
+/* --- Pagination --- */
 .pagination-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-top: 15px;
-  padding: 10px 0;
-  border-top: 1px solid #eee;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md) 0;
+  border-top: 1px solid var(--border-color-light);
   flex-wrap: wrap;
 }
-.pagination-controls button {
-  padding: 5px 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 0.9em;
-}
-.pagination-controls button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-.pagination-controls button:disabled {
-  background-color: #cccccc;
-  color: #666666;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
 #domainPageInfo {
-  font-size: 0.9em;
-  color: #555;
-  font-weight: bold;
+  font-size: var(--font-size-sm);
+  color: var(--text-color-secondary);
+  font-weight: 500;
   white-space: nowrap;
 }
 
-/* Responsive adjustments (Unchanged) */
+/* --- Modal Styles --- */
+.modal {
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5); /* Darker overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: var(--spacing-xl);
+  border: none;
+  width: 90%;
+  max-width: 500px;
+  border-radius: var(--border-radius);
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-color-heading);
+  text-align: center;
+  border: none;
+  font-weight: 500;
+}
+.close-button {
+  color: #aaa;
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-md);
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1;
+}
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+#editRuleFormContent .form-group,
+#editAssignmentFormContent .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+#editRuleFormContent label,
+#editAssignmentFormContent label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  font-size: var(--font-size-sm);
+}
+#editRuleFormContent input[type='text'],
+#editRuleFormContent select,
+#editRuleFormContent input[type='number'],
+#editAssignmentFormContent input[type='text'],
+#editAssignmentFormContent select {
+  /* Styles inherited */
+}
+#editRuleFormContent span#editRuleTypeDisplay {
+  font-style: italic;
+  color: var(--text-color-primary);
+}
+#editRuleLimitGroup .time-limit-input {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+#editRuleLimitGroup .time-limit-input input[type='number'] {
+  width: 80px;
+  flex-grow: 0;
+}
+#editRuleLimitGroup .time-limit-input select {
+  width: auto;
+  flex-grow: 1;
+}
+.modal-actions {
+  margin-top: var(--spacing-xl);
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+.modal-actions button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+}
+.modal-actions button#saveRuleChangesBtn,
+.modal-actions button#saveAssignmentChangesBtn {
+  background-color: var(--bg-button-success);
+}
+.modal-actions button#saveRuleChangesBtn:hover,
+.modal-actions button#saveAssignmentChangesBtn:hover {
+  background-color: var(--bg-button-success-hover);
+}
+
+/* --- Tracking Settings Section --- */
+#tracking-settings-section .form-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-sm);
+}
+#tracking-settings-section label {
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+  margin-bottom: 0;
+  font-size: var(--font-size-base); /* Match input size */
+}
+#tracking-settings-section select {
+  min-width: 180px;
+  flex-grow: 1;
+  max-width: 300px;
+}
+.setting-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin: var(--spacing-xs) 0 0 0;
+  flex-basis: 100%;
+  font-style: italic;
+}
+
+/* --- Responsive adjustments --- */
 @media (max-width: 900px) {
   .stats-dashboard {
     flex-direction: column;
@@ -531,22 +869,30 @@ button.delete-btn:hover {
     min-width: 0;
   }
   .chart-wrapper {
-    height: 300px;
-  }
+    height: 350px;
+  } /* Slightly taller */
 }
 @media (max-width: 768px) {
-  .container {
-    padding: 15px;
-    max-width: 100%;
+  body {
+    padding: var(--spacing-lg);
   }
+  .container {
+    padding: 0;
+  } /* No padding on container */
   h1 {
-    font-size: 1.5em;
+    font-size: 1.6rem;
+    margin-bottom: var(--spacing-xl);
   }
   h2 {
-    font-size: 1.3em;
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-md);
   }
   h3 {
-    font-size: 1.1em;
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-sm);
+  }
+  section {
+    padding: var(--spacing-md);
   }
   .form-inline {
     flex-direction: column;
@@ -566,214 +912,186 @@ button.delete-btn:hover {
     width: auto;
   }
   .calendar-day {
-    min-height: 50px;
-    font-size: 0.7em;
+    min-height: 55px;
+    font-size: 0.75rem;
   }
   .day-time {
-    font-size: 0.85em;
-  } /* Adjusted slightly */
+    font-size: 0.8rem;
+  }
+  .category-list-item,
+  .assignment-list-item,
+  #ruleList li {
+    flex-wrap: wrap;
+    padding: var(--spacing-sm);
+  }
+  .category-controls,
+  .assignment-controls,
+  #ruleList li > div:last-child {
+    min-width: unset;
+    justify-content: flex-start;
+    margin-top: var(--spacing-sm);
+    width: 100%;
+  }
+  #assignmentList .assignment-domain {
+    margin-right: 0;
+    margin-bottom: var(--spacing-xs);
+    display: block; /* Make domain take full width */
+  }
 }
 
-/* Style for Edit Button (next to delete) */
-#ruleList button.edit-btn {
-  background-color: #ffc107; /* Yellow/Amber for edit */
-  color: #212529; /* Dark text for contrast */
-  border: none;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 0.8em;
-  cursor: pointer;
-  margin-left: 5px; /* Space between edit and delete */
-  transition: background-color 0.2s ease;
-  white-space: nowrap;
-}
+/* --- Dark Mode --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Theme Variable Overrides */
+    --bg-page: #1c1c1e; /* Very dark grey/off-black */
+    --bg-card: #2c2c2e; /* Dark grey for cards */
+    --bg-input: #3a3a3c; /* Slightly lighter input background */
+    --bg-input-focus: #4a4a4c;
+    --bg-alternate-row: #2a2a2c; /* Slightly darker than card */
+    --bg-hover-row: #38383a;
+    --bg-selected-row: #004080; /* Darker blue for selected */
 
-#ruleList button.edit-btn:hover {
-  background-color: #e0a800;
-}
+    --bg-button-primary: #0a84ff; /* Brighter blue for dark mode */
+    --bg-button-primary-hover: #339cff;
+    --bg-button-secondary: #8e8e93; /* Lighter grey */
+    --bg-button-secondary-hover: #a0a0a5;
+    --bg-button-success: #30d158; /* Brighter green */
+    --bg-button-success-hover: #5ae07c;
+    --bg-button-danger: #ff453a; /* Brighter red */
+    --bg-button-danger-hover: #ff6f66;
+    --bg-button-warning: #ffd60a; /* Brighter yellow */
+    --bg-button-warning-hover: #ffe14f;
+    --bg-button-info: #64d2ff; /* Brighter teal */
+    --bg-button-info-hover: #82dfff;
+    --bg-button-disabled: #555;
 
-/* --- Modal Styles --- */
-.modal {
-  position: fixed; /* Stay in place */
-  z-index: 100; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
-  display: flex; /* Use flexbox for centering */
-  align-items: center;
-  justify-content: center;
-}
+    --text-color-primary: #f2f2f7; /* Light text */
+    --text-color-secondary: #c7c7cc; /* Slightly dimmer light text */
+    --text-color-muted: #8e8e93;
+    --text-color-heading: #ffffff; /* Pure white for headings */
+    --text-color-button: #ffffff; /* Keep most button text white */
+    --text-color-warning-button: #1c1c1e; /* Dark text on yellow button */
+    --text-color-link: var(--bg-button-primary);
+    --text-color-disabled: #999;
 
-.modal-content {
-  background-color: #fefefe;
-  margin: auto; /* Auto margin helps centering */
-  padding: 25px;
-  border: 1px solid #888;
-  width: 80%; /* Could be more specific */
-  max-width: 500px; /* Max width */
-  border-radius: 8px;
-  position: relative;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
+    --border-color-light: #3a3a3c; /* Dark borders */
+    --border-color-medium: #4a4a4c;
+    --border-color-input: #545456;
+    --border-color-input-focus: #0a84ff;
+    --border-color-selected: var(--bg-button-primary);
 
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #007bff;
-  text-align: center;
-  border: none; /* Remove border from modal heading */
-}
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1); /* Slightly more pronounced? */
+    --shadow-focus: 0 0 0 0.2rem rgba(10, 132, 255, 0.35); /* Focus based on primary button */
+  }
 
-/* Close Button */
-.close-button {
-  color: #aaa;
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 28px;
-  font-weight: bold;
-}
+  /* Adjust specific elements if needed */
+  #categoryTimeList li .category-name,
+  #detailedTimeList li .time,
+  #categoryTimeList li .time,
+  #assignmentList .assignment-category {
+    background-color: #48484a; /* Darker background for tags */
+    color: var(--text-color-primary);
+  }
 
-.close-button:hover,
-.close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
+  /* Chart.js dark mode text color (often respects inherited color) */
+  .chart-wrapper,
+  #timeChartCanvas {
+    color: var(--text-color-secondary); /* Hint for chart text color */
+  }
+  /* Calendar day hover/select */
+  .calendar-day:hover {
+    background-color: #3a3a3c;
+    border-color: #555;
+  }
+  .calendar-day.selected {
+    border-color: var(--border-color-selected);
+    background-color: #004080;
+  }
+  .calendar-day.selected:hover {
+    background-color: #0050a0;
+  }
+  .calendar-day.today {
+    border-color: var(--bg-button-primary);
+    background-color: rgba(10, 132, 255, 0.1);
+  }
+  .calendar-day.today .day-number {
+    background-color: var(--bg-button-primary);
+    color: white;
+  }
+  .calendar-detail-popup {
+    background-color: #3a3a3c;
+    border-color: #555;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  }
+  .calendar-detail-popup strong {
+    border-color: #555;
+  }
 
-/* Modal Form Styling */
-#editRuleFormContent .form-group {
-  margin-bottom: 15px;
+  /* Modal content */
+  .modal-content {
+    background-color: var(--bg-card);
+    border-color: var(--border-color-medium);
+  }
+  .modal-content h3 {
+    color: var(--bg-button-primary);
+  }
+  .close-button {
+    color: #aaa;
+  }
+  .close-button:hover {
+    color: var(--text-color-primary);
+  }
+  #editRuleFormContent label,
+  #editAssignmentFormContent label {
+    color: var(--text-color-secondary);
+  }
+  #editRuleFormContent span#editRuleTypeDisplay {
+    color: var(--text-color-primary);
+  }
 }
-#editRuleFormContent label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #555;
-}
-#editRuleFormContent input[type='text'],
-#editRuleFormContent select,
-#editRuleFormContent input[type='number'] {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box; /* Include padding/border in width */
-}
-#editRuleFormContent span#editRuleTypeDisplay {
-  font-style: italic;
+/* Add towards the end of options/options.css */
+
+/* --- Loader Styles --- */
+.stats-loader {
+  display: none; /* Hidden by default */
+  position: absolute; /* Position relative to the section or container */
+  /* Adjust top/left/transform based on where you placed it in HTML
+     This example centers it within the stats-display-section if that section is position: relative */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 15px 25px;
+  background-color: rgba(200, 200, 200, 0.8); /* Semi-transparent background */
   color: #333;
+  border-radius: 5px;
+  font-size: 1.1em;
+  font-weight: 500;
+  z-index: 10; /* Ensure it's above other content */
+  text-align: center;
+  border: 1px solid #bbb;
 }
 
-/* Reuse time limit layout */
-#editRuleLimitGroup .time-limit-input {
-  display: flex;
-  gap: 10px;
-}
-#editRuleLimitGroup .time-limit-input input[type='number'] {
-  width: 80px; /* Adjust as needed */
-  flex-grow: 0;
-}
-#editRuleLimitGroup .time-limit-input select {
-  width: auto;
-  flex-grow: 1;
+/* Dark mode adjustment for loader */
+@media (prefers-color-scheme: dark) {
+  .stats-loader {
+    background-color: rgba(50, 50, 50, 0.85); /* Darker background */
+    color: var(--text-color-primary);
+    border: 1px solid #666;
+  }
 }
 
-/* Modal Actions */
-.modal-actions {
-  margin-top: 25px;
-  text-align: right;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-.modal-actions button {
-  padding: 10px 20px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s ease;
-}
-.modal-actions button#saveRuleChangesBtn {
-  background-color: #28a745; /* Green */
-  color: white;
-}
-.modal-actions button#saveRuleChangesBtn:hover {
-  background-color: #218838;
-}
-.modal-actions button.cancel-btn {
-  /* Generic cancel */
-  background-color: #6c757d; /* Grey */
-  color: white;
-}
-.modal-actions button.cancel-btn:hover {
-  background-color: #5a6268;
+/* Optional: Style the section holding the dashboard to contain the absolute loader */
+#stats-display-section {
+  position: relative; /* Needed for absolute positioning of loader */
+  /* Add min-height if needed to prevent collapse while loading */
+  /* min-height: 300px; */
 }
 
-/* Tracking Settings Section */
-#tracking-settings-section .form-group {
-  display: flex;
-  align-items: center;
-  gap: 15px; /* Space between label and select */
-  flex-wrap: wrap; /* Allow wrapping */
-  margin-bottom: 10px; /* Space below setting */
+/* Optional: Hide dashboard content while loading */
+/* Add a class 'loading' to stats-dashboard via JS */
+/*
+.stats-dashboard.loading {
+    opacity: 0.3;
+    pointer-events: none;
 }
-
-#tracking-settings-section label {
-  font-weight: bold;
-  color: #555;
-  flex-shrink: 0; /* Prevent label from shrinking */
-}
-
-#tracking-settings-section select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-width: 150px; /* Give dropdown some width */
-  flex-grow: 1; /* Allow it to grow */
-  max-width: 250px; /* But not excessively wide */
-}
-
-.setting-description {
-  font-size: 0.85em;
-  color: #666;
-  margin: 5px 0 0 0; /* Space above description */
-  flex-basis: 100%; /* Make description take full width */
-  font-style: italic;
-}
-
-/* Adjust stats controls for better button alignment */
-.stats-controls {
-  display: flex;
-  justify-content: space-between; /* Space out select and button */
-  align-items: center;
-  flex-wrap: wrap; /* Allow wrapping */
-  gap: 15px; /* Space between items if they wrap */
-  margin-bottom: 20px;
-}
-.stats-controls > div {
-  /* Target the divs wrapping select and button */
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Export Button Style */
-button.export-button {
-  padding: 8px 15px;
-  background-color: #17a2b8; /* Teal/Info color */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background-color 0.2s ease;
-}
-
-button.export-button:hover {
-  background-color: #138496;
-}
+*/
