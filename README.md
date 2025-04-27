@@ -11,8 +11,6 @@ No tracking or analytics—your data stays local, stored entirely in your browse
 
 The app is under active development, so features may change over time.
 
-![quick-view](https://github.com/user-attachments/assets/9353a5f6-c4d3-4fc4-8e59-4d266fe4779c)
-
-![options_v0 6 2 3](https://github.com/user-attachments/assets/4b0819e5-e960-42e8-a038-97fed5f0edbf)
-
-![image](https://github.com/user-attachments/assets/22586725-ef27-4240-8b21-85e32b7146be)
+![quick-view](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
+![options](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
+![blocked](https://github.com/user-attachments/assets/f12dcbac-24de-4736-9395-9f3fd1db4510)
