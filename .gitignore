@@ -2,3 +2,4 @@ node_modules
 webpack.config.js
 dist
 package.json
+webpack.config__.js
