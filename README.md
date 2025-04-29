@@ -11,6 +11,8 @@ No tracking or analytics—your data stays local, stored entirely in your browse
 
 The app is under active development, so features may change over time.
 
+Focus Flow Monitor is now available on https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/
+
 ![quick-view](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
 ![options](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
 ![blocked](https://github.com/user-attachments/assets/f12dcbac-24de-4736-9395-9f3fd1db4510)
