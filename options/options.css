@@ -787,13 +787,13 @@ button.export-button:hover {
   color: var(--text-color-secondary);
   font-size: var(--font-size-sm);
 }
-#editRuleFormContent input[type='text'],
+/* #editRuleFormContent input[type='text'],
 #editRuleFormContent select,
 #editRuleFormContent input[type='number'],
 #editAssignmentFormContent input[type='text'],
-#editAssignmentFormContent select {
-  /* Styles inherited */
-}
+#editAssignmentFormContent select { */
+/* Styles inherited */
+/* } */
 #editRuleFormContent span#editRuleTypeDisplay {
   font-style: italic;
   color: var(--text-color-primary);
@@ -1094,9 +1094,9 @@ button.export-button:hover {
 }
 */
 
-#data-management-section {
-  /* Styles for the section */
-}
+/* #data-management-section { */
+/* Styles for the section */
+/* } */
 
 #data-management-section .form-group.data-buttons {
   display: flex;
