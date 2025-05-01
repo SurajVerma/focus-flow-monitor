@@ -96,6 +96,11 @@ function queryUIElements() {
   UIElements.cancelEditAssignmentBtn = document.getElementById('cancelEditAssignmentBtn');
   // Data Retention Select
   UIElements.dataRetentionSelect = document.getElementById('dataRetentionSelect');
+  // Data Management Elements (NEW)
+  UIElements.exportDataBtn = document.getElementById('exportDataBtn');
+  UIElements.importDataBtn = document.getElementById('importDataBtn');
+  UIElements.importFileInput = document.getElementById('importFileInput');
+  UIElements.importStatus = document.getElementById('importStatus');
 
   // Basic check to ensure critical elements were found
   if (
@@ -105,7 +110,11 @@ function queryUIElements() {
     !UIElements.addCategoryBtn ||
     !UIElements.editAssignmentModal ||
     !UIElements.saveAssignmentChangesBtn ||
-    !UIElements.dataRetentionSelect
+    !UIElements.dataRetentionSelect ||
+    !UIElements.exportDataBtn ||
+    !UIElements.importDataBtn ||
+    !UIElements.importFileInput ||
+    !UIElements.importStatus
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure

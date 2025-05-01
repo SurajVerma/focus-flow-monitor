@@ -169,6 +169,20 @@
           <li>Loading...</li>
         </ul>
       </section>
+      <hr />
+      <section id="data-management-section">
+        <h2>Data Management</h2>
+        <p>
+          Export your tracking history and settings, or import a previously exported backup file. Importing will
+          overwrite current data.
+        </p>
+        <div class="form-group data-buttons">
+          <button id="exportDataBtn" class="action-button">Export All Data</button>
+          <button id="importDataBtn" class="action-button">Import Data from File</button>
+          <input type="file" id="importFileInput" accept=".ffm" style="display: none" />
+        </div>
+        <p id="importStatus" class="status-message" style="display: none"></p>
+      </section>
     </div>
 
     <div id="editRuleModal" class="modal" style="display: none">

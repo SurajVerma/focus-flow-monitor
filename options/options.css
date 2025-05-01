@@ -1049,8 +1049,6 @@ button.export-button:hover {
     color: var(--text-color-primary);
   }
 }
-/* Add towards the end of options/options.css */
-
 /* --- Loader Styles --- */
 .stats-loader {
   display: none; /* Hidden by default */
@@ -1095,3 +1093,49 @@ button.export-button:hover {
     pointer-events: none;
 }
 */
+
+#data-management-section {
+  /* Styles for the section */
+}
+
+#data-management-section .form-group.data-buttons {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--spacing-md);
+}
+
+#data-management-section button.action-button {
+  /* Style like other primary buttons or use a secondary style */
+  background-color: var(--bg-button-secondary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-secondary);
+  padding: var(--spacing-sm) var(--spacing-lg); /* Adjust padding if needed */
+}
+#data-management-section button.action-button:hover {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--bg-button-secondary-hover);
+}
+
+#importStatus {
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+#importStatus.success {
+  color: var(--bg-button-success); /* Use success color variable */
+}
+#importStatus.error {
+  color: var(--bg-button-danger); /* Use danger color variable */
+}
+
+/* Dark mode adjustments if needed */
+@media (prefers-color-scheme: dark) {
+  #importStatus.success {
+    color: #30d158; /* Brighter green for dark mode */
+  }
+  #importStatus.error {
+    color: #ff453a; /* Brighter red for dark mode */
+  }
+}

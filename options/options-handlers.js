@@ -795,6 +795,238 @@ function handleDataRetentionChange() {
       // loadAllData(); // Or reload all settings if save failed
     });
 }
+
+// Add these functions to options-handlers.js
+
+// --- Data Export Handler ---
+// In options-handlers.js
+
+// --- Data Export Handler ---
+async function handleExportData() {
+  console.log('[Data Export] Starting export...');
+  try {
+    // Define all keys to export (include settings)
+    // *** CORRECTED: Use constants directly, not via FocusFlowState ***
+    const keysToExport = [
+      'trackedData',
+      'categoryTimeData',
+      'categories',
+      'categoryAssignments',
+      'rules',
+      'dailyDomainData',
+      'dailyCategoryData',
+      'hourlyData',
+      STORAGE_KEY_IDLE_THRESHOLD, // CORRECTED
+      STORAGE_KEY_DATA_RETENTION_DAYS, // CORRECTED
+    ];
+
+    const storedData = await browser.storage.local.get(keysToExport);
+
+    // Prepare the final object, ensuring all keys exist even if empty
+    const dataToExport = {};
+    keysToExport.forEach((key) => {
+      // Provide sensible defaults for missing data
+      if (key === 'categories') {
+        dataToExport[key] = storedData[key] || ['Other'];
+      } else if (key === 'rules') {
+        dataToExport[key] = storedData[key] || [];
+        // *** CORRECTED: Use constants directly in checks ***
+      } else if (key === STORAGE_KEY_IDLE_THRESHOLD) {
+        dataToExport[key] = storedData[key] ?? DEFAULT_IDLE_SECONDS; // CORRECTED
+      } else if (key === STORAGE_KEY_DATA_RETENTION_DAYS) {
+        dataToExport[key] = storedData[key] ?? DEFAULT_DATA_RETENTION_DAYS; // CORRECTED
+      } else {
+        dataToExport[key] = storedData[key] || {}; // Default to empty object for tracking data
+      }
+    });
+
+    // Create JSON string
+    const jsonString = JSON.stringify(dataToExport, null, 2); // Pretty print JSON
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+
+    // Create filename
+    const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const filename = `focusflow_backup_${dateStr}.ffm`;
+
+    // Trigger download (similar to CSV export)
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log('[Data Export] Export successful, download triggered:', filename);
+    } else {
+      alert('Data export might not be fully supported by your browser.');
+    }
+  } catch (error) {
+    console.error('[Data Export] Error exporting data:', error);
+    alert(`An error occurred during data export: ${error.message}`);
+  }
+}
+
+// --- Data Import Handlers ---
+function handleImportDataClick() {
+  // Trigger the hidden file input
+  if (UIElements.importFileInput) {
+    UIElements.importFileInput.click();
+  } else {
+    console.error('Import file input not found!');
+    alert('Import button error. Please refresh.');
+  }
+}
+
+function handleImportFileChange(event) {
+  const file = event.target.files ? event.target.files[0] : null;
+  if (!file) {
+    console.log('[Data Import] No file selected.');
+    return;
+  }
+  // if (!file.type || file.type !== 'application/json') {
+  //   alert('Import failed: Please select a valid JSON (.json) backup file.');
+  //   // Reset file input
+  //   event.target.value = null;
+  //   return;
+  // }
+  if (!file.name || !file.name.toLowerCase().endsWith('.ffm')) {
+    alert('Import failed: Please select a valid FocusFlow backup (.ffm) file.');
+    // Reset file input
+    event.target.value = null;
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    let importedData;
+    try {
+      importedData = JSON.parse(e.target.result);
+      console.log('[Data Import] File parsed successfully.');
+
+      // *** Basic Validation ***
+      const requiredKeys = [
+        'trackedData',
+        'categoryTimeData',
+        'categories',
+        'categoryAssignments',
+        'rules',
+        'dailyDomainData',
+        'dailyCategoryData',
+        'hourlyData',
+      ];
+      const missingKeys = requiredKeys.filter((key) => !(key in importedData));
+
+      if (missingKeys.length > 0) {
+        throw new Error(`Import file is missing required data keys: ${missingKeys.join(', ')}`);
+      }
+      if (
+        !Array.isArray(importedData.categories) ||
+        !Array.isArray(importedData.rules) ||
+        typeof importedData.trackedData !== 'object' ||
+        typeof importedData.categoryAssignments !== 'object' ||
+        typeof importedData.dailyDomainData !== 'object' ||
+        typeof importedData.dailyCategoryData !== 'object' ||
+        typeof importedData.hourlyData !== 'object'
+      ) {
+        throw new Error('Import file has incorrect data types for one or more keys.');
+      }
+      // Add more specific validation if needed (e.g., check rule structure)
+
+      // --- Confirmation ---
+      const confirmation = confirm(
+        'IMPORT WARNING:\n\nThis will OVERWRITE all your current FocusFlow Monitor settings and tracking data with the data from the selected file.\n\nAre you sure you want to proceed?'
+      );
+
+      if (!confirmation) {
+        console.log('[Data Import] User cancelled import.');
+        if (UIElements.importStatus) {
+          UIElements.importStatus.textContent = 'Import cancelled by user.';
+          UIElements.importStatus.className = 'status-message'; // Reset class
+          UIElements.importStatus.style.display = 'block';
+        }
+        // Reset file input
+        event.target.value = null;
+        return;
+      }
+
+      // --- Apply Data ---
+      console.log('[Data Import] User confirmed. Applying imported data...');
+      if (UIElements.importStatus) {
+        UIElements.importStatus.textContent = 'Importing... Please wait.';
+        UIElements.importStatus.className = 'status-message';
+        UIElements.importStatus.style.display = 'block';
+      }
+
+      await applyImportedData(importedData); // Call the function to save and refresh
+    } catch (error) {
+      console.error('[Data Import] Error processing import file:', error);
+      alert(`Import failed: ${error.message}`);
+      if (UIElements.importStatus) {
+        UIElements.importStatus.textContent = `Import failed: ${error.message}`;
+        UIElements.importStatus.className = 'status-message error';
+        UIElements.importStatus.style.display = 'block';
+      }
+      // Reset file input on error too
+      event.target.value = null;
+    }
+  };
+
+  reader.onerror = (e) => {
+    console.error('[Data Import] Error reading file:', e);
+    alert('Error reading the selected file.');
+    if (UIElements.importStatus) {
+      UIElements.importStatus.textContent = 'Import failed: Could not read file.';
+      UIElements.importStatus.className = 'status-message error';
+      UIElements.importStatus.style.display = 'block';
+    }
+    // Reset file input
+    event.target.value = null;
+  };
+
+  reader.readAsText(file);
+}
+
+// Function to save imported data and trigger refreshes
+async function applyImportedData(dataToImport) {
+  try {
+    // Use browser.storage.local.set to save the entire imported object
+    // This will overwrite existing values for these keys.
+    await browser.storage.local.set(dataToImport);
+    console.log('[Data Import] Data successfully saved to storage.');
+
+    // Notify background script to reload its state from storage
+    await browser.runtime.sendMessage({ action: 'importedData' });
+    console.log('[Data Import] Sent message to background script to reload state.');
+
+    // Show success message
+    if (UIElements.importStatus) {
+      UIElements.importStatus.textContent = 'Import successful! Reloading options page...';
+      UIElements.importStatus.className = 'status-message success';
+      UIElements.importStatus.style.display = 'block';
+    }
+
+    // Reload the options page to reflect the changes
+    // A short delay allows the user to see the success message
+    setTimeout(() => {
+      location.reload();
+    }, 1500); // Reload after 1.5 seconds
+  } catch (error) {
+    console.error('[Data Import] Error applying imported data:', error);
+    alert(`Failed to apply imported data: ${error.message}`);
+    if (UIElements.importStatus) {
+      UIElements.importStatus.textContent = `Import failed: ${error.message}`;
+      UIElements.importStatus.className = 'status-message error';
+      UIElements.importStatus.style.display = 'block';
+    }
+  } finally {
+    // Reset file input in case of error during apply/save
+    if (UIElements.importFileInput) UIElements.importFileInput.value = null;
+  }
+}
 // *** END ADDED ***
 
 console.log('[System] options-handlers.js loaded (v0.8.1)');
