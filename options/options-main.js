@@ -219,83 +219,100 @@ function renderChartForSelectedDateUI() {
 
 // --- Get Filtered Data ---
 function getFilteredDataForRange(range) {
-  let filteredDomainData = {};
-  let filteredCategoryData = {};
+  let initialDomainData = {};
+  let initialCategoryData = {};
+  let mergedDomainData = {}; // <<< Declare mergedDomainData HERE (outside try)
   let periodLabel = 'All Time';
   const today = new Date();
 
   try {
+    // --- Step 1: Aggregate data based on range (Existing Logic) ---
     if (range === 'today') {
-      const todayStr = formatDate(today);
-      filteredDomainData = AppState.dailyDomainData[todayStr] || {};
-      filteredCategoryData = AppState.dailyCategoryData[todayStr] || {};
+      const todayStr = formatDate(today); // from utils.js
+      initialDomainData = AppState.dailyDomainData[todayStr] || {};
+      initialCategoryData = AppState.dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
     } else if (range === 'week') {
       periodLabel = 'This Week';
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
-        const dateStr = formatDate(date);
+        const dateStr = formatDate(date); // from utils.js
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
-          for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+          for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
         }
         const cF = AppState.dailyCategoryData[dateStr];
         if (cF) {
-          for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+          for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
         }
       }
     } else if (range === 'month') {
       periodLabel = 'This Month';
       const y = today.getFullYear();
       const m = today.getMonth();
-      const dIM = today.getDate();
+      const dIM = today.getDate(); // Days In Month (up to today)
       for (let day = 1; day <= dIM; day++) {
         const date = new Date(y, m, day);
-        const dateStr = formatDate(date);
+        const dateStr = formatDate(date); // from utils.js
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
-          for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+          for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
         }
         const cF = AppState.dailyCategoryData[dateStr];
         if (cF) {
-          for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+          for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
         }
       }
     } else {
       // 'all'
-      // Note: AppState.trackedData/categoryTimeData are *loaded* but not necessarily
-      // recalculated in the options page itself after every assignment change unless triggered.
-      // For consistency, recalculate 'all time' from daily data IF daily data exists.
-      // If daily data is empty (e.g., user deleted it), fall back to stored totals.
+      periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
         console.log("[Options Main] Recalculating 'All Time' from daily data for display.");
-        filteredDomainData = {};
-        filteredCategoryData = {};
+        initialDomainData = {}; // Start fresh
+        initialCategoryData = {}; // Start fresh
         for (const dateStr in AppState.dailyDomainData) {
           const dF = AppState.dailyDomainData[dateStr];
           if (dF) {
-            for (const d in dF) filteredDomainData[d] = (filteredDomainData[d] || 0) + dF[d];
+            for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
           }
         }
         for (const dateStr in AppState.dailyCategoryData) {
           const cF = AppState.dailyCategoryData[dateStr];
           if (cF) {
-            for (const c in cF) filteredCategoryData[c] = (filteredCategoryData[c] || 0) + cF[c];
+            for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
           }
         }
       } else {
         console.warn("[Options Main] Daily data is empty, falling back to stored 'All Time' totals.");
-        filteredDomainData = AppState.trackedData || {};
-        filteredCategoryData = AppState.categoryTimeData || {};
+        initialDomainData = AppState.trackedData || {};
+        initialCategoryData = AppState.categoryTimeData || {};
       }
-      periodLabel = 'All Time';
     }
+
+    // --- Step 2: Merge www and non-www domains (Now populates the outer mergedDomainData) ---
+    // No longer declaring mergedDomainData here
+    for (const domain in initialDomainData) {
+      const time = initialDomainData[domain];
+      if (time > 0) {
+        let normalizedDomain = domain;
+        if (domain.startsWith('www.')) {
+          normalizedDomain = domain.substring(4);
+        }
+        mergedDomainData[normalizedDomain] = (mergedDomainData[normalizedDomain] || 0) + time;
+      }
+    }
+    // --- End Merging Logic ---
   } catch (filterError) {
-    console.error(`Error filtering for range "${range}":`, filterError);
-    return { domainData: {}, categoryData: {}, label: `Error (${range})` };
+    console.error(`Error filtering/merging for range "${range}":`, filterError);
+    // Return empty objects on error (mergedDomainData might be partially populated or empty)
+    // It's declared outside, so the return statement below will still work, returning whatever was merged before the error.
+    // If the goal is to return completely empty on ANY error, we'd return here:
+    // return { domainData: {}, categoryData: {}, label: `Error (${range})` };
   }
-  return { domainData: filteredDomainData, categoryData: filteredCategoryData, label: periodLabel };
+
+  // Return the MERGED domain data (declared outside try) and the original category data
+  return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
 }
 
 // --- Event Listener Setup ---
@@ -363,6 +380,12 @@ function setupEventListeners() {
     } else {
       console.warn('Data retention select element not found, cannot add listener.');
     }
+    // Inside setupEventListeners() in options-main.js
+
+    // Data Management Listeners (NEW)
+    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
+    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
+    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
     handleRuleTypeChange(); // Initialize rule input display
     console.log('[Options Main] Event listeners setup complete.');

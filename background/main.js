@@ -41,21 +41,34 @@ browser.tabs.onActivated.addListener(() => {
   updateTrackingStateDebounced('tabs.onActivated');
 });
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' || changeInfo.url) {
+  // --- MODIFIED: Only trigger on 'complete' status with a valid URL ---
+  if (changeInfo.status === 'complete' && tab && tab.url && getDomain(tab.url)) {
+    // Added check for tab.url and valid domain
     browser.windows
       .getLastFocused({ populate: true, windowTypes: ['normal'] })
       .then((currentWindow) => {
         if (currentWindow && currentWindow.focused) {
+          // Ensure the updated tab is still the active one in the focused window
           const activeTab = currentWindow.tabs.find((t) => t.active);
           if (activeTab && activeTab.id === tabId) {
-            updateTrackingStateDebounced('tabs.onUpdated');
+            console.log(`[Tracking Trigger] tabs.onUpdated (status: complete, tabId: ${tabId}, url: ${tab.url})`); // Added log
+            updateTrackingStateDebounced('tabs.onUpdated (complete)'); // Pass more specific context
           }
         }
       })
       .catch((e) => {
-        /* Ignore errors, likely no window focused */
+        // console.warn('[Tracking Trigger] tabs.onUpdated check failed (window/tab focus issue?):', e?.message); // Optional: more detailed warning
+        /* Ignore errors, likely no window focused or error during check */
       });
   }
+  // Log other status changes for debugging
+  // else if (changeInfo.status && changeInfo.status !== 'complete') {
+  //   console.log(`[Tracking Trigger] tabs.onUpdated (status: ${changeInfo.status}, tabId: ${tabId}) - Ignored`);
+  // }
+  // Log URL changes before complete status
+  // else if (changeInfo.url) {
+  //    console.log(`[Tracking Trigger] tabs.onUpdated (url change, status: ${tab?.status}, tabId: ${tabId}) - Ignored`);
+  // }
 });
 browser.windows.onFocusChanged.addListener(() => {
   updateTrackingStateDebounced('windows.onFocusChanged');
@@ -90,6 +103,20 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch((err) => {
         console.error(`[System] Error reloading data on message:`, err);
         sendResponse({ success: false, message: 'Error reloading config.' });
+      });
+    return true; // Indicates asynchronous response
+  } else if (request.action === 'importedData') {
+    console.log(`[System] Reloading ALL data due to data import.`);
+    loadData() // Load data now reloads state and runs initial prune check
+      .then(() => {
+        console.log('[System] Background state reloaded after import.');
+        sendResponse({ success: true, message: 'Background state reloaded after import.' });
+        // Optional: Maybe trigger a state check immediately?
+        // updateTrackingStateImplementation('dataImport');
+      })
+      .catch((err) => {
+        console.error(`[System] Error reloading background state after import:`, err);
+        sendResponse({ success: false, message: 'Error reloading background state.' });
       });
     return true; // Indicates asynchronous response
   }
