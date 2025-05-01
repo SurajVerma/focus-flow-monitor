@@ -557,7 +557,8 @@ button.export-button:hover {
 .calendar-header-controls button {
   padding: 3px 8px;
   font-size: 0.85em;
-  background-color: var(--bg-button-secondary);
+  background-color: var(--bg-button-primary);
+  color: var(--text-color-button);
 }
 .calendar-header-controls button:hover {
   background-color: var(--bg-button-secondary-hover);

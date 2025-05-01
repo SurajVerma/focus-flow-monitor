@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "FocusFlow Monitor",
-  "version": "0.7.2.7",
+  "version": "0.7.2.8",
   "description": "Tracks time, provides insights, allows blocking & limiting.",
   "permissions": ["tabs", "storage", "idle", "alarms", "webRequest", "webRequestBlocking", "<all_urls>"],
   "background": {
