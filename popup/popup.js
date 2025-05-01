@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressBarEl = document.getElementById('categoryProgressBar');
   const optionsBtn = document.getElementById('optionsBtn');
   const hourlyChartCanvas = document.getElementById('hourlyChartCanvas');
+  const focusScoreEl = document.getElementById('focusScoreToday');
   let hourlyChartCtx = null;
 
   if (hourlyChartCanvas) {
@@ -187,9 +188,25 @@ document.addEventListener('DOMContentLoaded', () => {
   browser.storage.local
     .get(['dailyDomainData', 'dailyCategoryData', 'hourlyData'])
     .then((result) => {
+      console.log('[Popup Debug] Raw result from storage.get:', JSON.stringify(result));
+
+      const dailyCategoryDataFromStorage = result.dailyCategoryData; // Check if this key exists in the logged 'result'
+      console.log(
+        '[Popup Debug] dailyCategoryDataFromStorage:',
+        typeof dailyCategoryDataFromStorage,
+        JSON.stringify(dailyCategoryDataFromStorage)
+      );
+      const todaysCategoryData = dailyCategoryDataFromStorage?.[todayStr] || {}; // This line might fail if dailyCategoryDataFromStorage is null/unexpected
+      console.log(
+        '[Popup Debug] todaysCategoryData after processing:',
+        typeof todaysCategoryData,
+        JSON.stringify(todaysCategoryData)
+      );
+
       const todaysDomainData = result.dailyDomainData?.[todayStr] || {};
-      const todaysCategoryData = result.dailyCategoryData?.[todayStr] || {};
+      // const todaysCategoryData = result.dailyCategoryData?.[todayStr] || {};
       const todaysHourlyData = result.hourlyData?.[todayStr] || {};
+      const userRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
 
       // Calculate Total Time
       let totalSecondsToday = 0;
@@ -316,6 +333,26 @@ document.addEventListener('DOMContentLoaded', () => {
       // Render Hourly Chart
       if (hourlyChartCtx) {
         renderHourlyChart(hourlyChartCtx, todaysHourlyData);
+      }
+
+      // --- NEW: Calculate and Display Focus Score ---
+      if (focusScoreEl) {
+        try {
+          // Calculate score using function from options-utils.js
+          const scoreData = calculateFocusScore(todaysCategoryData, userRatings);
+          focusScoreEl.textContent = `Focus Score: ${scoreData.score}%`;
+
+          // Optional: Add coloring class based on score
+          focusScoreEl.classList.remove('score-low', 'score-medium', 'score-high');
+          if (scoreData.score < 40) focusScoreEl.classList.add('score-low');
+          else if (scoreData.score < 70) focusScoreEl.classList.add('score-medium');
+          else focusScoreEl.classList.add('score-high');
+        } catch (scoreError) {
+          console.error('[Popup] Error calculating focus score:', scoreError);
+          focusScoreEl.textContent = 'Focus Score: Error';
+        }
+      } else {
+        console.error('[Popup] Focus score element not found');
       }
     })
     .catch((error) => {

@@ -9,6 +9,7 @@
  * @param {boolean} [forceHMS=false] - Whether to force HH:MM:SS format.
  * @returns {string} Formatted time string. Returns '<1m' if seconds < 60 and includeSeconds is false. Returns '0s' for 0 seconds.
  */
+
 function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   if (seconds === null || seconds === undefined || isNaN(seconds)) seconds = 0;
   if (seconds < 0) seconds = 0; // Treat negative as 0 for options/popup/blocked display
@@ -112,6 +113,94 @@ function escapeCsvValue(value) {
     return `"${escapedValue}"`;
   }
   return stringValue;
+}
+
+const PRODUCTIVITY_TIERS = {
+  // Define tiers
+  PRODUCTIVE: 1,
+  NEUTRAL: 0,
+  DISTRACTING: -1,
+};
+
+const defaultCategoryProductivityRatings = {
+  // Default ratings map
+  'Work/Productivity': PRODUCTIVITY_TIERS.PRODUCTIVE,
+  'Reference & Learning': PRODUCTIVITY_TIERS.PRODUCTIVE,
+  Technology: PRODUCTIVITY_TIERS.NEUTRAL,
+  Finance: PRODUCTIVITY_TIERS.NEUTRAL,
+  'News & Info': PRODUCTIVITY_TIERS.NEUTRAL,
+  Shopping: PRODUCTIVITY_TIERS.DISTRACTING,
+  'Social Media': PRODUCTIVITY_TIERS.DISTRACTING,
+  Entertainment: PRODUCTIVITY_TIERS.DISTRACTING,
+  Other: PRODUCTIVITY_TIERS.NEUTRAL,
+  // Note: Categories added by the user later won't have a default here
+  // The calculation function will handle this by defaulting them to Neutral.
+};
+
+// --- Productivity Score Constants (NEW) ---
+const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings'; // Key for user settings
+// --- Calculation Function (NEW) ---
+/**
+ * Calculates the Focus Score based on category times and ratings.
+ * Uses Formula 1: (Productive Time / Total Time) * 100
+ * @param {object} categoryData - Object with category names as keys and time in seconds as values.
+ * @param {object} userRatings - User's saved ratings { categoryName: tierValue, ... }.
+ * @returns {object} { score: number (0-100), totalTime: number } or null if no data.
+ */
+function calculateFocusScore(categoryData, userRatings = {}) {
+  // *** ADD DEBUG LOGS HERE ***
+  console.log('[Utils Debug] calculateFocusScore called.');
+  console.log('[Utils Debug] Input categoryData:', JSON.stringify(categoryData));
+  console.log('[Utils Debug] Input userRatings:', JSON.stringify(userRatings));
+  console.log(
+    '[Utils Debug] typeof PRODUCTIVITY_TIERS:',
+    typeof PRODUCTIVITY_TIERS,
+    JSON.stringify(PRODUCTIVITY_TIERS)
+  ); // Check constant
+  console.log(
+    '[Utils Debug] typeof defaultCategoryProductivityRatings:',
+    typeof defaultCategoryProductivityRatings,
+    JSON.stringify(defaultCategoryProductivityRatings)
+  ); // Check constant
+  // *** END DEBUG LOGS ***
+  let totalProductiveTime = 0;
+  let totalTrackedTime = 0;
+  const defaultRatings =
+    typeof defaultCategoryProductivityRatings !== 'undefined' ? defaultCategoryProductivityRatings : {};
+  // const tiers =
+  //   typeof PRODUCTIVITY_TIERS !== 'undefined' ? PRODUCTIVITY_TIERS : { PRODUCTIVE: 1, NEUTRAL: 0, DISTRACTING: -1 }; // Fallback just in case
+
+  const mergedRatings = { ...defaultRatings, ...userRatings }; // User ratings override defaults
+
+  if (!categoryData || Object.keys(categoryData).length === 0) {
+    return { score: 0, totalTime: 0 }; // Return 0 score if no data for the period
+  }
+
+  for (const category in categoryData) {
+    const time = categoryData[category] || 0;
+    if (time > 0) {
+      totalTrackedTime += time;
+      // Get rating: User > Default > Neutral
+      const rating = mergedRatings[category] ?? PRODUCTIVITY_TIERS.NEUTRAL;
+
+      if (rating === PRODUCTIVITY_TIERS.PRODUCTIVE) {
+        totalProductiveTime += time;
+      }
+      // We don't need distracting/neutral time for Formula 1
+    }
+  }
+
+  if (totalTrackedTime === 0) {
+    return { score: 0, totalTime: 0 }; // Avoid division by zero
+  }
+
+  // Formula 1: (Productive Time / Total Time) * 100
+  const score = Math.round((totalProductiveTime / totalTrackedTime) * 100);
+
+  return {
+    score: score, // The final percentage
+    totalTime: totalTrackedTime, // Return total time for context maybe
+  };
 }
 
 console.log('[System] options-utils.js loaded');

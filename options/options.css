@@ -1,4 +1,4 @@
-/* options.css (v0.8.0 - Modern Styling Refresh) */
+/* options.css (v0.8.1 - Consolidated Dark Mode) */
 
 /* --- Base & Variables --- */
 :root {
@@ -55,6 +55,11 @@
   --font-size-sm: 0.875rem;
   --font-size-lg: 1.125rem;
   --line-height-base: 1.6;
+
+  /* Define missing accent colors used in rules */
+  --accent-color-green: #28a745; /* Example */
+  --accent-color-red: #dc3545; /* Example */
+  --accent-color-blue: #007bff; /* Example */
 }
 
 body {
@@ -70,7 +75,7 @@ body {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  background-color: transparent; /* Container is just for max-width now */
+  background-color: transparent;
   padding: 0;
   border-radius: 0;
   box-shadow: none;
@@ -98,8 +103,8 @@ h2 {
   color: var(--text-color-heading);
   border-bottom: 1px solid var(--border-color-medium);
   padding-bottom: var(--spacing-md);
-  margin-top: 0; /* Remove top margin as section provides padding */
-  margin-bottom: var(--spacing-lg); /* More space after H2 */
+  margin-top: 0;
+  margin-bottom: var(--spacing-lg);
   font-size: 1.4rem;
   font-weight: 500;
 }
@@ -107,21 +112,21 @@ h3 {
   margin-top: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
   color: var(--text-color-heading);
-  border-bottom: none; /* Remove border, use spacing */
+  border-bottom: none;
   padding-bottom: 0;
-  font-size: 1.15rem; /* Slightly larger */
+  font-size: 1.15rem;
   font-weight: 500;
 }
 h4 {
   margin-top: var(--spacing-lg);
   margin-bottom: var(--spacing-sm);
   color: var(--text-color-secondary);
-  font-size: 0.95rem; /* Slightly larger */
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
 hr {
-  display: none; /* Remove HR, use section margins */
+  display: none;
 }
 
 /* --- General Form Styles --- */
@@ -133,10 +138,10 @@ hr {
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   flex-wrap: wrap;
-  align-items: center; /* Align items vertically */
+  align-items: center;
 }
 .form-inline label {
-  margin-bottom: 0; /* Remove bottom margin for inline labels */
+  margin-bottom: 0;
 }
 label {
   display: block;
@@ -149,7 +154,7 @@ input[type='text'],
 input[type='number'],
 select {
   display: block;
-  width: 100%; /* Inputs take full width by default */
+  width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: var(--font-size-base);
   font-weight: 400;
@@ -160,7 +165,7 @@ select {
   border: 1px solid var(--border-color-input);
   border-radius: var(--border-radius);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  box-sizing: border-box; /* Include padding in width */
+  box-sizing: border-box;
 }
 input[type='text']:focus,
 input[type='number']:focus,
@@ -174,13 +179,13 @@ select:focus {
 .form-inline input[type='text'],
 .form-inline select {
   flex-grow: 1;
-  width: auto; /* Allow shrinking in flex */
+  width: auto;
 }
 .form-inline select {
   min-width: 150px;
 }
 .form-inline button {
-  flex-shrink: 0; /* Prevent button shrinking */
+  flex-shrink: 0;
 }
 
 /* Buttons */
@@ -314,7 +319,7 @@ button.export-button:hover {
   list-style: none;
   padding: 0;
   margin: var(--spacing-sm) 0 0 0;
-  max-height: 200px; /* Keep scroll for long lists */
+  max-height: 200px;
   overflow-y: auto;
   border: 1px solid var(--border-color-medium);
   border-radius: var(--border-radius);
@@ -329,9 +334,9 @@ button.export-button:hover {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: none; /* Remove dashed border */
+  border-bottom: none;
   transition: background-color 0.15s ease-in-out;
-  font-size: var(--font-size-sm); /* Slightly smaller font in lists */
+  font-size: var(--font-size-sm);
 }
 
 /* Zebra Striping */
@@ -360,7 +365,7 @@ button.export-button:hover {
 .category-list-item .category-edit-input {
   flex-grow: 1;
   padding: 4px 6px;
-  border: 1px solid #ccc;
+  border: 1px solid #ccc; /* Consider var(--border-color-input) if focus state needed */
   border-radius: 3px;
   font-size: 0.9em;
   margin-right: var(--spacing-md);
@@ -374,7 +379,7 @@ button.export-button:hover {
   justify-content: flex-end;
 }
 .assignment-list-item .assignment-domain {
-  font-weight: 500; /* slightly bolder */
+  font-weight: 500;
   color: var(--text-color-primary);
   margin-right: var(--spacing-lg);
   overflow: hidden;
@@ -390,7 +395,7 @@ button.export-button:hover {
 }
 .assignment-list-item .assignment-category {
   color: var(--text-color-secondary);
-  background-color: #e9ecef;
+  background-color: #e9ecef; /* Could become var(--bg-alternate-row) or similar */
   padding: 2px 6px;
   border-radius: var(--border-radius);
   font-size: 0.85em;
@@ -436,7 +441,7 @@ button.export-button:hover {
   color: var(--text-color-primary);
   font-weight: 500;
   white-space: nowrap;
-  background-color: #e9ecef;
+  background-color: #e9ecef; /* Could become var(--bg-alternate-row) or similar */
   padding: 2px 6px;
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
@@ -448,6 +453,7 @@ button.export-button:hover {
   padding: var(--spacing-md);
   background-color: var(--bg-alternate-row);
   border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius); /* Add radius */
 }
 .time-limit-input {
   display: flex;
@@ -470,6 +476,9 @@ button.export-button:hover {
 }
 
 /* --- Statistics Section --- */
+#stats-display-section {
+  position: relative; /* For loader */
+}
 .stats-controls {
   display: flex;
   justify-content: space-between;
@@ -488,23 +497,22 @@ button.export-button:hover {
   flex-wrap: wrap;
   gap: var(--spacing-xl);
   margin-top: var(--spacing-sm);
-  align-items: flex-start; /* Align tops */
+  align-items: flex-start;
 }
 .calendar-column {
-  flex: 1 1 400px; /* Allow shrinking but prefer 400px */
+  flex: 1 1 400px;
   min-width: 320px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
 }
 .chart-column {
-  flex: 1 1 500px; /* Allow shrinking but prefer 500px */
+  flex: 1 1 500px;
   min-width: 350px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
 }
-/* Use cards for stats containers */
 .calendar-container,
 .stats-list-container {
   border: 1px solid var(--border-color-light);
@@ -535,7 +543,7 @@ button.export-button:hover {
   max-height: 250px;
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color-light);
-} /* Add border */
+}
 
 /* --- Calendar Styles --- */
 .calendar-header-controls {
@@ -574,7 +582,7 @@ button.export-button:hover {
   border: 1px solid var(--border-color-light);
   min-height: 65px;
   padding: var(--spacing-xs);
-  font-size: 0.8rem; /* Slightly larger */
+  font-size: 0.8rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -584,8 +592,8 @@ button.export-button:hover {
   border-radius: 2px;
 }
 .calendar-day:hover {
-  background-color: #e9f5ff;
-  border-color: #cce7ff;
+  background-color: var(--bg-hover-row); /* Use variable */
+  border-color: var(--border-color-medium); /* Use variable */
 }
 .calendar-day.empty {
   background-color: var(--bg-alternate-row);
@@ -593,13 +601,13 @@ button.export-button:hover {
   cursor: default;
 }
 .calendar-day.today {
-  border-color: var(--accent-color-blue);
-  background-color: #f0f8ff;
+  border-color: var(--accent-color-blue); /* Use variable */
+  background-color: rgba(0, 123, 255, 0.05); /* Example subtle background */
 }
 .calendar-day.today .day-number {
   font-weight: bold;
   color: white;
-  background-color: var(--accent-color-blue);
+  background-color: var(--accent-color-blue); /* Use variable */
   border-radius: 50%;
   width: 1.6em;
   height: 1.6em;
@@ -627,7 +635,7 @@ button.export-button:hover {
   color: var(--text-color-primary);
 }
 .day-time.no-data {
-  color: #bbb;
+  color: #bbb; /* Keep specific or use var(--text-color-muted) ? */
   font-weight: 400;
 }
 .calendar-day.selected {
@@ -636,12 +644,12 @@ button.export-button:hover {
   padding: 3px;
 }
 .calendar-day.selected:hover {
-  background-color: #cce7ff;
+  background-color: #cce7ff; /* Needs dark mode adjustment */
 }
 .calendar-detail-popup {
   position: absolute;
-  background-color: white;
-  border: 1px solid #ccc;
+  background-color: white; /* Needs dark mode adjustment */
+  border: 1px solid var(--border-color-medium);
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
   padding: 10px;
   border-radius: 4px;
@@ -691,6 +699,7 @@ button.export-button:hover {
   justify-content: center;
   align-items: center;
   box-shadow: var(--shadow-card);
+  color: var(--text-color-secondary); /* Hint for chart text */
 }
 #timeChartCanvas {
   max-width: 100%;
@@ -736,16 +745,16 @@ button.export-button:hover {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5); /* Darker overlay */
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .modal-content {
-  background-color: #fefefe;
+  background-color: var(--bg-card); /* Use variable */
   margin: auto;
   padding: var(--spacing-xl);
-  border: none;
+  border: 1px solid var(--border-color-medium); /* Use variable */
   width: 90%;
   max-width: 500px;
   border-radius: var(--border-radius);
@@ -761,7 +770,7 @@ button.export-button:hover {
   font-weight: 500;
 }
 .close-button {
-  color: #aaa;
+  color: #aaa; /* Needs dark mode adjustment */
   position: absolute;
   top: var(--spacing-sm);
   right: var(--spacing-md);
@@ -771,7 +780,7 @@ button.export-button:hover {
 }
 .close-button:hover,
 .close-button:focus {
-  color: black;
+  color: var(--text-color-primary); /* Use variable */
   text-decoration: none;
   cursor: pointer;
 }
@@ -787,13 +796,6 @@ button.export-button:hover {
   color: var(--text-color-secondary);
   font-size: var(--font-size-sm);
 }
-/* #editRuleFormContent input[type='text'],
-#editRuleFormContent select,
-#editRuleFormContent input[type='number'],
-#editAssignmentFormContent input[type='text'],
-#editAssignmentFormContent select { */
-/* Styles inherited */
-/* } */
 #editRuleFormContent span#editRuleTypeDisplay {
   font-style: italic;
   color: var(--text-color-primary);
@@ -842,7 +844,7 @@ button.export-button:hover {
   color: var(--text-color-secondary);
   flex-shrink: 0;
   margin-bottom: 0;
-  font-size: var(--font-size-base); /* Match input size */
+  font-size: var(--font-size-base);
 }
 #tracking-settings-section select {
   min-width: 180px;
@@ -855,6 +857,141 @@ button.export-button:hover {
   margin: var(--spacing-xs) 0 0 0;
   flex-basis: 100%;
   font-style: italic;
+}
+
+/* --- Loader Styles --- */
+.stats-loader {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 15px 25px;
+  background-color: rgba(200, 200, 200, 0.8);
+  color: #333;
+  border-radius: var(--border-radius);
+  font-size: 1.1em;
+  font-weight: 500;
+  z-index: 10;
+  text-align: center;
+  border: 1px solid #bbb;
+}
+
+/* --- Data Management Section --- */
+#data-management-section .form-group.data-buttons {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--spacing-md);
+}
+#data-management-section button.action-button {
+  background-color: var(--bg-button-secondary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-secondary);
+  padding: var(--spacing-sm) var(--spacing-lg);
+}
+#data-management-section button.action-button:hover {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--bg-button-secondary-hover);
+}
+#importStatus {
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+#importStatus.success {
+  color: var(--bg-button-success);
+}
+#importStatus.error {
+  color: var(--bg-button-danger);
+}
+
+/* --- Productivity Settings Section --- */
+#productivity-settings-section .settings-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--spacing-md) 0 0 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color-medium);
+  border-radius: var(--border-radius);
+}
+.settings-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-color-light); /* Uses variable */
+  font-size: var(--font-size-sm);
+}
+.settings-list li:last-child {
+  border-bottom: none;
+}
+.settings-list .category-name {
+  font-weight: 500;
+  margin-right: var(--spacing-lg);
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-list .rating-controls {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+.settings-list .rating-controls label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: 400;
+  font-size: inherit;
+  color: var(--text-color-secondary);
+  margin-bottom: 0;
+}
+.settings-list .rating-controls input[type='radio'] {
+  margin-right: 3px;
+  cursor: pointer;
+  accent-color: var(--bg-button-primary);
+}
+/* Zebra Striping for settings list */
+.settings-list li:nth-child(even) {
+  background-color: var(--bg-alternate-row);
+}
+
+/* --- Focus Score Display --- */
+.productivity-score-container {
+  text-align: center;
+}
+.score-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-color-primary); /* Use primary text color */
+}
+/* Classes for score value coloring (optional) */
+.score-value.score-low {
+  color: var(--bg-button-danger);
+}
+.score-value.score-medium {
+  color: var(--bg-button-warning);
+}
+.score-value.score-high {
+  color: var(--bg-button-success);
+}
+
+.focus-score-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0 var(--spacing-sm);
+  line-height: 1.4;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* --- Responsive adjustments --- */
@@ -870,7 +1007,7 @@ button.export-button:hover {
   }
   .chart-wrapper {
     height: 350px;
-  } /* Slightly taller */
+  }
 }
 @media (max-width: 768px) {
   body {
@@ -878,7 +1015,7 @@ button.export-button:hover {
   }
   .container {
     padding: 0;
-  } /* No padding on container */
+  }
   h1 {
     font-size: 1.6rem;
     margin-bottom: var(--spacing-xl);
@@ -935,108 +1072,115 @@ button.export-button:hover {
   #assignmentList .assignment-domain {
     margin-right: 0;
     margin-bottom: var(--spacing-xs);
-    display: block; /* Make domain take full width */
+    display: block;
   }
 }
 
-/* --- Dark Mode --- */
+/* --- Consolidated Dark Mode --- */
 @media (prefers-color-scheme: dark) {
   :root {
     /* Dark Theme Variable Overrides */
-    --bg-page: #1c1c1e; /* Very dark grey/off-black */
-    --bg-card: #2c2c2e; /* Dark grey for cards */
-    --bg-input: #3a3a3c; /* Slightly lighter input background */
+    --bg-page: #1c1c1e;
+    --bg-card: #2c2c2e;
+    --bg-input: #3a3a3c;
     --bg-input-focus: #4a4a4c;
-    --bg-alternate-row: #2a2a2c; /* Slightly darker than card */
+    --bg-alternate-row: #2a2a2c;
     --bg-hover-row: #38383a;
     --bg-selected-row: #004080; /* Darker blue for selected */
 
-    --bg-button-primary: #0a84ff; /* Brighter blue for dark mode */
+    --bg-button-primary: #0a84ff;
     --bg-button-primary-hover: #339cff;
-    --bg-button-secondary: #8e8e93; /* Lighter grey */
+    --bg-button-secondary: #8e8e93;
     --bg-button-secondary-hover: #a0a0a5;
-    --bg-button-success: #30d158; /* Brighter green */
+    --bg-button-success: #30d158;
     --bg-button-success-hover: #5ae07c;
-    --bg-button-danger: #ff453a; /* Brighter red */
+    --bg-button-danger: #ff453a;
     --bg-button-danger-hover: #ff6f66;
-    --bg-button-warning: #ffd60a; /* Brighter yellow */
+    --bg-button-warning: #ffd60a;
     --bg-button-warning-hover: #ffe14f;
-    --bg-button-info: #64d2ff; /* Brighter teal */
+    --bg-button-info: #64d2ff;
     --bg-button-info-hover: #82dfff;
     --bg-button-disabled: #555;
 
-    --text-color-primary: #f2f2f7; /* Light text */
-    --text-color-secondary: #c7c7cc; /* Slightly dimmer light text */
+    --text-color-primary: #f2f2f7;
+    --text-color-secondary: #c7c7cc;
     --text-color-muted: #8e8e93;
-    --text-color-heading: #ffffff; /* Pure white for headings */
-    --text-color-button: #ffffff; /* Keep most button text white */
-    --text-color-warning-button: #1c1c1e; /* Dark text on yellow button */
+    --text-color-heading: #ffffff;
+    --text-color-button: #ffffff;
+    --text-color-warning-button: #1c1c1e;
     --text-color-link: var(--bg-button-primary);
     --text-color-disabled: #999;
 
-    --border-color-light: #3a3a3c; /* Dark borders */
+    --border-color-light: #3a3a3c;
     --border-color-medium: #4a4a4c;
     --border-color-input: #545456;
     --border-color-input-focus: #0a84ff;
     --border-color-selected: var(--bg-button-primary);
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1); /* Slightly more pronounced? */
-    --shadow-focus: 0 0 0 0.2rem rgba(10, 132, 255, 0.35); /* Focus based on primary button */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-focus: 0 0 0 0.2rem rgba(10, 132, 255, 0.35);
+
+    /* Update accent colors for dark mode if needed */
+    --accent-color-green: #30d158;
+    --accent-color-red: #ff453a;
+    --accent-color-blue: #0a84ff;
   }
 
-  /* Adjust specific elements if needed */
-  #categoryTimeList li .category-name,
+  /* Adjust specific elements where variables aren't enough */
+
+  /* List item tags/badges */
+  #categoryTimeList li .category-name, /* Check if needed, uses text-color-secondary */
   #detailedTimeList li .time,
   #categoryTimeList li .time,
-  #assignmentList .assignment-category {
-    background-color: #48484a; /* Darker background for tags */
+  .assignment-list-item .assignment-category {
+    background-color: #48484a;
     color: var(--text-color-primary);
   }
 
-  /* Chart.js dark mode text color (often respects inherited color) */
-  .chart-wrapper,
-  #timeChartCanvas {
-    color: var(--text-color-secondary); /* Hint for chart text color */
+  /* Chart.js text color hint */
+  .chart-wrapper {
+    color: var(--text-color-secondary);
   }
-  /* Calendar day hover/select */
+
+  /* Calendar day hover/select/today adjustments */
   .calendar-day:hover {
-    background-color: #3a3a3c;
-    border-color: #555;
+    background-color: var(--bg-hover-row); /* Use variable */
+    border-color: var(--border-color-medium); /* Use variable */
   }
   .calendar-day.selected {
-    border-color: var(--border-color-selected);
-    background-color: #004080;
+    /* Variables already handle this */
   }
   .calendar-day.selected:hover {
-    background-color: #0050a0;
+    background-color: #0050a0; /* Adjust if needed */
   }
   .calendar-day.today {
-    border-color: var(--bg-button-primary);
+    border-color: var(--accent-color-blue); /* Use variable */
     background-color: rgba(10, 132, 255, 0.1);
   }
   .calendar-day.today .day-number {
-    background-color: var(--bg-button-primary);
+    background-color: var(--accent-color-blue); /* Use variable */
     color: white;
   }
+
+  /* Calendar popup */
   .calendar-detail-popup {
-    background-color: #3a3a3c;
-    border-color: #555;
+    background-color: var(--bg-card); /* Use variable */
+    border-color: var(--border-color-medium); /* Use variable */
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
   }
   .calendar-detail-popup strong {
-    border-color: #555;
+    border-color: var(--border-color-light); /* Use variable */
   }
 
   /* Modal content */
   .modal-content {
-    background-color: var(--bg-card);
-    border-color: var(--border-color-medium);
+    /* background-color, border-color handled by variables */
   }
   .modal-content h3 {
-    color: var(--bg-button-primary);
+    color: var(--text-color-heading); /* Use variable */
   }
   .close-button {
-    color: #aaa;
+    color: #aaa; /* Keep specific or use var(--text-color-muted) ? */
   }
   .close-button:hover {
     color: var(--text-color-primary);
@@ -1048,94 +1192,34 @@ button.export-button:hover {
   #editRuleFormContent span#editRuleTypeDisplay {
     color: var(--text-color-primary);
   }
-}
-/* --- Loader Styles --- */
-.stats-loader {
-  display: none; /* Hidden by default */
-  position: absolute; /* Position relative to the section or container */
-  /* Adjust top/left/transform based on where you placed it in HTML
-     This example centers it within the stats-display-section if that section is position: relative */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 15px 25px;
-  background-color: rgba(200, 200, 200, 0.8); /* Semi-transparent background */
-  color: #333;
-  border-radius: 5px;
-  font-size: 1.1em;
-  font-weight: 500;
-  z-index: 10; /* Ensure it's above other content */
-  text-align: center;
-  border: 1px solid #bbb;
-}
 
-/* Dark mode adjustment for loader */
-@media (prefers-color-scheme: dark) {
+  /* Stats Loader (Moved from separate block) */
   .stats-loader {
-    background-color: rgba(50, 50, 50, 0.85); /* Darker background */
+    background-color: rgba(50, 50, 50, 0.85);
     color: var(--text-color-primary);
-    border: 1px solid #666;
+    border: 1px solid var(--border-color-medium); /* Use variable */
   }
-}
 
-/* Optional: Style the section holding the dashboard to contain the absolute loader */
-#stats-display-section {
-  position: relative; /* Needed for absolute positioning of loader */
-  /* Add min-height if needed to prevent collapse while loading */
-  /* min-height: 300px; */
-}
-
-/* Optional: Hide dashboard content while loading */
-/* Add a class 'loading' to stats-dashboard via JS */
-/*
-.stats-dashboard.loading {
-    opacity: 0.3;
-    pointer-events: none;
-}
-*/
-
-/* #data-management-section { */
-/* Styles for the section */
-/* } */
-
-#data-management-section .form-group.data-buttons {
-  display: flex;
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
-  align-items: center;
-  margin-top: var(--spacing-md);
-}
-
-#data-management-section button.action-button {
-  /* Style like other primary buttons or use a secondary style */
-  background-color: var(--bg-button-secondary);
-  color: var(--text-color-button);
-  border-color: var(--bg-button-secondary);
-  padding: var(--spacing-sm) var(--spacing-lg); /* Adjust padding if needed */
-}
-#data-management-section button.action-button:hover {
-  background-color: var(--bg-button-secondary-hover);
-  border-color: var(--bg-button-secondary-hover);
-}
-
-#importStatus {
-  margin-top: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-#importStatus.success {
-  color: var(--bg-button-success); /* Use success color variable */
-}
-#importStatus.error {
-  color: var(--bg-button-danger); /* Use danger color variable */
-}
-
-/* Dark mode adjustments if needed */
-@media (prefers-color-scheme: dark) {
+  /* Import Status (Moved from separate block) */
   #importStatus.success {
-    color: #30d158; /* Brighter green for dark mode */
+    color: var(--accent-color-green); /* Use variable */
   }
   #importStatus.error {
-    color: #ff453a; /* Brighter red for dark mode */
+    color: var(--accent-color-red); /* Use variable */
   }
-}
+
+  /* Productivity Settings Radio Button Label (Moved from separate block) */
+  .settings-list .rating-controls label {
+    color: var(--text-color-secondary);
+  }
+  /* Score value colors */
+  .score-value.score-low {
+    color: var(--accent-color-red);
+  } /* Use variable */
+  .score-value.score-medium {
+    color: var(--bg-button-warning);
+  } /* Use variable */
+  .score-value.score-high {
+    color: var(--accent-color-green);
+  } /* Use variable */
+} /* End Main Dark Mode Media Query */

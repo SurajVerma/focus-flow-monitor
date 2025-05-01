@@ -1029,4 +1029,50 @@ async function applyImportedData(dataToImport) {
 }
 // *** END ADDED ***
 
+/**
+ * Handles changes to productivity rating radio buttons.
+ * Saves the updated rating to storage immediately.
+ * @param {Event} event - The input change event.
+ */
+async function handleProductivityRatingChange(event) {
+  // Ensure the event target is one of our radio buttons
+  if (event.target.type !== 'radio' || !event.target.name.startsWith('rating-')) {
+    return;
+  }
+
+  const category = event.target.dataset.category;
+  const newRating = parseInt(event.target.value, 10); // Value is -1, 0, or 1
+
+  if (!category || isNaN(newRating)) {
+    console.error('Could not get category or rating from event:', event.target);
+    return;
+  }
+
+  console.log(`[Productivity] Rating changed for "${category}" to ${newRating}`);
+
+  try {
+    // Get current user ratings from storage
+    const result = await browser.storage.local.get(STORAGE_KEY_PRODUCTIVITY_RATINGS);
+    const currentRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
+
+    // Update the specific category rating
+    currentRatings[category] = newRating;
+
+    // Save the updated ratings object back to storage
+    await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: currentRatings });
+    console.log(`[Productivity] Saved updated ratings.`);
+
+    // Update AppState immediately (optional but good for responsiveness)
+    AppState.categoryProductivityRatings = currentRatings;
+
+    // Trigger a recalculation and display update for the score
+    // This re-fetches data for the current range and recalculates the score
+    updateDisplayForSelectedRangeUI();
+  } catch (error) {
+    console.error('Error saving productivity rating:', error);
+    alert('Failed to save productivity setting. Please try again.');
+    // Optional: Revert the radio button state? (more complex)
+  }
+}
+
 console.log('[System] options-handlers.js loaded (v0.8.1)');

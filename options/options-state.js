@@ -29,6 +29,7 @@ let AppState = {
   currentChartViewMode: 'domain',
   editingRuleIndex: -1,
   editingAssignmentOriginalDomain: null,
+  categoryProductivityRatings: {}, // Add field to hold loaded user ratings
 };
 
 // --- UI Element References ---
@@ -101,6 +102,10 @@ function queryUIElements() {
   UIElements.importDataBtn = document.getElementById('importDataBtn');
   UIElements.importFileInput = document.getElementById('importFileInput');
   UIElements.importStatus = document.getElementById('importStatus');
+  //Productivity Score Settings
+  UIElements.productivitySettingsList = document.getElementById('productivitySettingsList');
+  UIElements.productivityScoreLabel = document.getElementById('productivityScoreLabel');
+  UIElements.productivityScoreValue = document.getElementById('productivityScoreValue');
 
   // Basic check to ensure critical elements were found
   if (
@@ -114,7 +119,8 @@ function queryUIElements() {
     !UIElements.exportDataBtn ||
     !UIElements.importDataBtn ||
     !UIElements.importFileInput ||
-    !UIElements.importStatus
+    !UIElements.importStatus ||
+    !UIElements.productivitySettingsList
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure

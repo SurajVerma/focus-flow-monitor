@@ -213,3 +213,27 @@ body {
 
 /* Chart.js Tooltip Styling (Optional - requires JS config usually) */
 /* You might need Chart.js options to fully style tooltips for dark mode */
+
+.focus-score {
+  font-size: 0.95em; /* Slightly smaller than total time */
+  font-weight: 600;
+  color: var(--popup-text-secondary); /* Use secondary text color */
+  margin-top: -10px; /* Adjust spacing relative to total time */
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Optional: Add coloring based on score later if desired */
+/* .focus-score.score-low { color: #dc3545; } */
+/* .focus-score.score-medium { color: #ffc107; } */
+/* .focus-score.score-high { color: #28a745; } */
+
+/* Dark mode adjustments if needed (should inherit ok) */
+@media (prefers-color-scheme: dark) {
+  .focus-score {
+    color: var(--popup-text-secondary);
+  }
+  /* .focus-score.score-low { color: #ff453a; } */
+  /* .focus-score.score-medium { color: #ffd60a; } */
+  /* .focus-score.score-high { color: #30d158; } */
+}
