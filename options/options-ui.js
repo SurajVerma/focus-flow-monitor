@@ -621,4 +621,77 @@ function clearChartOnError(message = 'Error loading chart data') {
   }
 }
 
+/**
+ * Populates the Productivity Settings list in the options page.
+ */
+function populateProductivitySettings() {
+  if (!UIElements.productivitySettingsList) {
+    console.error('Productivity settings list UI element not found!');
+    return;
+  }
+  // Ensure constants are accessible (they are global from options-state.js)
+  if (typeof PRODUCTIVITY_TIERS === 'undefined' || typeof defaultCategoryProductivityRatings === 'undefined') {
+    console.error('Productivity constants not found. Ensure options-state.js is loaded first.');
+    UIElements.productivitySettingsList.innerHTML = '<li>Error loading settings.</li>';
+    return;
+  }
+
+  const userRatings = AppState.categoryProductivityRatings || {}; // Use ratings loaded into AppState
+  const categories = AppState.categories || [];
+
+  UIElements.productivitySettingsList.replaceChildren(); // Clear previous items
+
+  if (!categories || categories.length === 0) {
+    UIElements.productivitySettingsList.innerHTML = '<li>No categories found.</li>';
+    return;
+  }
+
+  // Sort categories alphabetically for display, maybe keep 'Other' last
+  const sortedCategories = [...categories].sort((a, b) => {
+    if (a === 'Other') return 1;
+    if (b === 'Other') return -1;
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  });
+
+  const fragment = document.createDocumentFragment();
+
+  sortedCategories.forEach((category) => {
+    const li = document.createElement('li');
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'category-name';
+    nameSpan.textContent = category;
+    li.appendChild(nameSpan);
+
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'rating-controls';
+
+    // Determine current rating: User > Default > Neutral
+    const currentRating =
+      userRatings[category] ?? defaultCategoryProductivityRatings[category] ?? PRODUCTIVITY_TIERS.NEUTRAL;
+
+    // Create radio buttons for Productive, Neutral, Distracting
+    Object.entries(PRODUCTIVITY_TIERS).forEach(([tierName, tierValue]) => {
+      const label = document.createElement('label');
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = `rating-${category.replace(/[^a-zA-Z0-9]/g, '-')}`; // Create a unique name for the group
+      radio.value = tierValue;
+      radio.dataset.category = category; // Store category name
+      radio.checked = currentRating === tierValue; // Check the current rating
+
+      label.appendChild(radio);
+      // Make tier names user-friendly (e.g., PRODUCTIVE -> Productive)
+      const labelText = tierName.charAt(0) + tierName.slice(1).toLowerCase();
+      label.appendChild(document.createTextNode(` ${labelText}`)); // Add space
+      controlsDiv.appendChild(label);
+    });
+
+    li.appendChild(controlsDiv);
+    fragment.appendChild(li);
+  });
+
+  UIElements.productivitySettingsList.appendChild(fragment);
+}
+
 console.log('[System] options-ui.js loaded (v0.7.4)');

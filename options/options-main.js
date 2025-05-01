@@ -38,6 +38,7 @@ function loadAllData() {
       'hourlyData',
       STORAGE_KEY_IDLE_THRESHOLD,
       STORAGE_KEY_DATA_RETENTION_DAYS,
+      STORAGE_KEY_PRODUCTIVITY_RATINGS,
     ])
     .then((result) => {
       console.log('[Options Main] Data loaded from storage.');
@@ -49,6 +50,7 @@ function loadAllData() {
         AppState.dailyCategoryData = result.dailyCategoryData || {};
         AppState.hourlyData = result.hourlyData || {};
         AppState.categories = result.categories || ['Other'];
+        AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
         if (!AppState.categories.includes('Other')) AppState.categories.push('Other');
         AppState.categoryAssignments = result.categoryAssignments || {};
         AppState.rules = result.rules || [];
@@ -76,6 +78,7 @@ function loadAllData() {
         populateAssignmentList();
         populateRuleCategorySelect();
         populateRuleList();
+        populateProductivitySettings();
         renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
         updateDisplayForSelectedRangeUI();
         highlightSelectedCalendarDay(AppState.selectedDateStr);
@@ -149,6 +152,16 @@ function updateDisplayForSelectedRangeUI() {
 
       updateDomainDisplayAndPagination();
       displayCategoryTime(categoryData);
+      try {
+        // Use the categoryData for the selected period and the loaded ratings
+        const scoreData = calculateFocusScore(categoryData, AppState.categoryProductivityRatings);
+        // Call the display function with the result and the period label
+        displayProductivityScore(scoreData, label); // Defined in options-ui.js
+        console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
+      } catch (scoreError) {
+        console.error(`[Options Main] Error calculating focus score for range "${label}":`, scoreError);
+        displayProductivityScore(null, label, true); // Display error state
+      }
       renderChartForSelectedDateUI();
 
       console.log(`[Options Main] Display updated for range: ${selectedRange}`);
@@ -387,6 +400,12 @@ function setupEventListeners() {
     if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
+    // *** ADD Listener for Productivity Settings ***
+    if (UIElements.productivitySettingsList) {
+      // Use 'change' event which works well for radio buttons
+      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
+    }
+
     handleRuleTypeChange(); // Initialize rule input display
     console.log('[Options Main] Event listeners setup complete.');
   } catch (e) {
@@ -561,6 +580,37 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
   } finally {
     console.log('[Options Main] REBUILDING category totals FINISHED');
     // The UI update should happen *after* this function completes in the calling handler
+  }
+}
+
+// Add this function to options-main.js
+
+function displayProductivityScore(scoreData, periodLabel = 'Selected Period', isError = false) {
+  // Check if UI elements exist (using UIElements from options-state.js)
+  if (!UIElements.productivityScoreValue || !UIElements.productivityScoreLabel) {
+    console.warn('Productivity score UI elements not found in Options.');
+    return;
+  }
+
+  if (isError || !scoreData) {
+    UIElements.productivityScoreValue.textContent = 'Error';
+    UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`;
+    UIElements.productivityScoreValue.className = 'score-value'; // Reset class
+    return;
+  }
+
+  // Display the score
+  UIElements.productivityScoreValue.textContent = `${scoreData.score}%`;
+  UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`; // Update label with period
+
+  // Add visual indicator class based on score (Optional)
+  UIElements.productivityScoreValue.classList.remove('score-low', 'score-medium', 'score-high');
+  if (scoreData.score < 40) {
+    UIElements.productivityScoreValue.classList.add('score-low');
+  } else if (scoreData.score < 70) {
+    UIElements.productivityScoreValue.classList.add('score-medium');
+  } else {
+    UIElements.productivityScoreValue.classList.add('score-high');
   }
 }
 
