@@ -124,67 +124,43 @@ function updateDisplayForSelectedRangeUI() {
     return;
   }
   const selectedRange = UIElements.dateRangeSelect.value;
-  const loader = document.getElementById('statsLoader');
+  const loader = document.getElementById('statsLoader'); // Make sure this ID exists in your HTML or remove loader logic
   const dashboard = document.querySelector('.stats-dashboard');
 
   const showLoader = ['week', 'month', 'all'].includes(selectedRange);
 
   if (showLoader && loader) {
     loader.style.display = 'block';
-    if (dashboard) dashboard.style.visibility = 'hidden';
+    if (dashboard) dashboard.style.visibility = 'hidden'; // Hide dashboard while loading large ranges
   } else if (loader) {
-    loader.style.display = 'none';
+    loader.style.display = 'none'; // Ensure loader is hidden otherwise
   }
 
+  // Use setTimeout to allow loader to render if needed
   setTimeout(() => {
+    let domainData = {},
+      categoryData = {},
+      label = `Error (${selectedRange})`; // Default error values
     try {
-      console.log(`[Options Main] Updating display for range: ${selectedRange}`);
-      const { domainData, categoryData, label } = getFilteredDataForRange(selectedRange);
+      // Get data aggregated for the selected range (e.g., 'week', 'month')
+      const rangeData = getFilteredDataForRange(selectedRange);
+      domainData = rangeData.domainData;
+      categoryData = rangeData.categoryData;
+      label = rangeData.label;
 
-      if (UIElements.statsPeriodSpans) {
-        UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label));
-      }
-
-      AppState.fullDomainDataSorted = Object.entries(domainData)
-        .map(([d, t]) => ({ domain: d, time: t }))
-        .sort((a, b) => b.time - a.time);
-      AppState.domainCurrentPage = 1;
-
-      updateDomainDisplayAndPagination();
-      displayCategoryTime(categoryData);
-      try {
-        // Use the categoryData for the selected period and the loaded ratings
-        const scoreData = calculateFocusScore(categoryData, AppState.categoryProductivityRatings);
-        // Call the display function with the result and the period label
-        displayProductivityScore(scoreData, label); // Defined in options-ui.js
-        console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
-      } catch (scoreError) {
-        console.error(`[Options Main] Error calculating focus score for range "${label}":`, scoreError);
-        displayProductivityScore(null, label, true); // Display error state
-      }
-      renderChartForSelectedDateUI();
-
-      console.log(`[Options Main] Display updated for range: ${selectedRange}`);
+      // Call the consolidated update function.
+      // The chart should still reflect the *single selected day* in the calendar (AppState.selectedDateStr)
+      // even when viewing aggregated lists/scores for a range.
+      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr);
     } catch (e) {
-      console.error(`Error updating display for range ${selectedRange}:`, e);
-      if (UIElements.categoryTimeList) {
-        UIElements.categoryTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = `Error loading ${selectedRange} data.`;
-        UIElements.categoryTimeList.appendChild(errorLi);
-      }
-      if (UIElements.detailedTimeList) {
-        UIElements.detailedTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = `Error loading ${selectedRange} data.`;
-        UIElements.detailedTimeList.appendChild(errorLi);
-      }
-      clearChartOnError(`Error loading ${selectedRange} data`);
+      console.error(`Error processing range ${selectedRange}:`, e);
+      // If fetching/processing range data failed, display empty stats with error label
+      updateStatsDisplay({}, {}, label); // Pass empty data but the error label
     } finally {
       if (loader) loader.style.display = 'none';
-      if (dashboard) dashboard.style.visibility = 'visible';
+      if (dashboard) dashboard.style.visibility = 'visible'; // Ensure dashboard is visible
     }
-  }, 10);
+  }, 10); // Small timeout
 }
 function updateDomainDisplayAndPagination() {
   if (
@@ -212,6 +188,128 @@ function updateDomainDisplayAndPagination() {
   UIElements.domainNextBtn.disabled = AppState.domainCurrentPage >= totalPages;
   UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
 }
+
+/**
+ * Updates all statistic display elements (lists, score, chart, labels) with the provided data.
+ * @param {object} domainData - Domain time data object { domain: seconds, ... }
+ * @param {object} categoryData - Category time data object { category: seconds, ... }
+ * @param {string} label - The label for the period (e.g., "Today", "This Week", "May 2, 2025")
+ * @param {string} [chartDateStr] - Optional. The specific date string (YYYY-MM-DD) for chart rendering. Defaults to AppState.selectedDateStr if not provided.
+ */
+function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppState.selectedDateStr) {
+  try {
+    console.log(`[Options Main] updateStatsDisplay called for label: ${label}`);
+
+    // Ensure data inputs are objects, even if null/undefined
+    const currentDomainData = domainData || {};
+    const currentCategoryData = categoryData || {};
+
+    // Update the period label spans
+    if (UIElements.statsPeriodSpans) {
+      UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label));
+    }
+
+    // Update domain list and pagination
+    AppState.fullDomainDataSorted = Object.entries(currentDomainData)
+      .map(([d, t]) => ({ domain: d, time: t }))
+      .sort((a, b) => b.time - a.time);
+    AppState.domainCurrentPage = 1; // Reset pagination to page 1
+    updateDomainDisplayAndPagination(); // This function uses AppState.fullDomainDataSorted
+
+    // Update category time list
+    displayCategoryTime(currentCategoryData); // Pass the specific category data
+
+    // Calculate and Display Focus Score
+    try {
+      const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings);
+      displayProductivityScore(scoreData, label); // Pass the correct label
+      console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
+    } catch (scoreError) {
+      console.error(`[Options Main] Error calculating focus score for label "${label}":`, scoreError);
+      displayProductivityScore(null, label, true); // Display error state
+    }
+
+    // Render chart based on the *specific date* the chart should represent
+    const chartDataView =
+      AppState.currentChartViewMode === 'domain'
+        ? AppState.dailyDomainData[chartDateStr] || {}
+        : AppState.dailyCategoryData[chartDateStr] || {};
+    const chartLabel = formatDisplayDate(chartDateStr); // Label for the chart title
+    renderChart(chartDataView, chartLabel, AppState.currentChartViewMode); // Use the general renderChart
+
+    if (UIElements.chartTitleElement) {
+      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabel})`; // Update chart title
+    }
+
+    console.log(`[Options Main] Stats display updated for label: ${label}`);
+  } catch (error) {
+    console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
+    // Fallback: Display error state for all components
+    displayCategoryTime({});
+    updateDomainDisplayAndPagination(); // Will show empty based on potentially empty AppState.fullDomainDataSorted
+    displayProductivityScore(null, label, true);
+    clearChartOnError(`Error loading data for ${label}`);
+    if (UIElements.chartTitleElement) {
+      UIElements.chartTitleElement.textContent = `Usage Chart (Error)`;
+    }
+  }
+}
+
+/**
+ * Updates the statistics display areas to show a "No data" message for a specific date.
+ * @param {string} displayDateLabel - The user-friendly formatted date string (e.g., "May 3, 2025").
+ */
+function displayNoDataForDate(displayDateLabel) {
+  console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
+
+  const noDataMessage = `No data recorded for ${displayDateLabel}.`;
+
+  // Update period labels
+  if (UIElements.statsPeriodSpans) {
+    UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
+  }
+
+  // Clear Category List
+  if (UIElements.categoryTimeList) {
+    UIElements.categoryTimeList.replaceChildren(); // Clear existing items
+    const li = document.createElement('li');
+    li.textContent = noDataMessage;
+    li.style.textAlign = 'center'; // Optional: center the message
+    li.style.color = 'var(--text-color-muted)'; // Optional: use muted color
+    UIElements.categoryTimeList.appendChild(li);
+  }
+
+  // Clear Domain List and hide pagination
+  if (UIElements.detailedTimeList) {
+    UIElements.detailedTimeList.replaceChildren(); // Clear existing items
+    const li = document.createElement('li');
+    li.textContent = noDataMessage;
+    li.style.textAlign = 'center'; // Optional: center the message
+    li.style.color = 'var(--text-color-muted)'; // Optional: use muted color
+    UIElements.detailedTimeList.appendChild(li);
+  }
+  if (UIElements.domainPaginationDiv) {
+    UIElements.domainPaginationDiv.style.display = 'none'; // Hide pagination
+  }
+  // Reset sorted data in state to ensure pagination doesn't reappear incorrectly later
+  AppState.fullDomainDataSorted = [];
+
+  // Update Focus Score display
+  if (UIElements.productivityScoreLabel) {
+    UIElements.productivityScoreLabel.textContent = `Focus Score (${displayDateLabel})`;
+  }
+  if (UIElements.productivityScoreValue) {
+    UIElements.productivityScoreValue.textContent = 'N/A'; // Or '--%' or '0%'
+    UIElements.productivityScoreValue.className = 'score-value'; // Reset score class
+  }
+
+  // Clear Chart
+  clearChartOnError(noDataMessage); // Reuse the existing chart clearing function
+  if (UIElements.chartTitleElement) {
+    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`; // Update title even if no data
+  }
+}
+
 function renderChartForSelectedDateUI() {
   if (!AppState.selectedDateStr) {
     clearChartOnError('Select a date from the calendar.');

@@ -148,20 +148,19 @@ const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings'; // Key f
  * @returns {object} { score: number (0-100), totalTime: number } or null if no data.
  */
 function calculateFocusScore(categoryData, userRatings = {}) {
-  // *** ADD DEBUG LOGS HERE ***
-  console.log('[Utils Debug] calculateFocusScore called.');
-  console.log('[Utils Debug] Input categoryData:', JSON.stringify(categoryData));
-  console.log('[Utils Debug] Input userRatings:', JSON.stringify(userRatings));
-  console.log(
-    '[Utils Debug] typeof PRODUCTIVITY_TIERS:',
-    typeof PRODUCTIVITY_TIERS,
-    JSON.stringify(PRODUCTIVITY_TIERS)
-  ); // Check constant
-  console.log(
-    '[Utils Debug] typeof defaultCategoryProductivityRatings:',
-    typeof defaultCategoryProductivityRatings,
-    JSON.stringify(defaultCategoryProductivityRatings)
-  ); // Check constant
+  // console.log('[Utils Debug] calculateFocusScore called.');
+  // console.log('[Utils Debug] Input categoryData:', JSON.stringify(categoryData));
+  // console.log('[Utils Debug] Input userRatings:', JSON.stringify(userRatings));
+  // console.log(
+  //   '[Utils Debug] typeof PRODUCTIVITY_TIERS:',
+  //   typeof PRODUCTIVITY_TIERS,
+  //   JSON.stringify(PRODUCTIVITY_TIERS)
+  // ); // Check constant
+  // console.log(
+  //   '[Utils Debug] typeof defaultCategoryProductivityRatings:',
+  //   typeof defaultCategoryProductivityRatings,
+  //   JSON.stringify(defaultCategoryProductivityRatings)
+  // ); // Check constant
   // *** END DEBUG LOGS ***
   let totalProductiveTime = 0;
   let totalTrackedTime = 0;

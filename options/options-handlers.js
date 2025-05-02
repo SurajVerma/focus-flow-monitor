@@ -606,15 +606,54 @@ function handleCalendarMouseOver(event) {
 function handleCalendarMouseOut() {
   hideDayDetailsPopup();
 }
+// options-handlers.js
+
 function handleCalendarDayClick(event) {
   const dayCell = event.target.closest('.calendar-day');
   if (!dayCell) return;
-  const dateStr = dayCell.dataset.date;
+  const dateStr = dayCell.dataset.date; // YYYY-MM-DD format
   if (!dateStr) return;
+
   console.log(`[Calendar] Day clicked: ${dateStr}`);
-  AppState.selectedDateStr = dateStr;
-  highlightSelectedCalendarDay(dateStr);
-  renderChartForSelectedDateUI();
+  AppState.selectedDateStr = dateStr; // Update the selected date state
+  highlightSelectedCalendarDay(dateStr); // Update calendar visual
+
+  // // --- NEW: Update all stats based on the clicked day ---
+  // const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
+  // const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
+  // const displayDateLabel = formatDisplayDate(dateStr); // Get user-friendly date format from options-utils.js
+
+  // // Deselect the main range dropdown to avoid confusion
+  // if (UIElements.dateRangeSelect) {
+  //   UIElements.dateRangeSelect.value = ''; // Or a custom 'selected-date' value if you add one
+  // }
+
+  // // Call the consolidated update function with single-day data
+  // // Pass dateStr as the specific date for the chart
+  // updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
+
+  // // No longer need the separate chart rendering call here:
+  // // renderChartForSelectedDateUI();
+  const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
+  const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
+  const displayDateLabel = formatDisplayDate(dateStr); // Get user-friendly date format
+
+  // Check if there's any time recorded for this day (using domain data as a proxy)
+  const totalSeconds = Object.values(domainDataForDay).reduce((sum, time) => sum + (time || 0), 0);
+
+  // Deselect the main range dropdown to avoid confusion when a specific date is selected
+  if (UIElements.dateRangeSelect) {
+    UIElements.dateRangeSelect.value = ''; // Or a custom 'selected-date' value if you add one
+  }
+  console.log('suraj ' + totalSeconds);
+  if (totalSeconds < 1) {
+    // Check if effectively zero time recorded
+    // If no data, call the specific "No Data" display function
+    displayNoDataForDate(displayDateLabel);
+  } else {
+    // If data exists, call the normal update function
+    updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
+  }
 }
 
 function handleChartViewChange(event) {
