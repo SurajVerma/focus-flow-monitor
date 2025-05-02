@@ -62,8 +62,6 @@ Get the latest version from the official Firefox Add-ons store:
 
 This project is licensed under the **Mozilla Public License Version 2.0**.
 
-You can view the full license text in the [LICENSE](LICENSE) file (assuming you create one in your repository).
-
 _In simple terms, this means you are free to use, modify, and distribute the software, but if you modify files licensed under MPL 2.0, you must make your modifications available under the same MPL 2.0 license. Please ensure you retain the original copyright and license notices._
 
 ---
