@@ -1,18 +1,70 @@
+# Focus Flow Monitor
+
 **Track your time online, gain insights, and stay productive.**
 
-Understand your online habits and stay productive by tracking the time you spend on different websites. Set limits or block specific URLs or categories—like restricting your most distracting site to 30 minutes a day or blocking it entirely.
-Note: To better capture focused activities like video watching, tracking continues unless you are inactive (no mouse or keyboard use) for 30 minutes.
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+Focus Flow Monitor helps you understand your online habits by tracking the time you spend on different websites. Gain insights through categorized statistics, visual charts, and a daily focus score. Set limits or block distracting sites to stay productive.
+
+![Quick View Popup](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
+
+---
+
+## Key Features
+
+- **Automatic Time Tracking:** Monitors time spent on websites in your active browser tab.
+- **Website Categorization:** Automatically assigns websites to categories (e.g., Work, Social Media, Entertainment) with customizable assignments.
+- **Detailed Statistics:** View time spent per website and category for different periods (Today, Week, Month, All Time).
+- **Visual Charts:** Doughnut chart for visual time breakdown by site or category. Hourly bar chart in the popup.
+- **Calendar View:** Explore daily totals and top sites directly from a calendar interface.
+- **Focus Score:** Rate your categories (Productive, Neutral, Distracting) to get a daily focus score.
+- **Site Blocking & Limiting:** Set daily time limits or permanently block specific websites or entire categories.
+- **Data Management:** Export and import your tracking history and settings.
+- **Privacy Focused:** All tracking data is stored locally in your browser – nothing is sent externally.
+
+---
+
+## Privacy
 
 **Privacy-first by design.**
 
-No tracking or analytics—your data stays local, stored entirely in your browser.
+Focus Flow Monitor does not employ any external tracking or analytics. Your Browse and time data stays local, stored entirely within your browser's storage, and is never transmitted elsewhere.
 
-**Actively evolving.**
+---
 
-The app is under active development, so features may change over time.
+## Installation
 
-Focus Flow Monitor is now available on https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/
+Get the latest version from the official Firefox Add-ons store:
 
-![quick-view](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
-![options](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
-![blocked](https://github.com/user-attachments/assets/f12dcbac-24de-4736-9395-9f3fd1db4510)
+[**Install Focus Flow Monitor for Firefox**](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
+
+---
+
+## Usage Notes
+
+- **Tracking Inactivity:** To better capture focused activities like video watching or reading, tracking only pauses if you are inactive (no mouse or keyboard use) for a configurable duration (default: 30 minutes). This can be changed in the options.
+- **Options Page:** Access detailed statistics, manage categories, set rules, and configure settings via the extension's options page (Right-click the extension icon -> Manage Extension -> Preferences/Options, or via the gear icon in the popup).
+- **Active Development:** The extension is actively evolving, so features may change over time.
+
+---
+
+## Screenshots
+
+**Options & Statistics Page:**
+![Options Page](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
+
+**Blocked Page Example:**
+![Blocked Page](https://github.com/user-attachments/assets/f12dcbac-24de-4736-9395-f3fd1db4510)
+
+---
+
+## License
+
+This project is licensed under the **Mozilla Public License Version 2.0**.
+
+You can view the full license text in the [LICENSE](LICENSE) file (assuming you create one in your repository).
+
+_In simple terms, this means you are free to use, modify, and distribute the software, but if you modify files licensed under MPL 2.0, you must make your modifications available under the same MPL 2.0 license. Please ensure you retain the original copyright and license notices._
+
+---
+
+_Created with ❤️ in India by Suraj_

@@ -396,22 +396,23 @@ function renderCalendar(year, month) {
     timeSpan.classList.add('day-time');
     if (dailyTotalSeconds > 0) {
       timeSpan.textContent = formatTime(dailyTotalSeconds, false);
-    } // from utils.js
-    else {
+    } else {
       timeSpan.textContent = '-';
       timeSpan.classList.add('no-data');
     }
     dayCell.appendChild(timeSpan);
-    if (dailyTotalSeconds > 0) {
+    dayCell.addEventListener('click', handleCalendarDayClick);
+    if (dailyTotalSeconds > 0.1) {
+      dayCell.style.cursor = 'pointer';
       dayCell.addEventListener('mouseover', handleCalendarMouseOver);
       dayCell.addEventListener('focus', handleCalendarMouseOver);
       dayCell.addEventListener('mouseout', handleCalendarMouseOut);
       dayCell.addEventListener('blur', handleCalendarMouseOut);
-      dayCell.addEventListener('click', handleCalendarDayClick);
       dayCell.setAttribute('tabindex', '0');
     } else {
       dayCell.style.cursor = 'default';
     }
+
     fragment.appendChild(dayCell);
   }
   UIElements.calendarGrid.appendChild(fragment);

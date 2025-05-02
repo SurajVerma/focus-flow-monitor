@@ -95,7 +95,7 @@ body {
 
 /* Summary Section Styles */
 .summary-section {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   text-align: center;
 }
 
@@ -179,8 +179,8 @@ body {
 
 /* Hourly Chart Section */
 .hourly-chart-section {
-  margin-top: 20px;
-  padding-top: 15px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--popup-header-border); /* Use same border color */
 }
 
@@ -236,4 +236,14 @@ body {
   /* .focus-score.score-low { color: #ff453a; } */
   /* .focus-score.score-medium { color: #ffd60a; } */
   /* .focus-score.score-high { color: #30d158; } */
+}
+.attribution-footer {
+  font-size: 0.75em; /* Make it small */
+  color: var(--popup-text-muted); /* Use muted text color */
+  text-align: center; /* Center the text */
+  margin-top: 15px; /* Add some space above it */
+  margin-bottom: 0; /* Remove default bottom margin */
+  padding-top: 5px; /* Small padding */
+  border-top: 1px solid var(--popup-header-border); /* Optional subtle separator */
+  line-height: 1.2;
 }
