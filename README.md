@@ -3,6 +3,7 @@
 **Track your time online, gain insights, and stay productive.**
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+
 Focus Flow Monitor helps you understand your online habits by tracking the time you spend on different websites. Gain insights through categorized statistics, visual charts, and a daily focus score. Set limits or block distracting sites to stay productive.
 
 ![Quick View Popup](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
@@ -53,7 +54,7 @@ Get the latest version from the official Firefox Add-ons store:
 ![Options Page](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
 
 **Blocked Page Example:**
-![Blocked Page](https://github.com/user-attachments/assets/f12dcbac-24de-4736-9395-f3fd1db4510)
+![blocked](https://github.com/user-attachments/assets/b5c51bdc-a01e-49aa-be20-4906933b8ff5)
 
 ---
 
