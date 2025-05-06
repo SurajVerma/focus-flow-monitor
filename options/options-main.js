@@ -229,16 +229,25 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
       displayProductivityScore(null, label, true); // Display error state
     }
 
-    // Render chart based on the *specific date* the chart should represent
+    // Render chart based on the *selected range's data*
     const chartDataView =
       AppState.currentChartViewMode === 'domain'
-        ? AppState.dailyDomainData[chartDateStr] || {}
-        : AppState.dailyCategoryData[chartDateStr] || {};
-    const chartLabel = formatDisplayDate(chartDateStr); // Label for the chart title
-    renderChart(chartDataView, chartLabel, AppState.currentChartViewMode); // Use the general renderChart
+        ? currentDomainData // USE THE AGGREGATED RANGE DATA passed into the function
+        : currentCategoryData; // USE THE AGGREGATED RANGE DATA passed into the function
+    const chartLabel = label; // USE THE RANGE LABEL passed into the function
+
+    // Check if there's significant data to render for the range
+    const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
+
+    if (hasSignificantData) {
+      renderChart(chartDataView, chartLabel, AppState.currentChartViewMode);
+    } else {
+      // Clear the chart if the selected range has no significant data
+      clearChartOnError(`No significant data for ${chartLabel}`);
+    }
 
     if (UIElements.chartTitleElement) {
-      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabel})`; // Update chart title
+      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabel})`; // Update chart title with range label
     }
 
     console.log(`[Options Main] Stats display updated for label: ${label}`);
