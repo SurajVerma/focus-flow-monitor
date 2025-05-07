@@ -6,7 +6,8 @@
 
 Focus Flow Monitor helps you understand your online habits by tracking the time you spend on different websites. Gain insights through categorized statistics, visual charts, and a daily focus score. Set limits or block distracting sites to stay productive.
 
-![Quick View Popup](https://github.com/user-attachments/assets/fcbcf28b-cbd0-4040-aaa7-5355bdc4d8c4)
+![Quick View Popup](https://github.com/user-attachments/assets/c0edf5d2-d556-4976-88c3-e1887ff43b2f)
+
 
 ---
 
@@ -51,10 +52,10 @@ Get the latest version from the official Firefox Add-ons store:
 ## Screenshots
 
 **Options & Statistics Page:**
-![Options Page](https://github.com/user-attachments/assets/ff0304a9-9230-414f-85ee-8e80211e2010)
+![Options Page](https://github.com/user-attachments/assets/387e0515-d242-44f5-9e64-03c74b12a2ca)
 
 **Blocked Page Example:**
-![blocked](https://github.com/user-attachments/assets/b5c51bdc-a01e-49aa-be20-4906933b8ff5)
+![blocked](https://github.com/user-attachments/assets/01c6ba2b-595c-41a1-943b-15ed34228b61)
 
 ---
 
