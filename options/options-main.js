@@ -1,49 +1,72 @@
-// options/options-main.js (v0.8.1 - Load Retention Setting) - Recalculation Fix
+// options/options-main.js (v0.8.3 - Block Page Customization - User's Base Corrected)
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[Options Main] DOMContentLoaded');
+  // Ensure UI elements are queried and available before proceeding
   if (!queryUIElements()) {
+    // From options-state.js
     console.error('Failed to initialize UI elements. Aborting setup.');
+    const container = document.querySelector('.container');
+    if (container) {
+      container.innerHTML =
+        '<p style="color: red; text-align: center; padding: 20px;">Error: Could not load page elements. Please try refreshing.</p>';
+    }
     return;
   }
   try {
+    // Set the initial state of the chart view radio button
     const defaultChartView = AppState.currentChartViewMode || 'domain';
     const radioToCheck = document.querySelector(`input[name="chartView"][value="${defaultChartView}"]`);
-    if (radioToCheck) radioToCheck.checked = true;
-    else {
+    if (radioToCheck) {
+      radioToCheck.checked = true;
+    } else {
       const fallback = document.querySelector('input[name="chartView"][value="domain"]');
       if (fallback) fallback.checked = true;
     }
   } catch (e) {
     console.error('Error setting initial chart view radio button:', e);
   }
-  loadAllData();
-  setupEventListeners(); // Call setupEventListeners
-  console.log('Options Main script initialized (v0.8.1 - Recalculation Fix).');
+  loadAllData(); // Load all settings and tracking data
+  setupEventListeners(); // Setup all event listeners for the options page
+  console.log("Options Main script initialized (v0.8.3 - Block Page Customization - User's Base Corrected).");
 });
 
 // --- Data Loading ---
 function loadAllData() {
   console.log('[Options Main] loadAllData starting...');
+  // Define all storage keys that need to be loaded
+  const keysToLoad = [
+    'trackedData',
+    'categoryTimeData',
+    'categories',
+    'categoryAssignments',
+    'rules',
+    'dailyDomainData',
+    'dailyCategoryData',
+    'hourlyData',
+    STORAGE_KEY_IDLE_THRESHOLD, // From options-state.js
+    STORAGE_KEY_DATA_RETENTION_DAYS, // From options-state.js
+    STORAGE_KEY_PRODUCTIVITY_RATINGS, // From options-state.js
+    // NEW: Add block page customization storage keys (from options-state.js)
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
+    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
+  ];
+
   browser.storage.local
-    .get([
-      'trackedData',
-      'categoryTimeData',
-      'categories',
-      'categoryAssignments',
-      'rules',
-      'dailyDomainData',
-      'dailyCategoryData',
-      'hourlyData',
-      STORAGE_KEY_IDLE_THRESHOLD,
-      STORAGE_KEY_DATA_RETENTION_DAYS,
-      STORAGE_KEY_PRODUCTIVITY_RATINGS,
-    ])
+    .get(keysToLoad)
     .then((result) => {
       console.log('[Options Main] Data loaded from storage.');
       try {
-        // Update AppState
+        // Update AppState for existing data, providing defaults if data is missing
         AppState.trackedData = result.trackedData || {};
         AppState.categoryTimeData = result.categoryTimeData || {};
         AppState.dailyDomainData = result.dailyDomainData || {};
@@ -51,7 +74,9 @@ function loadAllData() {
         AppState.hourlyData = result.hourlyData || {};
         AppState.categories = result.categories || ['Other'];
         AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
-        if (!AppState.categories.includes('Other')) AppState.categories.push('Other');
+        if (!AppState.categories.includes('Other')) {
+          AppState.categories.push('Other');
+        }
         AppState.categoryAssignments = result.categoryAssignments || {};
         AppState.rules = result.rules || [];
 
@@ -72,18 +97,74 @@ function loadAllData() {
           console.log(`[Options Main] Data retention loaded: ${UIElements.dataRetentionSelect.value} days`);
         }
 
-        // Initial UI Population
-        populateCategoryList();
-        populateCategorySelect();
-        populateAssignmentList();
-        populateRuleCategorySelect();
-        populateRuleList();
-        populateProductivitySettings();
-        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
-        updateDisplayForSelectedRangeUI();
-        highlightSelectedCalendarDay(AppState.selectedDateStr);
+        // --- NEW: Load and apply Block Page Customization settings ---
+        AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
+        AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
+        AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
+
+        AppState.blockPageShowUrl =
+          result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
+        AppState.blockPageShowReason =
+          result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
+        AppState.blockPageShowRule =
+          result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
+        AppState.blockPageShowLimitInfo =
+          result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
+            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
+            : true;
+        AppState.blockPageShowScheduleInfo =
+          result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
+            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
+            : true;
+        AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
+        AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
+          ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
+          : [];
+
+        // Populate UI elements with loaded block page settings
+        if (UIElements.blockPageCustomHeadingInput)
+          UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
+        if (UIElements.blockPageCustomMessageTextarea)
+          UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
+        if (UIElements.blockPageCustomButtonTextInput)
+          UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
+
+        if (UIElements.blockPageShowUrlCheckbox)
+          UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
+        if (UIElements.blockPageShowReasonCheckbox)
+          UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
+        if (UIElements.blockPageShowRuleCheckbox)
+          UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
+        if (UIElements.blockPageShowLimitInfoCheckbox)
+          UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
+        if (UIElements.blockPageShowScheduleInfoCheckbox)
+          UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
+
+        if (UIElements.blockPageShowQuoteCheckbox) {
+          UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
+          if (UIElements.blockPageUserQuotesContainer) {
+            UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
+          }
+        }
+        if (UIElements.blockPageUserQuotesTextarea)
+          UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
+        // --- END NEW ---
+
+        // Initial UI Population for other sections
+        populateCategoryList(); // from options-ui.js
+        populateCategorySelect(); // from options-ui.js
+        populateAssignmentList(); // from options-ui.js
+        populateRuleCategorySelect(); // from options-ui.js
+        populateRuleList(); // from options-ui.js
+        populateProductivitySettings(); // from options-ui.js
+        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth()); // from options-ui.js
+        updateDisplayForSelectedRangeUI(); // Defined below
+        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
       } catch (processingError) {
-        console.error('[Options Main] Error during data processing/UI update!', processingError);
+        console.error(
+          '[Options Main] Error during data processing/UI update after loading from storage!',
+          processingError
+        );
         if (UIElements.categoryTimeList) {
           UIElements.categoryTimeList.replaceChildren();
           const errorLi = document.createElement('li');
@@ -96,7 +177,7 @@ function loadAllData() {
           errorLi.textContent = 'Error loading data.';
           UIElements.detailedTimeList.appendChild(errorLi);
         }
-        clearChartOnError('Error processing data');
+        clearChartOnError('Error processing data'); // from options-ui.js
       }
     })
     .catch((error) => {
@@ -113,7 +194,7 @@ function loadAllData() {
         errorLi.textContent = 'Failed to load data.';
         UIElements.detailedTimeList.appendChild(errorLi);
       }
-      clearChartOnError('Failed to load data');
+      clearChartOnError('Failed to load data'); // from options-ui.js
     });
 }
 
@@ -123,45 +204,58 @@ function updateDisplayForSelectedRangeUI() {
     console.warn('Date range select element not found.');
     return;
   }
-  const selectedRange = UIElements.dateRangeSelect.value;
-  const loader = document.getElementById('statsLoader'); // Make sure this ID exists in your HTML or remove loader logic
+  let selectedRange = UIElements.dateRangeSelect.value;
+  const loader = document.getElementById('statsLoader');
   const dashboard = document.querySelector('.stats-dashboard');
 
-  const showLoader = ['week', 'month', 'all'].includes(selectedRange);
+  let dataFetchKey = selectedRange;
+  let displayLabelKey = selectedRange;
+
+  if (selectedRange === '' && AppState.selectedDateStr) {
+    dataFetchKey = AppState.selectedDateStr;
+    displayLabelKey = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
+  } else if (selectedRange === '') {
+    dataFetchKey = 'today';
+    displayLabelKey = 'Today';
+    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
+  }
+
+  const showLoader = ['week', 'month', 'all'].includes(dataFetchKey);
 
   if (showLoader && loader) {
     loader.style.display = 'block';
-    if (dashboard) dashboard.style.visibility = 'hidden'; // Hide dashboard while loading large ranges
+    if (dashboard) dashboard.style.visibility = 'hidden';
   } else if (loader) {
-    loader.style.display = 'none'; // Ensure loader is hidden otherwise
+    loader.style.display = 'none';
   }
 
-  // Use setTimeout to allow loader to render if needed
   setTimeout(() => {
     let domainData = {},
       categoryData = {},
-      label = `Error (${selectedRange})`; // Default error values
+      label = `Error (${displayLabelKey || dataFetchKey})`;
     try {
-      // Get data aggregated for the selected range (e.g., 'week', 'month')
-      const rangeData = getFilteredDataForRange(selectedRange);
+      const isSpecificDateFetch = /^\d{4}-\d{2}-\d{2}$/.test(dataFetchKey);
+      const rangeData = getFilteredDataForRange(dataFetchKey, isSpecificDateFetch); // Defined below
       domainData = rangeData.domainData;
       categoryData = rangeData.categoryData;
-      label = rangeData.label;
+      label = isSpecificDateFetch ? displayLabelKey : rangeData.label;
 
-      // Call the consolidated update function.
-      // The chart should still reflect the *single selected day* in the calendar (AppState.selectedDateStr)
-      // even when viewing aggregated lists/scores for a range.
-      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr);
+      if (dataFetchKey === 'today' && !isSpecificDateFetch) {
+        AppState.selectedDateStr = getCurrentDateString(); // from options-utils.js
+        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
+      }
+
+      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr); // Defined below
     } catch (e) {
-      console.error(`Error processing range ${selectedRange}:`, e);
-      // If fetching/processing range data failed, display empty stats with error label
-      updateStatsDisplay({}, {}, label); // Pass empty data but the error label
+      console.error(`Error processing range ${dataFetchKey}:`, e);
+      updateStatsDisplay({}, {}, label);
     } finally {
       if (loader) loader.style.display = 'none';
-      if (dashboard) dashboard.style.visibility = 'visible'; // Ensure dashboard is visible
+      if (dashboard) dashboard.style.visibility = 'visible';
     }
-  }, 10); // Small timeout
+  }, 10);
 }
+
 function updateDomainDisplayAndPagination() {
   if (
     !UIElements.detailedTimeList ||
@@ -181,7 +275,7 @@ function updateDomainDisplayAndPagination() {
   const endIndex = startIndex + AppState.domainItemsPerPage;
   const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex);
 
-  displayDomainTime(itemsToShow);
+  displayDomainTime(itemsToShow); // from options-ui.js
 
   UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`;
   UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1;
@@ -198,64 +292,55 @@ function updateDomainDisplayAndPagination() {
  */
 function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppState.selectedDateStr) {
   try {
-    console.log(`[Options Main] updateStatsDisplay called for label: ${label}`);
+    console.log(
+      `[Options Main] updateStatsDisplay called for label: ${label}, chartDateStr for chart: ${chartDateStr}`
+    );
 
-    // Ensure data inputs are objects, even if null/undefined
     const currentDomainData = domainData || {};
     const currentCategoryData = categoryData || {};
 
-    // Update the period label spans
     if (UIElements.statsPeriodSpans) {
       UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label));
     }
 
-    // Update domain list and pagination
     AppState.fullDomainDataSorted = Object.entries(currentDomainData)
       .map(([d, t]) => ({ domain: d, time: t }))
       .sort((a, b) => b.time - a.time);
-    AppState.domainCurrentPage = 1; // Reset pagination to page 1
-    updateDomainDisplayAndPagination(); // This function uses AppState.fullDomainDataSorted
+    AppState.domainCurrentPage = 1;
+    updateDomainDisplayAndPagination();
 
-    // Update category time list
-    displayCategoryTime(currentCategoryData); // Pass the specific category data
+    displayCategoryTime(currentCategoryData); // from options-ui.js
 
-    // Calculate and Display Focus Score
     try {
-      const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings);
-      displayProductivityScore(scoreData, label); // Pass the correct label
+      const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings); // from options-utils.js
+      displayProductivityScore(scoreData, label); // Display the score
       console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
     } catch (scoreError) {
       console.error(`[Options Main] Error calculating focus score for label "${label}":`, scoreError);
-      displayProductivityScore(null, label, true); // Display error state
+      displayProductivityScore(null, label, true);
     }
 
-    // Render chart based on the *selected range's data*
-    const chartDataView =
-      AppState.currentChartViewMode === 'domain'
-        ? currentDomainData // USE THE AGGREGATED RANGE DATA passed into the function
-        : currentCategoryData; // USE THE AGGREGATED RANGE DATA passed into the function
-    const chartLabel = label; // USE THE RANGE LABEL passed into the function
+    const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData;
+    const chartLabelForRender = label;
 
-    // Check if there's significant data to render for the range
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
     if (hasSignificantData) {
-      renderChart(chartDataView, chartLabel, AppState.currentChartViewMode);
+      renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode); // from options-ui.js
     } else {
-      // Clear the chart if the selected range has no significant data
-      clearChartOnError(`No significant data for ${chartLabel}`);
+      clearChartOnError(`No significant data for ${chartLabelForRender}`); // from options-ui.js
     }
 
     if (UIElements.chartTitleElement) {
-      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabel})`; // Update chart title with range label
+      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabelForRender})`;
     }
 
     console.log(`[Options Main] Stats display updated for label: ${label}`);
   } catch (error) {
     console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
-    // Fallback: Display error state for all components
     displayCategoryTime({});
-    updateDomainDisplayAndPagination(); // Will show empty based on potentially empty AppState.fullDomainDataSorted
+    AppState.fullDomainDataSorted = [];
+    updateDomainDisplayAndPagination();
     displayProductivityScore(null, label, true);
     clearChartOnError(`Error loading data for ${label}`);
     if (UIElements.chartTitleElement) {
@@ -270,58 +355,48 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
  */
 function displayNoDataForDate(displayDateLabel) {
   console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
-
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
 
-  // Update period labels
   if (UIElements.statsPeriodSpans) {
     UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   }
-
-  // Clear Category List
   if (UIElements.categoryTimeList) {
-    UIElements.categoryTimeList.replaceChildren(); // Clear existing items
+    UIElements.categoryTimeList.replaceChildren();
     const li = document.createElement('li');
     li.textContent = noDataMessage;
-    li.style.textAlign = 'center'; // Optional: center the message
-    li.style.color = 'var(--text-color-muted)'; // Optional: use muted color
+    li.style.textAlign = 'center';
+    li.style.color = 'var(--text-color-muted)';
     UIElements.categoryTimeList.appendChild(li);
   }
-
-  // Clear Domain List and hide pagination
   if (UIElements.detailedTimeList) {
-    UIElements.detailedTimeList.replaceChildren(); // Clear existing items
+    UIElements.detailedTimeList.replaceChildren();
     const li = document.createElement('li');
     li.textContent = noDataMessage;
-    li.style.textAlign = 'center'; // Optional: center the message
-    li.style.color = 'var(--text-color-muted)'; // Optional: use muted color
+    li.style.textAlign = 'center';
+    li.style.color = 'var(--text-color-muted)';
     UIElements.detailedTimeList.appendChild(li);
   }
   if (UIElements.domainPaginationDiv) {
-    UIElements.domainPaginationDiv.style.display = 'none'; // Hide pagination
+    UIElements.domainPaginationDiv.style.display = 'none';
   }
-  // Reset sorted data in state to ensure pagination doesn't reappear incorrectly later
   AppState.fullDomainDataSorted = [];
 
-  // Update Focus Score display
   if (UIElements.productivityScoreLabel) {
     UIElements.productivityScoreLabel.textContent = `Focus Score (${displayDateLabel})`;
   }
   if (UIElements.productivityScoreValue) {
-    UIElements.productivityScoreValue.textContent = 'N/A'; // Or '--%' or '0%'
-    UIElements.productivityScoreValue.className = 'score-value'; // Reset score class
+    UIElements.productivityScoreValue.textContent = 'N/A';
+    UIElements.productivityScoreValue.className = 'score-value';
   }
-
-  // Clear Chart
-  clearChartOnError(noDataMessage); // Reuse the existing chart clearing function
+  clearChartOnError(noDataMessage); // from options-ui.js
   if (UIElements.chartTitleElement) {
-    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`; // Update title even if no data
+    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
   }
 }
 
 function renderChartForSelectedDateUI() {
   if (!AppState.selectedDateStr) {
-    clearChartOnError('Select a date from the calendar.');
+    clearChartOnError('Select a date from the calendar.'); // from options-ui.js
     return;
   }
   const data =
@@ -329,8 +404,8 @@ function renderChartForSelectedDateUI() {
       ? AppState.dailyDomainData[AppState.selectedDateStr] || {}
       : AppState.dailyCategoryData[AppState.selectedDateStr] || {};
 
-  const displayDate = formatDisplayDate(AppState.selectedDateStr);
-  renderChart(data, displayDate, AppState.currentChartViewMode);
+  const displayDate = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
+  renderChart(data, displayDate, AppState.currentChartViewMode); // from options-ui.js
 
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
@@ -338,17 +413,20 @@ function renderChartForSelectedDateUI() {
 }
 
 // --- Get Filtered Data ---
-function getFilteredDataForRange(range) {
+function getFilteredDataForRange(range, isSpecificDate = false) {
   let initialDomainData = {};
   let initialCategoryData = {};
-  let mergedDomainData = {}; // <<< Declare mergedDomainData HERE (outside try)
+  let mergedDomainData = {};
   let periodLabel = 'All Time';
   const today = new Date();
 
   try {
-    // --- Step 1: Aggregate data based on range (Existing Logic) ---
-    if (range === 'today') {
-      const todayStr = formatDate(today); // from utils.js
+    if (isSpecificDate && /^\d{4}-\d{2}-\d{2}$/.test(range)) {
+      initialDomainData = AppState.dailyDomainData[range] || {};
+      initialCategoryData = AppState.dailyCategoryData[range] || {};
+      periodLabel = formatDisplayDate(range); // from options-utils.js
+    } else if (range === 'today') {
+      const todayStr = formatDate(today); // from options-utils.js
       initialDomainData = AppState.dailyDomainData[todayStr] || {};
       initialCategoryData = AppState.dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
@@ -357,7 +435,7 @@ function getFilteredDataForRange(range) {
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
-        const dateStr = formatDate(date); // from utils.js
+        const dateStr = formatDate(date);
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -371,10 +449,10 @@ function getFilteredDataForRange(range) {
       periodLabel = 'This Month';
       const y = today.getFullYear();
       const m = today.getMonth();
-      const dIM = today.getDate(); // Days In Month (up to today)
+      const dIM = today.getDate();
       for (let day = 1; day <= dIM; day++) {
         const date = new Date(y, m, day);
-        const dateStr = formatDate(date); // from utils.js
+        const dateStr = formatDate(date);
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -389,8 +467,8 @@ function getFilteredDataForRange(range) {
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
         console.log("[Options Main] Recalculating 'All Time' from daily data for display.");
-        initialDomainData = {}; // Start fresh
-        initialCategoryData = {}; // Start fresh
+        initialDomainData = {};
+        initialCategoryData = {};
         for (const dateStr in AppState.dailyDomainData) {
           const dF = AppState.dailyDomainData[dateStr];
           if (dF) {
@@ -410,8 +488,6 @@ function getFilteredDataForRange(range) {
       }
     }
 
-    // --- Step 2: Merge www and non-www domains (Now populates the outer mergedDomainData) ---
-    // No longer declaring mergedDomainData here
     for (const domain in initialDomainData) {
       const time = initialDomainData[domain];
       if (time > 0) {
@@ -422,18 +498,42 @@ function getFilteredDataForRange(range) {
         mergedDomainData[normalizedDomain] = (mergedDomainData[normalizedDomain] || 0) + time;
       }
     }
-    // --- End Merging Logic ---
   } catch (filterError) {
     console.error(`Error filtering/merging for range "${range}":`, filterError);
-    // Return empty objects on error (mergedDomainData might be partially populated or empty)
-    // It's declared outside, so the return statement below will still work, returning whatever was merged before the error.
-    // If the goal is to return completely empty on ANY error, we'd return here:
-    // return { domainData: {}, categoryData: {}, label: `Error (${range})` };
+    periodLabel = `Error (${range})`;
+    return { domainData: {}, categoryData: {}, label: periodLabel };
   }
-
-  // Return the MERGED domain data (declared outside try) and the original category data
   return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
 }
+
+// --- NEW: Handlers for Block Page Customization ---
+// These functions will handle saving the settings when they are changed.
+function handleBlockPageSettingChange(storageKey, value) {
+  browser.storage.local
+    .set({ [storageKey]: value })
+    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
+    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
+}
+
+function handleBlockPageShowQuoteChange() {
+  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
+  // Toggle visibility of the custom quotes textarea
+  if (UIElements.blockPageUserQuotesContainer) {
+    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
+  }
+}
+
+function handleBlockPageUserQuotesChange() {
+  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
+  // Split by newline, trim whitespace, and filter out empty lines
+  const quotesArray = quotesText
+    .split('\n')
+    .map((q) => q.trim())
+    .filter((q) => q.length > 0);
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
+}
+// --- END NEW HANDLERS ---
 
 // --- Event Listener Setup ---
 function setupEventListeners() {
@@ -500,18 +600,80 @@ function setupEventListeners() {
     } else {
       console.warn('Data retention select element not found, cannot add listener.');
     }
-    // Inside setupEventListeners() in options-main.js
 
-    // Data Management Listeners (NEW)
+    // Data Management Listeners
     if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
     if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
-    // *** ADD Listener for Productivity Settings ***
+    // Productivity Settings Listener
     if (UIElements.productivitySettingsList) {
-      // Use 'change' event which works well for radio buttons
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
     }
+
+    // --- NEW: Event Listeners for Block Page Customization ---
+    if (UIElements.blockPageCustomHeadingInput) {
+      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+          UIElements.blockPageCustomHeadingInput.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageCustomMessageTextarea) {
+      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+          UIElements.blockPageCustomMessageTextarea.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageCustomButtonTextInput) {
+      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+          UIElements.blockPageCustomButtonTextInput.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageShowUrlCheckbox) {
+      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowReasonCheckbox) {
+      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowRuleCheckbox) {
+      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowLimitInfoCheckbox) {
+      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+          UIElements.blockPageShowLimitInfoCheckbox.checked
+        )
+      );
+    }
+    if (UIElements.blockPageShowScheduleInfoCheckbox) {
+      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+          UIElements.blockPageShowScheduleInfoCheckbox.checked
+        )
+      );
+    }
+    if (UIElements.blockPageShowQuoteCheckbox) {
+      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
+    }
+    if (UIElements.blockPageUserQuotesTextarea) {
+      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
+    }
+    // --- END NEW Event Listeners ---
 
     handleRuleTypeChange(); // Initialize rule input display
     console.log('[Options Main] Event listeners setup complete.');
@@ -556,19 +718,16 @@ function saveRules() {
 function convertDataToCsv(dataObject) {
   if (!dataObject) return '';
   const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
-  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n'; // escapeCsvValue from options-utils.js
 
   const sortedData = Object.entries(dataObject)
     .map(([d, s]) => ({ domain: d, seconds: s }))
     .sort((a, b) => b.seconds - a.seconds);
 
-  // Helper function to get category (avoids calling background utils)
   const getCategory = (domain) => {
-    // Direct match
     if (AppState.categoryAssignments.hasOwnProperty(domain)) {
       return AppState.categoryAssignments[domain];
     }
-    // Wildcard match
     const parts = domain.split('.');
     for (let i = 1; i < parts.length; i++) {
       const wildcardPattern = '*.' + parts.slice(i).join('.');
@@ -576,14 +735,14 @@ function convertDataToCsv(dataObject) {
         return AppState.categoryAssignments[wildcardPattern];
       }
     }
-    return 'Other'; // Default category
+    return 'Other';
   };
 
   sortedData.forEach((item) => {
     const category = getCategory(item.domain);
     const timeHMS = formatTime(item.seconds, true, true); // from options-utils.js
     const row = [item.domain, category, timeHMS, item.seconds];
-    csvString += row.map(escapeCsvValue).join(',') + '\n'; // from options-utils.js
+    csvString += row.map(escapeCsvValue).join(',') + '\n';
   });
   return csvString;
 }
@@ -610,18 +769,15 @@ function triggerCsvDownload(csvString, filename) {
   }
 }
 
-// --- Recalculation Logic (REWRITTEN) ---
+// --- Recalculation Logic ---
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
   console.log('[Options Main] REBUILDING category totals STARTING', changeDetails);
   try {
-    // Fetch the most current domain data directly from storage within this function
-    // to ensure we're working with the latest persisted data.
     const result = await browser.storage.local.get(['trackedData', 'dailyDomainData', 'categoryAssignments']);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    const currentAssignments = result.categoryAssignments || {}; // Use fetched assignments
+    const currentAssignments = AppState.categoryAssignments || {};
 
-    // Helper function to get category using the current assignments
     const getCategoryForDomain = (domain, assignments) => {
       if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
@@ -637,7 +793,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       return 'Other';
     };
 
-    // 1. Rebuild All-Time Category Totals (categoryTimeData)
     const rebuiltCategoryTimeData = {};
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
@@ -647,7 +802,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       }
     }
 
-    // 2. Rebuild Daily Category Totals (dailyCategoryData)
     const rebuiltDailyCategoryData = {};
     for (const date in currentDailyDomainData) {
       rebuiltDailyCategoryData[date] = {};
@@ -659,41 +813,30 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
       }
-      // Clean up dates with no category data after rebuild
       if (Object.keys(rebuiltDailyCategoryData[date]).length === 0) {
         delete rebuiltDailyCategoryData[date];
       }
     }
 
-    // 3. Save the rebuilt data
     console.log('[Recalc] Saving REBUILT category totals...');
     await browser.storage.local.set({
       categoryTimeData: rebuiltCategoryTimeData,
       dailyCategoryData: rebuiltDailyCategoryData,
     });
 
-    // 4. Update AppState with the newly saved data
     AppState.categoryTimeData = rebuiltCategoryTimeData;
     AppState.dailyCategoryData = rebuiltDailyCategoryData;
-    // AppState.trackedData and AppState.dailyDomainData were already up-to-date
-    // AppState.categoryAssignments was updated before calling this function
 
     console.log('[Recalc] Category totals rebuilt and saved.');
   } catch (error) {
     console.error('[Options Main] Error during category recalculation (rebuild):', error);
     alert('An error occurred while recalculating category totals.');
-    // Consider a full reload as a fallback
-    // loadAllData();
   } finally {
     console.log('[Options Main] REBUILDING category totals FINISHED');
-    // The UI update should happen *after* this function completes in the calling handler
   }
 }
 
-// Add this function to options-main.js
-
 function displayProductivityScore(scoreData, periodLabel = 'Selected Period', isError = false) {
-  // Check if UI elements exist (using UIElements from options-state.js)
   if (!UIElements.productivityScoreValue || !UIElements.productivityScoreLabel) {
     console.warn('Productivity score UI elements not found in Options.');
     return;
@@ -702,15 +845,13 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   if (isError || !scoreData) {
     UIElements.productivityScoreValue.textContent = 'Error';
     UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`;
-    UIElements.productivityScoreValue.className = 'score-value'; // Reset class
+    UIElements.productivityScoreValue.className = 'score-value';
     return;
   }
 
-  // Display the score
   UIElements.productivityScoreValue.textContent = `${scoreData.score}%`;
-  UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`; // Update label with period
+  UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`;
 
-  // Add visual indicator class based on score (Optional)
   UIElements.productivityScoreValue.classList.remove('score-low', 'score-medium', 'score-high');
   if (scoreData.score < 40) {
     UIElements.productivityScoreValue.classList.add('score-low');
@@ -721,4 +862,4 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-console.log('[System] options-main.js loaded (v0.8.1 - Recalculation Fix)');
+console.log("[System] options-main.js loaded (v0.8.3 - Block Page Customization - User's Base Corrected)");

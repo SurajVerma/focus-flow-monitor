@@ -33,8 +33,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "focusflow-monitor@bleuflex.com",
-      "update_url": "https://www.bleuflex.com/addons-update/updates.json"
+      "id": "focusflow-monitor-pub@bleuflex.com"
     }
   }
 }

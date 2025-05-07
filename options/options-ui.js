@@ -284,21 +284,30 @@ function populateRuleList() {
         detailContent = '',
         detailClass = '';
 
-      if (rule.type === 'block-url') {
-        typeText = 'Block URL';
-        detailContent = '(Blocked)';
+      let scheduleText = '';
+      if (rule.type.includes('block-') && (rule.startTime || rule.days)) {
+        // --- USE formatTimeToAMPM ---
+        const displayStartTime = rule.startTime ? formatTimeToAMPM(rule.startTime) : '';
+        const displayEndTime = rule.endTime ? formatTimeToAMPM(rule.endTime) : '';
+        // --- END USE formatTimeToAMPM ---
+
+        const timePart = displayStartTime && displayEndTime ? `${displayStartTime}-${displayEndTime}` : 'All Day';
+        const daysPart = rule.days ? rule.days.join(',') : 'All Week';
+        // Combine only if days are specified OR time is specified
+        if (rule.days || (displayStartTime && displayEndTime)) {
+          scheduleText = ` (Schedule: ${timePart}, ${daysPart})`;
+        } else {
+          scheduleText = ' (Permanent)'; // If no time/days set for block rule
+        }
+      }
+
+      if (rule.type === 'block-url' || rule.type === 'block-category') {
+        typeText = rule.type === 'block-url' ? 'Block URL' : 'Block Cat';
+        detailContent = scheduleText || '(Permanent)';
         detailClass = 'rule-blocked';
-      } else if (rule.type === 'limit-url') {
-        typeText = 'Limit URL';
-        detailContent = `(Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`;
-        detailClass = 'rule-limit';
-      } else if (rule.type === 'block-category') {
-        typeText = 'Block Cat';
-        detailContent = '(Blocked)';
-        detailClass = 'rule-blocked';
-      } else if (rule.type === 'limit-category') {
-        typeText = 'Limit Cat';
-        detailContent = `(Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`;
+      } else if (rule.type === 'limit-url' || rule.type === 'limit-category') {
+        typeText = rule.type === 'limit-url' ? 'Limit URL' : 'Limit Cat';
+        detailContent = ` (Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`;
         detailClass = 'rule-limit';
       } else {
         typeText = 'Unknown Rule';
