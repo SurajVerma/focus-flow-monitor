@@ -1,14 +1,14 @@
-/* options.css (v0.8.1 - Consolidated Dark Mode) */
+/* options.css (v0.8.5 - Added Block Page Customization Styles) */
 
 /* --- Base & Variables --- */
 :root {
-  --bg-page: #f7f8fc; /* Lighter page background */
+  --bg-page: #f7f8fc;
   --bg-card: #ffffff;
   --bg-input: #ffffff;
   --bg-input-focus: #ffffff;
   --bg-alternate-row: #f8f9fa;
   --bg-hover-row: #eef2f7;
-  --bg-selected-row: #e9f5ff; /* Calendar selected */
+  --bg-selected-row: #e9f5ff;
   --bg-button-primary: #007bff;
   --bg-button-primary-hover: #0056b3;
   --bg-button-secondary: #6c757d;
@@ -23,8 +23,8 @@
   --bg-button-info-hover: #138496;
   --bg-button-disabled: #cccccc;
 
-  --text-color-primary: #212529; /* Darker primary text */
-  --text-color-secondary: #495057; /* Slightly lighter secondary */
+  --text-color-primary: #212529;
+  --text-color-secondary: #495057;
   --text-color-muted: #6c757d;
   --text-color-heading: #343a40;
   --text-color-button: #ffffff;
@@ -32,7 +32,7 @@
   --text-color-link: var(--bg-button-primary);
   --text-color-disabled: #666666;
 
-  --border-color-light: #e9ecef; /* Lighter border */
+  --border-color-light: #e9ecef;
   --border-color-medium: #dee2e6;
   --border-color-input: #ced4da;
   --border-color-input-focus: #80bdff;
@@ -41,7 +41,7 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   --shadow-focus: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 
-  --border-radius: 0.3rem; /* Slightly larger radius */
+  --border-radius: 0.3rem;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -51,15 +51,14 @@
 
   --font-family-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-  --font-size-base: 1rem; /* Typically 16px */
+  --font-size-base: 1rem;
   --font-size-sm: 0.875rem;
   --font-size-lg: 1.125rem;
   --line-height-base: 1.6;
 
-  /* Define missing accent colors used in rules */
-  --accent-color-green: #28a745; /* Example */
-  --accent-color-red: #dc3545; /* Example */
-  --accent-color-blue: #007bff; /* Example */
+  --accent-color-green: #28a745;
+  --accent-color-red: #dc3545;
+  --accent-color-blue: #007bff;
 }
 
 body {
@@ -81,7 +80,6 @@ body {
   box-shadow: none;
 }
 
-/* --- Section Card Styling --- */
 section {
   background-color: var(--bg-card);
   border-radius: var(--border-radius);
@@ -91,7 +89,6 @@ section {
   border: 1px solid var(--border-color-light);
 }
 
-/* Headings */
 h1 {
   text-align: center;
   color: var(--text-color-heading);
@@ -126,10 +123,9 @@ h4 {
 }
 
 hr {
-  display: none;
+  display: none; /* We use spacing between sections instead of visible hr */
 }
 
-/* --- General Form Styles --- */
 .form-group {
   margin-bottom: var(--spacing-lg);
 }
@@ -152,7 +148,10 @@ label {
 }
 input[type='text'],
 input[type='number'],
-select {
+input[type='time'],
+select,
+textarea {
+  /* Added textarea */
   display: block;
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
@@ -169,7 +168,10 @@ select {
 }
 input[type='text']:focus,
 input[type='number']:focus,
-select:focus {
+input[type='time']:focus,
+select:focus,
+textarea:focus {
+  /* Added textarea */
   color: var(--text-color-primary);
   background-color: var(--bg-input-focus);
   border-color: var(--border-color-input-focus);
@@ -184,11 +186,16 @@ select:focus {
 .form-inline select {
   min-width: 150px;
 }
+
+#ruleCategorySelect {
+  flex-grow: 1;
+  min-width: 150px;
+}
+
 .form-inline button {
   flex-shrink: 0;
 }
 
-/* Buttons */
 button {
   display: inline-block;
   font-weight: 400;
@@ -217,7 +224,6 @@ button:not(:disabled):active {
   filter: brightness(95%);
 }
 
-/* Button Variants */
 .form-inline button,
 button#addCategoryBtn,
 button#assignDomainBtn,
@@ -238,13 +244,18 @@ button#saveAssignmentChangesBtn:hover {
   border-color: var(--bg-button-primary-hover);
 }
 
+button.delete-btn,
+button.edit-btn,
+button.save-btn,
+button.cancel-btn {
+  padding: 3px 8px;
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
 button.delete-btn {
   background-color: var(--bg-button-danger);
   color: var(--text-color-button);
   border-color: var(--bg-button-danger);
-  padding: 3px 8px;
-  font-size: var(--font-size-sm);
-  margin-left: var(--spacing-sm);
 }
 button.delete-btn:hover {
   background-color: var(--bg-button-danger-hover);
@@ -254,9 +265,6 @@ button.edit-btn {
   background-color: var(--bg-button-warning);
   color: var(--text-color-warning-button);
   border-color: var(--bg-button-warning);
-  padding: 3px 8px;
-  font-size: var(--font-size-sm);
-  margin-left: var(--spacing-xs);
 }
 button.edit-btn:hover {
   background-color: var(--bg-button-warning-hover);
@@ -266,9 +274,6 @@ button.save-btn {
   background-color: var(--bg-button-success);
   color: var(--text-color-button);
   border-color: var(--bg-button-success);
-  padding: 3px 8px;
-  font-size: var(--font-size-sm);
-  margin-left: var(--spacing-xs);
 }
 button.save-btn:hover {
   background-color: var(--bg-button-success-hover);
@@ -278,9 +283,6 @@ button.cancel-btn {
   background-color: var(--bg-button-secondary);
   color: var(--text-color-button);
   border-color: var(--bg-button-secondary);
-  padding: 3px 8px;
-  font-size: var(--font-size-sm);
-  margin-left: var(--spacing-xs);
 }
 button.cancel-btn:hover {
   background-color: var(--bg-button-secondary-hover);
@@ -311,7 +313,6 @@ button.export-button:hover {
   color: var(--text-color-disabled);
 }
 
-/* --- List Styles --- */
 #categoryList,
 #assignmentList,
 #ruleList,
@@ -324,7 +325,6 @@ button.export-button:hover {
   border: 1px solid var(--border-color-medium);
   border-radius: var(--border-radius);
 }
-
 #categoryList li,
 #assignmentList li,
 #ruleList li,
@@ -334,12 +334,10 @@ button.export-button:hover {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: none;
+  border-bottom: none; /* Use :not(:last-child) if borders between items are desired */
   transition: background-color 0.15s ease-in-out;
   font-size: var(--font-size-sm);
 }
-
-/* Zebra Striping */
 #categoryList li:nth-child(even),
 #assignmentList li:nth-child(even),
 #ruleList li:nth-child(even),
@@ -347,8 +345,6 @@ button.export-button:hover {
 #categoryTimeList li:nth-child(even) {
   background-color: var(--bg-alternate-row);
 }
-
-/* Hover effect */
 #categoryList li:hover,
 #assignmentList li:hover,
 #ruleList li:hover,
@@ -357,7 +353,6 @@ button.export-button:hover {
   background-color: var(--bg-hover-row);
 }
 
-/* List specific content styling */
 .category-list-item .category-name-display {
   flex-grow: 1;
   margin-right: var(--spacing-md);
@@ -365,7 +360,7 @@ button.export-button:hover {
 .category-list-item .category-edit-input {
   flex-grow: 1;
   padding: 4px 6px;
-  border: 1px solid #ccc; /* Consider var(--border-color-input) if focus state needed */
+  border: 1px solid var(--border-color-input);
   border-radius: 3px;
   font-size: 0.9em;
   margin-right: var(--spacing-md);
@@ -375,7 +370,7 @@ button.export-button:hover {
   display: flex;
   gap: var(--spacing-xs);
   flex-shrink: 0;
-  min-width: 120px;
+  min-width: 120px; /* Adjust if needed based on button text */
   justify-content: flex-end;
 }
 .assignment-list-item .assignment-domain {
@@ -395,7 +390,7 @@ button.export-button:hover {
 }
 .assignment-list-item .assignment-category {
   color: var(--text-color-secondary);
-  background-color: #e9ecef; /* Could become var(--bg-alternate-row) or similar */
+  background-color: var(--bg-alternate-row);
   padding: 2px 6px;
   border-radius: var(--border-radius);
   font-size: 0.85em;
@@ -441,43 +436,141 @@ button.export-button:hover {
   color: var(--text-color-primary);
   font-weight: 500;
   white-space: nowrap;
-  background-color: #e9ecef; /* Could become var(--bg-alternate-row) or similar */
+  background-color: var(--bg-alternate-row);
   padding: 2px 6px;
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
   flex-shrink: 0;
 }
 
-/* --- Add Rule Form --- */
 .add-rule-form {
   padding: var(--spacing-md);
   background-color: var(--bg-alternate-row);
   border: 1px solid var(--border-color-light);
-  border-radius: var(--border-radius); /* Add radius */
+  border-radius: var(--border-radius);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: center;
 }
-.time-limit-input {
+.add-rule-form select,
+.add-rule-form input[type='text'] {
+  flex-grow: 1;
+  min-width: 150px;
+}
+.add-rule-form .time-limit-input {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  flex-grow: 2;
+  flex-grow: 1;
+  min-width: 150px;
 }
-.time-limit-input input[type='number'] {
+.add-rule-form .time-limit-input input[type='number'] {
   width: 70px;
   padding: var(--spacing-sm);
 }
-.time-limit-input select {
+.add-rule-form .time-limit-input select {
   padding: var(--spacing-sm);
+  flex-grow: 1;
 }
-.time-limit-input span {
+.add-rule-form .time-limit-input span {
   white-space: nowrap;
   color: var(--text-color-secondary);
   font-size: var(--font-size-sm);
   margin-left: var(--spacing-xs);
 }
 
-/* --- Statistics Section --- */
+.add-rule-form .schedule-inputs,
+#editRuleScheduleGroup.schedule-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-basis: 100%;
+  border-top: 1px dashed var(--border-color-medium);
+  padding-top: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+}
+
+.time-inputs-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+}
+.time-inputs-container label {
+  margin-bottom: 0;
+}
+#editRuleScheduleGroup .modal-time-inputs {
+  margin-top: var(--spacing-xs);
+}
+#editRuleScheduleGroup .time-inputs-container label.label-schedule-start {
+  margin-right: var(--spacing-xs);
+}
+#editRuleScheduleGroup .time-inputs-container label.label-schedule-end {
+  margin-left: var(--spacing-md);
+  margin-right: var(--spacing-xs);
+}
+
+.time-input-schedule {
+  padding: 5px;
+  max-width: 120px;
+  width: auto;
+  flex-grow: 0;
+}
+
+.days-selector {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+}
+#editRuleScheduleGroup .days-selector {
+  margin-top: var(--spacing-md);
+}
+
+.days-selector span {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-secondary);
+  margin-right: var(--spacing-xs);
+}
+.days-selector label {
+  font-weight: normal;
+  margin-right: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-color-secondary);
+}
+.days-selector input[type='checkbox'] {
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+.schedule-notes {
+  flex-basis: 100%;
+  color: var(--text-color-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+.schedule-notes-modal {
+  display: block;
+  margin-top: var(--spacing-xs);
+  color: var(--text-color-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+#domainPagination,
+#calendarDetailPopup,
+#importFileInput,
+#importStatus,
+#editRuleModal,
+#editAssignmentModal {
+  display: none;
+}
+
 #stats-display-section {
-  position: relative; /* For loader */
+  position: relative;
 }
 .stats-controls {
   display: flex;
@@ -536,16 +629,12 @@ button.export-button:hover {
 }
 .stats-list-container ul {
   margin: 0;
-  padding: 0;
-  list-style: none;
   overflow-y: auto;
   flex-grow: 1;
   max-height: 250px;
-  border-radius: var(--border-radius);
   border: 1px solid var(--border-color-light);
 }
 
-/* --- Calendar Styles --- */
 .calendar-header-controls {
   display: flex;
   justify-content: space-between;
@@ -561,7 +650,7 @@ button.export-button:hover {
   color: var(--text-color-button);
 }
 .calendar-header-controls button:hover {
-  background-color: var(--bg-button-secondary-hover);
+  background-color: var(--bg-button-primary-hover);
 }
 #currentMonthYear {
   font-weight: 500;
@@ -593,8 +682,8 @@ button.export-button:hover {
   border-radius: 2px;
 }
 .calendar-day:hover {
-  background-color: var(--bg-hover-row); /* Use variable */
-  border-color: var(--border-color-medium); /* Use variable */
+  background-color: var(--bg-hover-row);
+  border-color: var(--border-color-medium);
 }
 .calendar-day.empty {
   background-color: var(--bg-alternate-row);
@@ -602,13 +691,13 @@ button.export-button:hover {
   cursor: default;
 }
 .calendar-day.today {
-  border-color: var(--accent-color-blue); /* Use variable */
-  background-color: rgba(0, 123, 255, 0.05); /* Example subtle background */
+  border-color: var(--accent-color-blue);
+  background-color: rgba(0, 123, 255, 0.05);
 }
 .calendar-day.today .day-number {
   font-weight: bold;
   color: white;
-  background-color: var(--accent-color-blue); /* Use variable */
+  background-color: var(--accent-color-blue);
   border-radius: 50%;
   width: 1.6em;
   height: 1.6em;
@@ -636,20 +725,20 @@ button.export-button:hover {
   color: var(--text-color-primary);
 }
 .day-time.no-data {
-  color: #bbb; /* Keep specific or use var(--text-color-muted) ? */
+  color: #bbb;
   font-weight: 400;
 }
 .calendar-day.selected {
   border: 2px solid var(--border-color-selected);
   background-color: var(--bg-selected-row);
-  padding: 3px;
+  padding: 3px; /* Adjust padding for border */
 }
 .calendar-day.selected:hover {
-  background-color: #cce7ff; /* Needs dark mode adjustment */
+  background-color: #cce7ff; /* Lighter blue on hover when selected */
 }
 .calendar-detail-popup {
   position: absolute;
-  background-color: white; /* Needs dark mode adjustment */
+  background-color: var(--bg-card);
   border: 1px solid var(--border-color-medium);
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
   padding: 10px;
@@ -658,7 +747,7 @@ button.export-button:hover {
   min-width: 150px;
   max-width: 250px;
   z-index: 10;
-  pointer-events: none;
+  pointer-events: none; /* Important for mouseout to work correctly on day cell */
 }
 .calendar-detail-popup strong {
   display: block;
@@ -679,7 +768,6 @@ button.export-button:hover {
   text-overflow: ellipsis;
 }
 
-/* --- Chart Styles --- */
 .chart-column h3 {
   text-align: center;
   margin-top: 0;
@@ -700,7 +788,7 @@ button.export-button:hover {
   justify-content: center;
   align-items: center;
   box-shadow: var(--shadow-card);
-  color: var(--text-color-secondary); /* Hint for chart text */
+  color: var(--text-color-secondary); /* For chart placeholder text */
 }
 #timeChartCanvas {
   max-width: 100%;
@@ -719,7 +807,6 @@ button.export-button:hover {
   font-size: var(--font-size-sm);
 }
 
-/* --- Pagination --- */
 .pagination-controls {
   display: flex;
   justify-content: center;
@@ -737,7 +824,6 @@ button.export-button:hover {
   white-space: nowrap;
 }
 
-/* --- Modal Styles --- */
 .modal {
   position: fixed;
   z-index: 100;
@@ -752,10 +838,10 @@ button.export-button:hover {
   justify-content: center;
 }
 .modal-content {
-  background-color: var(--bg-card); /* Use variable */
+  background-color: var(--bg-card);
   margin: auto;
   padding: var(--spacing-xl);
-  border: 1px solid var(--border-color-medium); /* Use variable */
+  border: 1px solid var(--border-color-medium);
   width: 90%;
   max-width: 500px;
   border-radius: var(--border-radius);
@@ -771,7 +857,7 @@ button.export-button:hover {
   font-weight: 500;
 }
 .close-button {
-  color: #aaa; /* Needs dark mode adjustment */
+  color: #aaa;
   position: absolute;
   top: var(--spacing-sm);
   right: var(--spacing-md);
@@ -781,7 +867,7 @@ button.export-button:hover {
 }
 .close-button:hover,
 .close-button:focus {
-  color: var(--text-color-primary); /* Use variable */
+  color: var(--text-color-primary);
   text-decoration: none;
   cursor: pointer;
 }
@@ -832,35 +918,42 @@ button.export-button:hover {
   background-color: var(--bg-button-success-hover);
 }
 
-/* --- Tracking Settings Section --- */
 #tracking-settings-section .form-group {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
-  margin-bottom: var(--spacing-sm);
+  /* display: flex; /* This was causing issues with p.setting-description */
+  /* align-items: center; */
+  /* gap: var(--spacing-lg); */
+  /* flex-wrap: wrap; */
+  margin-bottom: var(--spacing-sm); /* Reduced margin for tighter layout */
+}
+#tracking-settings-section .form-group > label,
+#tracking-settings-section .form-group > select {
+  display: inline-block; /* Make label and select inline */
+  vertical-align: middle;
+  margin-right: var(--spacing-md); /* Space between label and select */
 }
 #tracking-settings-section label {
   font-weight: 500;
   color: var(--text-color-secondary);
   flex-shrink: 0;
-  margin-bottom: 0;
+  margin-bottom: 0; /* Reset margin for inline display */
   font-size: var(--font-size-base);
 }
 #tracking-settings-section select {
   min-width: 180px;
   flex-grow: 1;
   max-width: 300px;
+  width: auto; /* Allow select to shrink if needed */
 }
 .setting-description {
   font-size: var(--font-size-sm);
   color: var(--text-color-muted);
-  margin: var(--spacing-xs) 0 0 0;
+  margin: var(--spacing-xs) 0 var(--spacing-lg) 0; /* Adjusted margin */
+  display: block; /* Ensure it takes full width below the input/select */
   flex-basis: 100%;
   font-style: italic;
+  clear: both; /* Ensure it clears floated elements if any */
 }
 
-/* --- Loader Styles --- */
 .stats-loader {
   display: none;
   position: absolute;
@@ -878,7 +971,6 @@ button.export-button:hover {
   border: 1px solid #bbb;
 }
 
-/* --- Data Management Section --- */
 #data-management-section .form-group.data-buttons {
   display: flex;
   gap: var(--spacing-lg);
@@ -908,7 +1000,6 @@ button.export-button:hover {
   color: var(--bg-button-danger);
 }
 
-/* --- Productivity Settings Section --- */
 #productivity-settings-section .settings-list {
   list-style: none;
   padding: 0;
@@ -923,7 +1014,7 @@ button.export-button:hover {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: 1px solid var(--border-color-light); /* Uses variable */
+  border-bottom: 1px solid var(--border-color-light);
   font-size: var(--font-size-sm);
 }
 .settings-list li:last-child {
@@ -957,12 +1048,10 @@ button.export-button:hover {
   cursor: pointer;
   accent-color: var(--bg-button-primary);
 }
-/* Zebra Striping for settings list */
 .settings-list li:nth-child(even) {
   background-color: var(--bg-alternate-row);
 }
 
-/* --- Focus Score Display --- */
 .productivity-score-container {
   text-align: center;
 }
@@ -970,9 +1059,8 @@ button.export-button:hover {
   font-size: 1.8em;
   font-weight: bold;
   margin-bottom: var(--spacing-sm);
-  color: var(--text-color-primary); /* Use primary text color */
+  color: var(--text-color-primary);
 }
-/* Classes for score value coloring (optional) */
 .score-value.score-low {
   color: var(--bg-button-danger);
 }
@@ -982,7 +1070,6 @@ button.export-button:hover {
 .score-value.score-high {
   color: var(--bg-button-success);
 }
-
 .focus-score-description {
   font-size: var(--font-size-sm);
   color: var(--text-color-muted);
@@ -995,7 +1082,49 @@ button.export-button:hover {
   margin-right: auto;
 }
 
-/* --- Responsive adjustments --- */
+/* --- NEW: Block Page Customization Styles --- */
+#block-page-customization-section .form-group {
+  margin-bottom: var(--spacing-lg); /* Standard spacing for form groups */
+}
+
+#block-page-customization-section textarea {
+  min-height: 80px; /* Give textareas a bit more default height */
+  resize: vertical; /* Allow vertical resizing */
+}
+
+#block-page-customization-section h3 {
+  margin-top: var(--spacing-xl); /* More space before subheadings */
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.05rem; /* Slightly smaller than section h2 */
+  color: var(--text-color-secondary);
+}
+
+#block-page-customization-section .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm); /* Tighter spacing for checkbox groups */
+}
+
+#block-page-customization-section .checkbox-group input[type='checkbox'] {
+  margin-right: var(--spacing-xs);
+  width: auto; /* Override default block display for inputs */
+  flex-shrink: 0;
+}
+
+#block-page-customization-section .checkbox-group label {
+  margin-bottom: 0; /* Align label with checkbox */
+  font-weight: normal; /* Normal weight for checkbox labels */
+  font-size: var(--font-size-base);
+  color: var(--text-color-primary);
+}
+
+#blockPageUserQuotesContainer {
+  /* JS will toggle display: block/none */
+  margin-top: var(--spacing-sm);
+}
+/* --- END: Block Page Customization Styles --- */
+
 @media (max-width: 900px) {
   .stats-dashboard {
     flex-direction: column;
@@ -1075,31 +1204,43 @@ button.export-button:hover {
     margin-bottom: var(--spacing-xs);
     display: block;
   }
+  /* Ensure block page customization form groups also stack on mobile */
+  #block-page-customization-section .form-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #block-page-customization-section .form-group > label,
+  #block-page-customization-section .form-group > input,
+  #block-page-customization-section .form-group > textarea {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: var(--spacing-xs);
+  }
+  #block-page-customization-section .checkbox-group {
+    padding-left: 0; /* Align checkboxes with other inputs on mobile */
+  }
 }
 
 .attribution-footer {
-  font-size: var(--font-size-sm); /* Use existing small font size variable */
-  color: var(--text-color-muted); /* Use existing muted color variable */
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
   text-align: center;
-  margin-top: var(--spacing-xl); /* Add space above */
-  margin-bottom: var(--spacing-sm); /* Add some space below */
-  padding-top: var(--spacing-md); /* Add padding above */
-  border-top: 1px solid var(--border-color-light); /* Subtle separator */
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color-light);
   line-height: 1.3;
 }
 
-/* --- Consolidated Dark Mode --- */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Theme Variable Overrides */
     --bg-page: #1c1c1e;
     --bg-card: #2c2c2e;
     --bg-input: #3a3a3c;
     --bg-input-focus: #4a4a4c;
     --bg-alternate-row: #2a2a2c;
     --bg-hover-row: #38383a;
-    --bg-selected-row: #004080; /* Darker blue for selected */
-
+    --bg-selected-row: #004080;
     --bg-button-primary: #0a84ff;
     --bg-button-primary-hover: #339cff;
     --bg-button-secondary: #8e8e93;
@@ -1113,7 +1254,6 @@ button.export-button:hover {
     --bg-button-info: #64d2ff;
     --bg-button-info-hover: #82dfff;
     --bg-button-disabled: #555;
-
     --text-color-primary: #f2f2f7;
     --text-color-secondary: #c7c7cc;
     --text-color-muted: #8e8e93;
@@ -1122,116 +1262,71 @@ button.export-button:hover {
     --text-color-warning-button: #1c1c1e;
     --text-color-link: var(--bg-button-primary);
     --text-color-disabled: #999;
-
     --border-color-light: #3a3a3c;
     --border-color-medium: #4a4a4c;
     --border-color-input: #545456;
     --border-color-input-focus: #0a84ff;
     --border-color-selected: var(--bg-button-primary);
-
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-focus: 0 0 0 0.2rem rgba(10, 132, 255, 0.35);
-
-    /* Update accent colors for dark mode if needed */
     --accent-color-green: #30d158;
     --accent-color-red: #ff453a;
     --accent-color-blue: #0a84ff;
   }
-
-  /* Adjust specific elements where variables aren't enough */
-
-  /* List item tags/badges */
-  #categoryTimeList li .category-name, /* Check if needed, uses text-color-secondary */
   #detailedTimeList li .time,
   #categoryTimeList li .time,
   .assignment-list-item .assignment-category {
     background-color: #48484a;
     color: var(--text-color-primary);
   }
-
-  /* Chart.js text color hint */
   .chart-wrapper {
-    color: var(--text-color-secondary);
+    color: var(--text-color-secondary); /* For chart placeholder text */
   }
-
-  /* Calendar day hover/select/today adjustments */
-  .calendar-day:hover {
-    background-color: var(--bg-hover-row); /* Use variable */
-    border-color: var(--border-color-medium); /* Use variable */
-  }
-  /* .calendar-day.selected { */
-  /* Variables already handle this */
-  /* } */
   .calendar-day.selected:hover {
-    background-color: #0050a0; /* Adjust if needed */
+    background-color: #0050a0;
   }
   .calendar-day.today {
-    border-color: var(--accent-color-blue); /* Use variable */
     background-color: rgba(10, 132, 255, 0.1);
   }
-  .calendar-day.today .day-number {
-    background-color: var(--accent-color-blue); /* Use variable */
-    color: white;
-  }
-
-  /* Calendar popup */
   .calendar-detail-popup {
-    background-color: var(--bg-card); /* Use variable */
-    border-color: var(--border-color-medium); /* Use variable */
+    background-color: var(--bg-card);
+    border-color: var(--border-color-medium);
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
   }
   .calendar-detail-popup strong {
-    border-color: var(--border-color-light); /* Use variable */
-  }
-
-  /* Modal content */
-  /* .modal-content { */
-  /* background-color, border-color handled by variables */
-  /* } */
-  .modal-content h3 {
-    color: var(--text-color-heading); /* Use variable */
+    border-color: var(--border-color-light);
   }
   .close-button {
-    color: #aaa; /* Keep specific or use var(--text-color-muted) ? */
+    color: #aaa;
   }
   .close-button:hover {
     color: var(--text-color-primary);
   }
-  #editRuleFormContent label,
-  #editAssignmentFormContent label {
-    color: var(--text-color-secondary);
-  }
-  #editRuleFormContent span#editRuleTypeDisplay {
-    color: var(--text-color-primary);
-  }
-
-  /* Stats Loader (Moved from separate block) */
   .stats-loader {
     background-color: rgba(50, 50, 50, 0.85);
     color: var(--text-color-primary);
-    border: 1px solid var(--border-color-medium); /* Use variable */
+    border: 1px solid var(--border-color-medium);
   }
-
-  /* Import Status (Moved from separate block) */
   #importStatus.success {
-    color: var(--accent-color-green); /* Use variable */
+    color: var(--accent-color-green);
   }
   #importStatus.error {
-    color: var(--accent-color-red); /* Use variable */
+    color: var(--accent-color-red);
   }
-
-  /* Productivity Settings Radio Button Label (Moved from separate block) */
   .settings-list .rating-controls label {
     color: var(--text-color-secondary);
   }
-  /* Score value colors */
   .score-value.score-low {
     color: var(--accent-color-red);
-  } /* Use variable */
+  }
   .score-value.score-medium {
-    color: var(--bg-button-warning);
-  } /* Use variable */
+    color: var(--bg-button-warning); /* Using the warning button bg for dark mode consistency */
+  }
   .score-value.score-high {
     color: var(--accent-color-green);
-  } /* Use variable */
-} /* End Main Dark Mode Media Query */
+  }
+  /* Dark mode for checkbox labels in customization section */
+  #block-page-customization-section .checkbox-group label {
+    color: var(--text-color-primary);
+  }
+}

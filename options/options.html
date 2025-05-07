@@ -7,6 +7,8 @@
   </head>
   <body>
     <div class="container">
+      <h1>FocusFlow Monitor Settings & Stats</h1>
+
       <section id="tracking-settings-section">
         <h2>Tracking Settings</h2>
         <div class="form-group">
@@ -41,7 +43,6 @@
           </p>
         </div>
       </section>
-      <h1>FocusFlow Monitor Settings & Stats</h1>
 
       <section id="stats-display-section">
         <h2>Statistics Overview</h2>
@@ -49,6 +50,7 @@
           <div>
             <label for="dateRangeSelect">Select Period:</label>
             <select id="dateRangeSelect">
+              <option value="" disabled selected hidden>Select Date or Range</option>
               <option value="today" selected>Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -75,7 +77,7 @@
                 <div class="calendar-day-header">Fri</div>
                 <div class="calendar-day-header">Sat</div>
               </div>
-              <div id="calendarDetailPopup" class="calendar-detail-popup" style="display: none"></div>
+              <div id="calendarDetailPopup" class="calendar-detail-popup"></div>
             </div>
 
             <div class="stats-list-container">
@@ -106,7 +108,7 @@
               <ul id="detailedTimeList">
                 <li>Loading...</li>
               </ul>
-              <div class="pagination-controls" id="domainPagination" style="display: none">
+              <div class="pagination-controls" id="domainPagination">
                 <button id="domainPrevBtn" disabled>&laquo; Prev</button>
                 <span id="domainPageInfo">Page 1 of 1</span>
                 <button id="domainNextBtn" disabled>Next &raquo;</button>
@@ -161,7 +163,7 @@
 
       <section id="blocking-section">
         <h2>Site Blocking & Time Limiting</h2>
-        <p>Permanently block access or set daily time limits for specific websites or categories.</p>
+        <p>Permanently block access, set daily time limits, or schedule blocks for specific websites or categories.</p>
         <div class="form-inline add-rule-form">
           <select id="ruleTypeSelect">
             <option value="block-url">Block URL Pattern</option>
@@ -170,10 +172,10 @@
             <option value="limit-category">Limit Category</option>
           </select>
           <input type="text" id="rulePatternInput" placeholder="e.g., *.social.com" />
-          <select id="ruleCategorySelect" style="display: none">
+          <select id="ruleCategorySelect">
             <option value="">Select Category</option>
           </select>
-          <div class="time-limit-input" style="display: none">
+          <div class="time-limit-input">
             <input type="number" id="ruleLimitInput" min="1" step="1" placeholder="Time" />
             <select id="ruleUnitSelect">
               <option value="minutes" selected>Minutes</option>
@@ -181,12 +183,98 @@
             </select>
             <span> per day</span>
           </div>
+
+          <div class="schedule-inputs">
+            <div class="time-inputs-container">
+              <label for="ruleStartTime">Start:</label>
+              <input type="time" id="ruleStartTime" class="time-input-schedule" />
+              <label for="ruleEndTime">End:</label>
+              <input type="time" id="ruleEndTime" class="time-input-schedule" />
+            </div>
+            <div class="days-selector">
+              <span>Days:</span>
+              <label><input type="checkbox" name="ruleDay" value="Mon" />Mon</label>
+              <label><input type="checkbox" name="ruleDay" value="Tue" />Tue</label>
+              <label><input type="checkbox" name="ruleDay" value="Wed" />Wed</label>
+              <label><input type="checkbox" name="ruleDay" value="Thu" />Thu</label>
+              <label><input type="checkbox" name="ruleDay" value="Fri" />Fri</label>
+              <label><input type="checkbox" name="ruleDay" value="Sat" />Sat</label>
+              <label><input type="checkbox" name="ruleDay" value="Sun" />Sun</label>
+            </div>
+            <small class="schedule-notes">Leave blank for all-day/all-week blocking.</small>
+          </div>
           <button id="addRuleBtn">Add Rule</button>
         </div>
         <h4>Current Rules:</h4>
         <ul id="ruleList">
           <li>Loading...</li>
         </ul>
+      </section>
+      <hr />
+
+      <section id="block-page-customization-section">
+        <h2>Block Page Customization</h2>
+        <p>Personalize the page shown when a site is blocked.</p>
+
+        <div class="form-group">
+          <label for="blockPageCustomHeading">Custom Heading:</label>
+          <input type="text" id="blockPageCustomHeading" placeholder="e.g., Access Denied, Stay Focused!" />
+          <p class="setting-description">Set a custom main heading for the block page. Leave blank for default.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="blockPageCustomMessage">Custom Message:</label>
+          <textarea
+            id="blockPageCustomMessage"
+            rows="3"
+            placeholder="e.g., This site is blocked to help you focus."></textarea>
+          <p class="setting-description">Set a custom message below the heading. Leave blank for default.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="blockPageCustomButtonText">Custom "Go Back" Button Text:</label>
+          <input type="text" id="blockPageCustomButtonText" placeholder="e.g., Go Back, Return to Safety" />
+          <p class="setting-description">Customize the text for the 'Go Back' button. Leave blank for default.</p>
+        </div>
+
+        <h3>Display Details on Block Page:</h3>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowUrl" checked />
+          <label for="blockPageShowUrl">Show Blocked URL</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowReason" checked />
+          <label for="blockPageShowReason">Show Block Reason</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowRule" checked />
+          <label for="blockPageShowRule">Show Matching Rule Details</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowLimitInfo" checked />
+          <label for="blockPageShowLimitInfo">Show Limit Information (if applicable)</label>
+        </div>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowScheduleInfo" checked />
+          <label for="blockPageShowScheduleInfo">Show Schedule Information (if applicable)</label>
+        </div>
+
+        <h3>Motivational Quotes:</h3>
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="blockPageShowQuote" />
+          <label for="blockPageShowQuote">Show a Motivational Quote</label>
+        </div>
+        <div class="form-group" id="blockPageUserQuotesContainer" style="display: none">
+          <label for="blockPageUserQuotes">Your Custom Quotes (one per line):</label>
+          <textarea
+            id="blockPageUserQuotes"
+            rows="5"
+            placeholder="e.g., The secret of getting ahead is getting started."></textarea>
+          <p class="setting-description">
+            If "Show Motivational Quote" is checked, one of these quotes (or a default one if this is empty) will be
+            displayed.
+          </p>
+        </div>
       </section>
       <hr />
       <section id="data-management-section">
@@ -198,13 +286,13 @@
         <div class="form-group data-buttons">
           <button id="exportDataBtn" class="action-button">Export All Data</button>
           <button id="importDataBtn" class="action-button">Import Data from File</button>
-          <input type="file" id="importFileInput" accept=".ffm" style="display: none" />
+          <input type="file" id="importFileInput" accept=".ffm" />
         </div>
-        <p id="importStatus" class="status-message" style="display: none"></p>
+        <p id="importStatus" class="status-message"></p>
       </section>
     </div>
 
-    <div id="editRuleModal" class="modal" style="display: none">
+    <div id="editRuleModal" class="modal">
       <div class="modal-content">
         <span class="close-button" id="closeEditModalBtn">&times;</span>
         <h3>Edit Rule</h3>
@@ -232,6 +320,27 @@
               </select>
             </div>
           </div>
+
+          <div class="form-group schedule-inputs" id="editRuleScheduleGroup">
+            <label>Schedule (Optional):</label>
+            <div class="time-inputs-container modal-time-inputs">
+              <label for="editRuleStartTime" class="label-schedule-start">Start:</label>
+              <input type="time" id="editRuleStartTime" class="time-input-schedule" />
+              <label for="editRuleEndTime" class="label-schedule-end">End:</label>
+              <input type="time" id="editRuleEndTime" class="time-input-schedule" />
+            </div>
+            <div class="days-selector modal-days-selector">
+              <span>Days:</span>
+              <label><input type="checkbox" name="editRuleDay" value="Mon" />Mon</label>
+              <label><input type="checkbox" name="editRuleDay" value="Tue" />Tue</label>
+              <label><input type="checkbox" name="editRuleDay" value="Wed" />Wed</label>
+              <label><input type="checkbox" name="editRuleDay" value="Thu" />Thu</label>
+              <label><input type="checkbox" name="editRuleDay" value="Fri" />Fri</label>
+              <label><input type="checkbox" name="editRuleDay" value="Sat" />Sat</label>
+              <label><input type="checkbox" name="editRuleDay" value="Sun" />Sun</label>
+            </div>
+            <small class="schedule-notes-modal">Leave blank for all-day/all-week blocking.</small>
+          </div>
         </div>
         <div class="modal-actions">
           <button id="saveRuleChangesBtn">Save Changes</button>
@@ -240,7 +349,7 @@
       </div>
     </div>
 
-    <div id="editAssignmentModal" class="modal" style="display: none">
+    <div id="editAssignmentModal" class="modal">
       <div class="modal-content">
         <span class="close-button" id="closeEditAssignmentModalBtn">&times;</span>
         <h3>Edit Assignment</h3>

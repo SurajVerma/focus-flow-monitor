@@ -3,3 +3,4 @@ webpack.config.js
 dist
 package.json
 webpack.config__.js
+webpack.config_old.js

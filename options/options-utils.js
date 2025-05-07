@@ -47,6 +47,30 @@ function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   return parts.length > 0 ? parts.join(' ') : '0s';
 }
 
+// --- NEW: Time Formatting for AM/PM Display ---
+/**
+ * Converts a "HH:MM" time string to "H:MM AM/PM" format.
+ * @param {string} timeString24hr - Time in "HH:MM" format.
+ * @returns {string} Formatted time string (e.g., "9:05 AM", "11:30 PM") or original string if invalid.
+ */
+function formatTimeToAMPM(timeString24hr) {
+  if (!timeString24hr || typeof timeString24hr !== 'string' || !timeString24hr.includes(':')) {
+    return timeString24hr; // Return original if format is unexpected
+  }
+  try {
+    const [hours, minutes] = timeString24hr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return timeString24hr;
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12; // Convert hour 0 to 12
+    const minutesStr = String(minutes).padStart(2, '0');
+    return `${hours12}:${minutesStr} ${ampm}`;
+  } catch (e) {
+    console.warn('Error formatting time to AM/PM:', e);
+    return timeString24hr; // Fallback to original on error
+  }
+}
+
 // --- Category Colors ---
 const categoryColors = {
   'Work/Productivity': 'rgba(54, 162, 235, 0.8)',

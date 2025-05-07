@@ -1,4 +1,4 @@
-// options/options-handlers.js (v0.8.1 - Add Retention Handler - Complete File)
+// options/options-handlers.js (v0.8.2 - Block Page Customization Handlers)
 
 // --- Helper to reset category list item UI ---
 function resetCategoryItemUI(listItem) {
@@ -50,6 +50,7 @@ function handleAddCategory() {
     populateCategoryList();
     populateCategorySelect();
     populateRuleCategorySelect(); // from ui.js
+    populateProductivitySettings(); // Also update productivity settings list
   } catch (e) {
     console.error('Error adding category:', e);
     alert('Failed to add category.');
@@ -133,8 +134,17 @@ function handleAssignDomain() {
     AppState.categoryAssignments[domainPattern] = category;
     UIElements.domainPatternInput.value = '';
     UIElements.categorySelect.value = '';
-    saveCategoriesAndAssignments(); // This is fine as it doesn't need recalc for *new* assignments
+    saveCategoriesAndAssignments();
     populateAssignmentList();
+    // For new assignments, a full recalc might be needed if the domain was previously tracked under "Other"
+    recalculateAndUpdateCategoryTotals({
+      type: 'assignmentChange',
+      domain: domainPattern,
+      oldCategory: 'Other', // Assume it might have been "Other"
+      newCategory: category,
+    }).then(() => {
+      updateDisplayForSelectedRangeUI();
+    });
   } catch (e) {
     console.error('Error assigning domain:', e);
     alert('Failed to assign domain.');
@@ -148,16 +158,22 @@ function handleDeleteCategory(event) {
     if (categoryToDelete && categoryToDelete !== 'Other') {
       if (
         confirm(
-          `DELETE CATEGORY?\n"${categoryToDelete}"\nThis also removes related domain assignments and potentially rules.`
+          `DELETE CATEGORY?\n"${categoryToDelete}"\nThis also removes related domain assignments and potentially rules. Tracked time for these domains will be moved to 'Other'.`
         )
       ) {
         const oldCategoryName = categoryToDelete;
         AppState.categories = AppState.categories.filter((cat) => cat !== oldCategoryName);
         let assignmentsChanged = false,
           rulesChanged = false;
-        // Update assignments
+
+        // Update assignments: move to 'Other'
         for (const domain in AppState.categoryAssignments) {
           if (AppState.categoryAssignments[domain] === oldCategoryName) {
+            // Instead of deleting, reassign to 'Other' or a user-selected category
+            // For simplicity here, let's assume we might delete or reassign to 'Other'
+            // If reassigning, the recalculate function will handle it.
+            // If just deleting the assignment, then time would naturally fall to 'Other' if no other rule matches.
+            // Let's assume for now we delete the assignment, and time will be recategorized by getCategoryForDomain.
             delete AppState.categoryAssignments[domain];
             assignmentsChanged = true;
           }
@@ -170,26 +186,33 @@ function handleDeleteCategory(event) {
         rulesChanged = AppState.rules.length !== originalRulesLength;
 
         // Save changes
-        const savePromises = [];
-        savePromises.push(saveCategoriesAndAssignments());
+        const savePromises = [saveCategoriesAndAssignments()];
         if (rulesChanged) savePromises.push(saveRules());
 
-        // Wait for saves then update UI
         Promise.all(savePromises)
           .then(() => {
-            console.log('Category and related data deleted successfully.');
+            console.log('Category and related data updated/deleted successfully.');
+            // Recalculate totals as assignments have changed
+            return recalculateAndUpdateCategoryTotals({
+              type: 'categoryDelete',
+              oldCategory: oldCategoryName,
+              newCategory: 'Other', // Indicate time should effectively move
+            });
+          })
+          .then(() => {
             // Refresh UI completely
             populateCategoryList();
             populateCategorySelect();
             populateRuleCategorySelect();
             populateAssignmentList();
             populateRuleList();
+            populateProductivitySettings();
             updateDisplayForSelectedRangeUI();
           })
           .catch((error) => {
-            console.error('Error saving after category deletion:', error);
+            console.error('Error saving or recalculating after category deletion:', error);
             alert('Failed to save changes after deleting category. Please refresh.');
-            loadAllData(); // Reload data as a simple recovery
+            loadAllData();
           });
       }
     }
@@ -251,7 +274,6 @@ async function handleSaveCategoryClick(event) {
   const oldName = listItem.dataset.originalName;
   const newName = inputField.value.trim();
 
-  // Validation
   if (!newName) {
     alert('Category name cannot be empty.');
     inputField.focus();
@@ -273,7 +295,6 @@ async function handleSaveCategoryClick(event) {
     return;
   }
 
-  // Start Save Process
   const originalButtonText = saveButton.textContent;
   saveButton.textContent = 'Saving...';
   saveButton.disabled = true;
@@ -281,7 +302,6 @@ async function handleSaveCategoryClick(event) {
   if (cancelButton) cancelButton.disabled = true;
 
   try {
-    // Update State
     let assignmentsChanged = false;
     let rulesChanged = false;
     const categoryIndex = AppState.categories.indexOf(oldName);
@@ -301,34 +321,42 @@ async function handleSaveCategoryClick(event) {
         rulesChanged = true;
       }
     });
+    // Update productivity ratings
+    if (AppState.categoryProductivityRatings.hasOwnProperty(oldName)) {
+      AppState.categoryProductivityRatings[newName] = AppState.categoryProductivityRatings[oldName];
+      delete AppState.categoryProductivityRatings[oldName];
+      // Need to save this separately or as part of a general settings save
+      await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: AppState.categoryProductivityRatings });
+    }
 
-    // Save Primary Changes
     console.log(`Category "${oldName}" renamed to "${newName}". Saving primary changes...`);
     const savePromises = [saveCategoriesAndAssignments()];
     if (rulesChanged) savePromises.push(saveRules());
     await Promise.all(savePromises);
     console.log('Primary changes saved.');
 
-    // Recalculate Totals
     console.log(`Triggering category total recalculation for rename...`);
     await recalculateAndUpdateCategoryTotals({ type: 'categoryRename', oldCategory: oldName, newCategory: newName });
     console.log('Recalculation complete.');
 
-    // Explicit Full UI Refresh
     console.log('Refreshing UI after category rename and recalculation...');
     populateCategoryList();
     populateCategorySelect();
     populateRuleCategorySelect();
     if (assignmentsChanged) populateAssignmentList();
     if (rulesChanged) populateRuleList();
+    populateProductivitySettings(); // Refresh productivity settings
     updateDisplayForSelectedRangeUI();
     console.log(`Category rename process complete for "${oldName}" -> "${newName}".`);
   } catch (error) {
     console.error('Error saving category rename:', error);
     alert(`Failed to save category rename: ${error.message || 'Unknown error'}`);
-    if (saveButton) saveButton.textContent = originalButtonText;
-    if (saveButton) saveButton.disabled = false;
+    // Restore button state on error
+    saveButton.textContent = originalButtonText;
+    saveButton.disabled = false;
     if (cancelButton) cancelButton.disabled = false;
+    // Potentially revert AppState changes if critical, or reload all data
+    // loadAllData();
   }
 }
 
@@ -348,7 +376,7 @@ function handleDeleteAssignment(event) {
               type: 'assignmentChange',
               domain: domainToDelete,
               oldCategory: oldCategory,
-              newCategory: null,
+              newCategory: null, // Or 'Other' if it should fall back
             });
           })
           .then(() => {
@@ -398,7 +426,7 @@ async function handleSaveAssignmentClick() {
   const originalDomain = AppState.editingAssignmentOriginalDomain;
   const newDomain = UIElements.editAssignmentDomainInput.value.trim();
   const newCategory = UIElements.editAssignmentCategorySelect.value;
-  // Validation
+
   if (!originalDomain) {
     alert('Error saving assignment: Original domain not found.');
     handleCancelAssignmentEditClick();
@@ -433,35 +461,35 @@ async function handleSaveAssignmentClick() {
       return;
     }
   }
-  // Start Save Process
+
   const originalButtonText = saveButton.textContent;
   saveButton.textContent = 'Saving...';
   saveButton.disabled = true;
   if (cancelButton) cancelButton.disabled = true;
   try {
     const oldCategory = AppState.categoryAssignments[originalDomain];
-    let needsRecalculation = oldCategory !== newCategory;
-    // Update State
+    let needsRecalculation = oldCategory !== newCategory || newDomain.toLowerCase() !== originalDomain.toLowerCase();
+
     if (newDomain.toLowerCase() !== originalDomain.toLowerCase()) {
       delete AppState.categoryAssignments[originalDomain];
-      needsRecalculation = true;
     }
     AppState.categoryAssignments[newDomain] = newCategory;
-    // Save Primary Changes
+
     console.log(`Assignment updated: "${originalDomain}" -> "${newDomain}" : "${newCategory}". Saving assignment...`);
     await saveCategoriesAndAssignments();
-    // Recalculate Totals
+
     if (needsRecalculation) {
       console.log(`Triggering category total recalculation for assignment change...`);
       await recalculateAndUpdateCategoryTotals({
         type: 'assignmentChange',
-        domain: newDomain,
+        domain: newDomain, // Use new domain for recalc context
+        oldDomain: originalDomain !== newDomain ? originalDomain : null, // Pass old domain if it changed
         oldCategory: oldCategory,
         newCategory: newCategory,
       });
       console.log('Recalculation complete.');
     }
-    // UI Refresh
+
     console.log('Refreshing UI after assignment save...');
     populateAssignmentList();
     if (needsRecalculation) updateDisplayForSelectedRangeUI();
@@ -470,6 +498,7 @@ async function handleSaveAssignmentClick() {
   } catch (error) {
     console.error('Error saving assignment:', error);
     alert(`Failed to save assignment: ${error.message || 'Unknown error'}`);
+  } finally {
     saveButton.textContent = originalButtonText;
     saveButton.disabled = false;
     if (cancelButton) cancelButton.disabled = false;
@@ -482,14 +511,24 @@ function handleRuleTypeChange() {
       !UIElements.ruleTypeSelect ||
       !UIElements.rulePatternInput ||
       !UIElements.ruleCategorySelect ||
-      !UIElements.timeLimitInputDiv
-    )
+      !UIElements.timeLimitInputDiv ||
+      !UIElements.addRuleScheduleInputsDiv
+    ) {
+      console.error('Missing UI elements for rule type change handling.');
       return;
+    }
     const selectedType = UIElements.ruleTypeSelect.value;
-    UIElements.rulePatternInput.style.display = selectedType.includes('-url') ? '' : 'none';
-    UIElements.ruleCategorySelect.style.display = selectedType.includes('-category') ? '' : 'none';
-    UIElements.timeLimitInputDiv.style.display = selectedType.includes('limit-') ? '' : 'none';
-    if (selectedType.includes('-url')) UIElements.rulePatternInput.placeholder = 'e.g., badsite.com or *.social.com';
+    const isUrlType = selectedType.includes('-url');
+    const isCategoryType = selectedType.includes('-category');
+    const isLimitType = selectedType.includes('limit-');
+    const isBlockType = selectedType.includes('block-');
+
+    UIElements.rulePatternInput.style.display = isUrlType ? '' : 'none';
+    UIElements.ruleCategorySelect.style.display = isCategoryType ? '' : 'none';
+    UIElements.timeLimitInputDiv.style.display = isLimitType ? '' : 'none';
+    UIElements.addRuleScheduleInputsDiv.style.display = isBlockType ? '' : 'none';
+
+    if (isUrlType) UIElements.rulePatternInput.placeholder = 'e.g., badsite.com or *.social.com';
   } catch (e) {
     console.error('Error changing rule type view:', e);
   }
@@ -502,12 +541,20 @@ function handleAddRule() {
       !UIElements.rulePatternInput ||
       !UIElements.ruleCategorySelect ||
       !UIElements.ruleLimitInput ||
-      !UIElements.ruleUnitSelect
-    )
+      !UIElements.ruleUnitSelect ||
+      !UIElements.ruleStartTimeInput ||
+      !UIElements.ruleEndTimeInput ||
+      !UIElements.ruleDayCheckboxes
+    ) {
+      console.error('Missing UI elements for adding a rule.');
       return;
+    }
     const type = UIElements.ruleTypeSelect.value;
     let value = '',
       limitSeconds = null;
+    let startTime = null,
+      endTime = null,
+      days = null;
     if (type.includes('-url')) {
       value = UIElements.rulePatternInput.value.trim();
       if (!value) {
@@ -530,6 +577,33 @@ function handleAddRule() {
       }
       limitSeconds = unit === 'hours' ? limitValue * 3600 : limitValue * 60;
     }
+    if (type.includes('block-')) {
+      startTime = UIElements.ruleStartTimeInput.value || null;
+      endTime = UIElements.ruleEndTimeInput.value || null;
+
+      if (startTime && !endTime) {
+        alert('Please provide an End Time if Start Time is set.');
+        return;
+      }
+      if (!startTime && endTime) {
+        alert('Please provide a Start Time if End Time is set.');
+        return;
+      }
+      if (startTime && endTime && startTime >= endTime) {
+        alert('Start Time must be before End Time.');
+        return;
+      }
+
+      const selectedDays = Array.from(UIElements.ruleDayCheckboxes)
+        .filter((cb) => cb.checked)
+        .map((cb) => cb.value);
+      if (selectedDays.length > 0 && selectedDays.length < 7) {
+        days = selectedDays;
+      } else if (selectedDays.length === 7) {
+        days = null;
+      }
+    }
+
     const exists = AppState.rules.some(
       (rule) => rule.type === type && rule.value.toLowerCase() === value.toLowerCase()
     );
@@ -539,6 +613,10 @@ function handleAddRule() {
     }
     const newRule = { type, value };
     if (limitSeconds !== null) newRule.limitSeconds = limitSeconds;
+    if (startTime) newRule.startTime = startTime;
+    if (endTime) newRule.endTime = endTime;
+    if (days) newRule.days = days;
+
     AppState.rules.push(newRule);
     console.log('[Options] Added rule:', newRule);
     saveRules();
@@ -547,6 +625,9 @@ function handleAddRule() {
     UIElements.ruleCategorySelect.value = '';
     UIElements.ruleLimitInput.value = '';
     UIElements.ruleUnitSelect.value = 'minutes';
+    UIElements.ruleStartTimeInput.value = '';
+    UIElements.ruleEndTimeInput.value = '';
+    UIElements.ruleDayCheckboxes.forEach((cb) => (cb.checked = false));
   } catch (e) {
     console.error('Error adding rule:', e);
     alert('Failed to add rule.');
@@ -606,52 +687,30 @@ function handleCalendarMouseOver(event) {
 function handleCalendarMouseOut() {
   hideDayDetailsPopup();
 }
-// options-handlers.js
 
 function handleCalendarDayClick(event) {
   const dayCell = event.target.closest('.calendar-day');
   if (!dayCell) return;
-  const dateStr = dayCell.dataset.date; // YYYY-MM-DD format
+  const dateStr = dayCell.dataset.date;
   if (!dateStr) return;
 
   console.log(`[Calendar] Day clicked: ${dateStr}`);
-  AppState.selectedDateStr = dateStr; // Update the selected date state
-  highlightSelectedCalendarDay(dateStr); // Update calendar visual
+  AppState.selectedDateStr = dateStr;
+  highlightSelectedCalendarDay(dateStr);
 
-  // // --- NEW: Update all stats based on the clicked day ---
-  // const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
-  // const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
-  // const displayDateLabel = formatDisplayDate(dateStr); // Get user-friendly date format from options-utils.js
-
-  // // Deselect the main range dropdown to avoid confusion
-  // if (UIElements.dateRangeSelect) {
-  //   UIElements.dateRangeSelect.value = ''; // Or a custom 'selected-date' value if you add one
-  // }
-
-  // // Call the consolidated update function with single-day data
-  // // Pass dateStr as the specific date for the chart
-  // updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
-
-  // // No longer need the separate chart rendering call here:
-  // // renderChartForSelectedDateUI();
   const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
   const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
-  const displayDateLabel = formatDisplayDate(dateStr); // Get user-friendly date format
+  const displayDateLabel = formatDisplayDate(dateStr);
 
-  // Check if there's any time recorded for this day (using domain data as a proxy)
   const totalSeconds = Object.values(domainDataForDay).reduce((sum, time) => sum + (time || 0), 0);
 
-  // Deselect the main range dropdown to avoid confusion when a specific date is selected
   if (UIElements.dateRangeSelect) {
-    UIElements.dateRangeSelect.value = ''; // Or a custom 'selected-date' value if you add one
+    UIElements.dateRangeSelect.value = '';
   }
-  console.log('suraj ' + totalSeconds);
+  console.log('Total seconds for day click:', totalSeconds);
   if (totalSeconds < 1) {
-    // Check if effectively zero time recorded
-    // If no data, call the specific "No Data" display function
     displayNoDataForDate(displayDateLabel);
   } else {
-    // If data exists, call the normal update function
     updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
   }
 }
@@ -659,7 +718,9 @@ function handleCalendarDayClick(event) {
 function handleChartViewChange(event) {
   AppState.currentChartViewMode = event.target.value;
   console.log(`Chart view changed to: ${AppState.currentChartViewMode}`);
-  renderChartForSelectedDateUI();
+  // Instead of renderChartForSelectedDateUI, call the main update function
+  // to ensure all stats (including lists and score) are consistent with the chart.
+  updateDisplayForSelectedRangeUI();
 }
 
 function handleEditRuleClick(event) {
@@ -681,19 +742,30 @@ function handleEditRuleClick(event) {
     !UIElements.editRuleLimitGroup ||
     !UIElements.editRuleLimitInput ||
     !UIElements.editRuleUnitSelect ||
-    !UIElements.editRuleIndexInput
+    !UIElements.editRuleIndexInput ||
+    !UIElements.editRuleScheduleGroup ||
+    !UIElements.editRuleStartTimeInput ||
+    !UIElements.editRuleEndTimeInput ||
+    !UIElements.editRuleDayCheckboxes
   ) {
     alert('Error opening edit form. Please check console.');
     return;
   }
   UIElements.editRuleIndexInput.value = ruleIndex;
   UIElements.editRuleTypeDisplay.textContent = rule.type;
-  UIElements.editRulePatternGroup.style.display = rule.type.includes('-url') ? '' : 'none';
-  UIElements.editRuleCategoryGroup.style.display = rule.type.includes('-category') ? '' : 'none';
-  UIElements.editRuleLimitGroup.style.display = rule.type.includes('limit-') ? '' : 'none';
-  if (rule.type.includes('-url')) UIElements.editRulePatternInput.value = rule.value;
-  else if (rule.type.includes('-category')) {
-    populateRuleCategorySelect();
+  const isUrlType = rule.type.includes('-url');
+  const isCategoryType = rule.type.includes('-category');
+  const isLimitType = rule.type.includes('limit-');
+  const isBlockType = rule.type.includes('block-');
+
+  UIElements.editRulePatternGroup.style.display = isUrlType ? '' : 'none';
+  UIElements.editRuleCategoryGroup.style.display = isCategoryType ? '' : 'none';
+  UIElements.editRuleLimitGroup.style.display = isLimitType ? '' : 'none';
+  UIElements.editRuleScheduleGroup.style.display = isBlockType ? '' : 'none';
+
+  if (isUrlType) UIElements.editRulePatternInput.value = rule.value;
+  else if (isCategoryType) {
+    populateRuleCategorySelect(); // Ensures the select is up-to-date
     UIElements.editRuleCategorySelect.value = rule.value;
     if (!AppState.categories.includes(rule.value)) {
       const tempOpt = document.createElement('option');
@@ -704,7 +776,7 @@ function handleEditRuleClick(event) {
       UIElements.editRuleCategorySelect.value = rule.value;
     }
   }
-  if (rule.type.includes('limit-')) {
+  if (isLimitType) {
     const limitSec = rule.limitSeconds || 0;
     if (limitSec > 0 && limitSec % 3600 === 0 && limitSec / 3600 >= 1) {
       UIElements.editRuleLimitInput.value = limitSec / 3600;
@@ -714,6 +786,7 @@ function handleEditRuleClick(event) {
       UIElements.editRuleUnitSelect.value = 'minutes';
     }
     if (limitSec > 0 && UIElements.editRuleLimitInput.value == 0) {
+      // Ensure non-zero display for small limits
       UIElements.editRuleLimitInput.value = 1;
       UIElements.editRuleUnitSelect.value = 'minutes';
     }
@@ -721,6 +794,23 @@ function handleEditRuleClick(event) {
     UIElements.editRuleLimitInput.value = '';
     UIElements.editRuleUnitSelect.value = 'minutes';
   }
+
+  if (isBlockType) {
+    UIElements.editRuleStartTimeInput.value = rule.startTime || '';
+    UIElements.editRuleEndTimeInput.value = rule.endTime || '';
+    UIElements.editRuleDayCheckboxes.forEach((cb) => (cb.checked = false));
+    if (rule.days && Array.isArray(rule.days)) {
+      rule.days.forEach((dayValue) => {
+        const cb = document.querySelector(`#editRuleModal input[name="editRuleDay"][value="${dayValue}"]`);
+        if (cb) cb.checked = true;
+      });
+    }
+  } else {
+    UIElements.editRuleStartTimeInput.value = '';
+    UIElements.editRuleEndTimeInput.value = '';
+    UIElements.editRuleDayCheckboxes.forEach((cb) => (cb.checked = false));
+  }
+
   UIElements.editRuleModal.style.display = 'flex';
 }
 
@@ -736,24 +826,30 @@ function handleSaveChangesClick() {
     return;
   }
   const originalRule = AppState.rules[editIndex];
-  const updatedRule = { type: originalRule.type };
-  if (originalRule.type.includes('-url')) {
+  const updatedRule = { type: originalRule.type }; // Keep original type
+  const isUrlType = originalRule.type.includes('-url');
+  const isCategoryType = originalRule.type.includes('-category');
+  const isLimitType = originalRule.type.includes('limit-');
+  const isBlockType = originalRule.type.includes('block-');
+
+  if (isUrlType) {
     const newVal = UIElements.editRulePatternInput.value.trim();
     if (!newVal) {
       alert('Please enter a URL or pattern.');
       return;
     }
     updatedRule.value = newVal;
-  } else if (originalRule.type.includes('-category')) {
+  } else if (isCategoryType) {
     const newVal = UIElements.editRuleCategorySelect.value;
     const selOpt = UIElements.editRuleCategorySelect.options[UIElements.editRuleCategorySelect.selectedIndex];
-    if (!newVal || selOpt.disabled) {
+    if (!newVal || (selOpt && selOpt.disabled)) {
+      // Check if selected option is disabled (deleted category)
       alert('Please select a valid category.');
       return;
     }
     updatedRule.value = newVal;
   }
-  if (originalRule.type.includes('limit-')) {
+  if (isLimitType) {
     const limitVal = parseInt(UIElements.editRuleLimitInput.value, 10);
     const unit = UIElements.editRuleUnitSelect.value;
     if (isNaN(limitVal) || limitVal <= 0) {
@@ -762,6 +858,40 @@ function handleSaveChangesClick() {
     }
     updatedRule.limitSeconds = unit === 'hours' ? limitVal * 3600 : limitVal * 60;
   }
+
+  if (isBlockType) {
+    const startTime = UIElements.editRuleStartTimeInput.value || null;
+    const endTime = UIElements.editRuleEndTimeInput.value || null;
+
+    if (startTime && !endTime) {
+      alert('Please provide an End Time if Start Time is set.');
+      return;
+    }
+    if (!startTime && endTime) {
+      alert('Please provide a Start Time if End Time is set.');
+      return;
+    }
+    if (startTime && endTime && startTime >= endTime) {
+      alert('Start Time must be before End Time.');
+      return;
+    }
+
+    const selectedDays = Array.from(UIElements.editRuleDayCheckboxes)
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.value);
+
+    // Only add schedule properties if they are set
+    if (startTime) updatedRule.startTime = startTime;
+    else delete updatedRule.startTime;
+    if (endTime) updatedRule.endTime = endTime;
+    else delete updatedRule.endTime;
+    if (selectedDays.length > 0 && selectedDays.length < 7) {
+      updatedRule.days = selectedDays;
+    } else {
+      delete updatedRule.days; // If no days or all days selected, remove property (treat as default)
+    }
+  }
+
   const exists = AppState.rules.some(
     (r, i) =>
       i !== editIndex && r.type === updatedRule.type && r.value.toLowerCase() === updatedRule.value.toLowerCase()
@@ -799,24 +929,39 @@ function handleExportCsv() {
     alert('Error: Cannot determine selected date range.');
     return;
   }
-  const selectedRange = UIElements.dateRangeSelect.value;
-  const { domainData, label } = getFilteredDataForRange(selectedRange);
+  const selectedRangeOption = UIElements.dateRangeSelect.value;
+  let rangeToProcess = selectedRangeOption;
+  let labelForFilename = UIElements.dateRangeSelect.options[UIElements.dateRangeSelect.selectedIndex].text;
+
+  if (selectedRangeOption === '' && AppState.selectedDateStr) {
+    // Calendar date selected
+    rangeToProcess = AppState.selectedDateStr; // This will make getFilteredDataForRange use the specific date
+    labelForFilename = AppState.selectedDateStr;
+  } else if (selectedRangeOption === '') {
+    // Placeholder selected, default to today
+    rangeToProcess = 'today';
+    labelForFilename = 'Today';
+  }
+
+  const { domainData, label } = getFilteredDataForRange(rangeToProcess, true); // Pass true to get specific date data if rangeToProcess is a date string
+
   if (!domainData || Object.keys(domainData).length === 0) {
-    alert(`No domain data to export for the selected period: ${label}`);
+    alert(`No domain data to export for the selected period: ${labelForFilename}`);
     return;
   }
-  const csvString = convertDataToCsv(domainData);
-  const filename = `focusflow_export_${label.toLowerCase().replace(/\s+/g, '_')}_${formatDate(new Date())}.csv`;
+  const csvString = convertDataToCsv(domainData); // convertDataToCsv needs AppState for categories
+  const filename = `focusflow_export_${labelForFilename.toLowerCase().replace(/\s+/g, '_')}_${formatDate(
+    new Date()
+  )}.csv`;
   triggerCsvDownload(csvString, filename);
 }
 
-// *** ADDED: Handler for Data Retention Change ***
 function handleDataRetentionChange() {
   if (!UIElements.dataRetentionSelect) return;
-  const selectedValue = parseInt(UIElements.dataRetentionSelect.value, 10); // Value is in days or -1
+  const selectedValue = parseInt(UIElements.dataRetentionSelect.value, 10);
   if (isNaN(selectedValue)) {
     console.error('Invalid data retention value selected:', UIElements.dataRetentionSelect.value);
-    UIElements.dataRetentionSelect.value = DEFAULT_DATA_RETENTION_DAYS; // Reset to default
+    UIElements.dataRetentionSelect.value = DEFAULT_DATA_RETENTION_DAYS;
     return;
   }
   console.log(`[Options] Data retention setting changed to: ${selectedValue} days (-1 means forever)`);
@@ -824,28 +969,16 @@ function handleDataRetentionChange() {
     .set({ [STORAGE_KEY_DATA_RETENTION_DAYS]: selectedValue })
     .then(() => {
       console.log('[Options] Data retention setting saved successfully.');
-      // Optional: Notify background to possibly run prune check sooner than daily alarm?
-      // browser.runtime.sendMessage({ action: 'checkPruning' });
     })
     .catch((error) => {
       console.error('Error saving data retention setting:', error);
       alert('Failed to save data retention setting.');
-      // Consider reverting the dropdown selection on error
-      // loadAllData(); // Or reload all settings if save failed
     });
 }
 
-// Add these functions to options-handlers.js
-
-// --- Data Export Handler ---
-// In options-handlers.js
-
-// --- Data Export Handler ---
 async function handleExportData() {
   console.log('[Data Export] Starting export...');
   try {
-    // Define all keys to export (include settings)
-    // *** CORRECTED: Use constants directly, not via FocusFlowState ***
     const keysToExport = [
       'trackedData',
       'categoryTimeData',
@@ -855,39 +988,50 @@ async function handleExportData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
-      STORAGE_KEY_IDLE_THRESHOLD, // CORRECTED
-      STORAGE_KEY_DATA_RETENTION_DAYS, // CORRECTED
+      STORAGE_KEY_IDLE_THRESHOLD,
+      STORAGE_KEY_DATA_RETENTION_DAYS,
+      STORAGE_KEY_PRODUCTIVITY_RATINGS, // Include productivity ratings
+      // NEW: Include block page customization keys
+      STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+      STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+      STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_RULE,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+      STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
+      STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
     ];
 
     const storedData = await browser.storage.local.get(keysToExport);
-
-    // Prepare the final object, ensuring all keys exist even if empty
     const dataToExport = {};
     keysToExport.forEach((key) => {
       // Provide sensible defaults for missing data
-      if (key === 'categories') {
-        dataToExport[key] = storedData[key] || ['Other'];
-      } else if (key === 'rules') {
-        dataToExport[key] = storedData[key] || [];
-        // *** CORRECTED: Use constants directly in checks ***
-      } else if (key === STORAGE_KEY_IDLE_THRESHOLD) {
-        dataToExport[key] = storedData[key] ?? DEFAULT_IDLE_SECONDS; // CORRECTED
-      } else if (key === STORAGE_KEY_DATA_RETENTION_DAYS) {
-        dataToExport[key] = storedData[key] ?? DEFAULT_DATA_RETENTION_DAYS; // CORRECTED
-      } else {
-        dataToExport[key] = storedData[key] || {}; // Default to empty object for tracking data
-      }
+      if (key === 'categories') dataToExport[key] = storedData[key] || ['Other'];
+      else if (key === 'rules') dataToExport[key] = storedData[key] || [];
+      else if (key === STORAGE_KEY_IDLE_THRESHOLD) dataToExport[key] = storedData[key] ?? DEFAULT_IDLE_SECONDS;
+      else if (key === STORAGE_KEY_DATA_RETENTION_DAYS)
+        dataToExport[key] = storedData[key] ?? DEFAULT_DATA_RETENTION_DAYS;
+      else if (key === STORAGE_KEY_PRODUCTIVITY_RATINGS) dataToExport[key] = storedData[key] || {};
+      // Defaults for new block page settings
+      else if (key === STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING) dataToExport[key] = storedData[key] || '';
+      else if (key === STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE) dataToExport[key] = storedData[key] || '';
+      else if (key === STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT) dataToExport[key] = storedData[key] || '';
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_URL) dataToExport[key] = storedData[key] ?? true;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_REASON) dataToExport[key] = storedData[key] ?? true;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_RULE) dataToExport[key] = storedData[key] ?? true;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO) dataToExport[key] = storedData[key] ?? true;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO) dataToExport[key] = storedData[key] ?? true;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE) dataToExport[key] = storedData[key] ?? false;
+      else if (key === STORAGE_KEY_BLOCK_PAGE_USER_QUOTES) dataToExport[key] = storedData[key] || [];
+      else dataToExport[key] = storedData[key] || {}; // Default for tracking data objects
     });
 
-    // Create JSON string
-    const jsonString = JSON.stringify(dataToExport, null, 2); // Pretty print JSON
+    const jsonString = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
-
-    // Create filename
-    const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `focusflow_backup_${dateStr}.ffm`;
-
-    // Trigger download (similar to CSV export)
     const link = document.createElement('a');
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
@@ -908,9 +1052,7 @@ async function handleExportData() {
   }
 }
 
-// --- Data Import Handlers ---
 function handleImportDataClick() {
-  // Trigger the hidden file input
   if (UIElements.importFileInput) {
     UIElements.importFileInput.click();
   } else {
@@ -925,28 +1067,19 @@ function handleImportFileChange(event) {
     console.log('[Data Import] No file selected.');
     return;
   }
-  // if (!file.type || file.type !== 'application/json') {
-  //   alert('Import failed: Please select a valid JSON (.json) backup file.');
-  //   // Reset file input
-  //   event.target.value = null;
-  //   return;
-  // }
   if (!file.name || !file.name.toLowerCase().endsWith('.ffm')) {
     alert('Import failed: Please select a valid FocusFlow backup (.ffm) file.');
-    // Reset file input
     event.target.value = null;
     return;
   }
 
   const reader = new FileReader();
-
   reader.onload = async (e) => {
     let importedData;
     try {
       importedData = JSON.parse(e.target.result);
       console.log('[Data Import] File parsed successfully.');
 
-      // *** Basic Validation ***
       const requiredKeys = [
         'trackedData',
         'categoryTimeData',
@@ -956,12 +1089,13 @@ function handleImportFileChange(event) {
         'dailyDomainData',
         'dailyCategoryData',
         'hourlyData',
+        // Optionally check for new settings keys, but allow import if they are missing (use defaults)
       ];
       const missingKeys = requiredKeys.filter((key) => !(key in importedData));
-
       if (missingKeys.length > 0) {
         throw new Error(`Import file is missing required data keys: ${missingKeys.join(', ')}`);
       }
+      // Basic type checks
       if (
         !Array.isArray(importedData.categories) ||
         !Array.isArray(importedData.rules) ||
@@ -973,34 +1107,28 @@ function handleImportFileChange(event) {
       ) {
         throw new Error('Import file has incorrect data types for one or more keys.');
       }
-      // Add more specific validation if needed (e.g., check rule structure)
 
-      // --- Confirmation ---
       const confirmation = confirm(
         'IMPORT WARNING:\n\nThis will OVERWRITE all your current FocusFlow Monitor settings and tracking data with the data from the selected file.\n\nAre you sure you want to proceed?'
       );
-
       if (!confirmation) {
         console.log('[Data Import] User cancelled import.');
         if (UIElements.importStatus) {
           UIElements.importStatus.textContent = 'Import cancelled by user.';
-          UIElements.importStatus.className = 'status-message'; // Reset class
+          UIElements.importStatus.className = 'status-message';
           UIElements.importStatus.style.display = 'block';
         }
-        // Reset file input
         event.target.value = null;
         return;
       }
 
-      // --- Apply Data ---
       console.log('[Data Import] User confirmed. Applying imported data...');
       if (UIElements.importStatus) {
         UIElements.importStatus.textContent = 'Importing... Please wait.';
         UIElements.importStatus.className = 'status-message';
         UIElements.importStatus.style.display = 'block';
       }
-
-      await applyImportedData(importedData); // Call the function to save and refresh
+      await applyImportedData(importedData);
     } catch (error) {
       console.error('[Data Import] Error processing import file:', error);
       alert(`Import failed: ${error.message}`);
@@ -1009,11 +1137,9 @@ function handleImportFileChange(event) {
         UIElements.importStatus.className = 'status-message error';
         UIElements.importStatus.style.display = 'block';
       }
-      // Reset file input on error too
       event.target.value = null;
     }
   };
-
   reader.onerror = (e) => {
     console.error('[Data Import] Error reading file:', e);
     alert('Error reading the selected file.');
@@ -1022,37 +1148,25 @@ function handleImportFileChange(event) {
       UIElements.importStatus.className = 'status-message error';
       UIElements.importStatus.style.display = 'block';
     }
-    // Reset file input
     event.target.value = null;
   };
-
   reader.readAsText(file);
 }
 
-// Function to save imported data and trigger refreshes
 async function applyImportedData(dataToImport) {
   try {
-    // Use browser.storage.local.set to save the entire imported object
-    // This will overwrite existing values for these keys.
     await browser.storage.local.set(dataToImport);
     console.log('[Data Import] Data successfully saved to storage.');
-
-    // Notify background script to reload its state from storage
     await browser.runtime.sendMessage({ action: 'importedData' });
     console.log('[Data Import] Sent message to background script to reload state.');
-
-    // Show success message
     if (UIElements.importStatus) {
       UIElements.importStatus.textContent = 'Import successful! Reloading options page...';
       UIElements.importStatus.className = 'status-message success';
       UIElements.importStatus.style.display = 'block';
     }
-
-    // Reload the options page to reflect the changes
-    // A short delay allows the user to see the success message
     setTimeout(() => {
       location.reload();
-    }, 1500); // Reload after 1.5 seconds
+    }, 1500);
   } catch (error) {
     console.error('[Data Import] Error applying imported data:', error);
     alert(`Failed to apply imported data: ${error.message}`);
@@ -1062,56 +1176,206 @@ async function applyImportedData(dataToImport) {
       UIElements.importStatus.style.display = 'block';
     }
   } finally {
-    // Reset file input in case of error during apply/save
     if (UIElements.importFileInput) UIElements.importFileInput.value = null;
   }
 }
-// *** END ADDED ***
 
-/**
- * Handles changes to productivity rating radio buttons.
- * Saves the updated rating to storage immediately.
- * @param {Event} event - The input change event.
- */
 async function handleProductivityRatingChange(event) {
-  // Ensure the event target is one of our radio buttons
   if (event.target.type !== 'radio' || !event.target.name.startsWith('rating-')) {
     return;
   }
-
   const category = event.target.dataset.category;
-  const newRating = parseInt(event.target.value, 10); // Value is -1, 0, or 1
-
+  const newRating = parseInt(event.target.value, 10);
   if (!category || isNaN(newRating)) {
     console.error('Could not get category or rating from event:', event.target);
     return;
   }
-
   console.log(`[Productivity] Rating changed for "${category}" to ${newRating}`);
-
   try {
-    // Get current user ratings from storage
     const result = await browser.storage.local.get(STORAGE_KEY_PRODUCTIVITY_RATINGS);
     const currentRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
-
-    // Update the specific category rating
     currentRatings[category] = newRating;
-
-    // Save the updated ratings object back to storage
     await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: currentRatings });
     console.log(`[Productivity] Saved updated ratings.`);
-
-    // Update AppState immediately (optional but good for responsiveness)
     AppState.categoryProductivityRatings = currentRatings;
-
-    // Trigger a recalculation and display update for the score
-    // This re-fetches data for the current range and recalculates the score
     updateDisplayForSelectedRangeUI();
   } catch (error) {
     console.error('Error saving productivity rating:', error);
     alert('Failed to save productivity setting. Please try again.');
-    // Optional: Revert the radio button state? (more complex)
   }
 }
 
-console.log('[System] options-handlers.js loaded (v0.8.1)');
+// --- NEW: Handlers for Block Page Customization ---
+function handleBlockPageSettingChange(storageKey, value) {
+  browser.storage.local
+    .set({ [storageKey]: value })
+    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
+    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
+}
+
+function handleBlockPageShowQuoteChange() {
+  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
+  // Toggle visibility of the custom quotes textarea
+  if (UIElements.blockPageUserQuotesContainer) {
+    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
+  }
+}
+
+function handleBlockPageUserQuotesChange() {
+  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
+  // Split by newline, trim whitespace, and filter out empty lines
+  const quotesArray = quotesText
+    .split('\n')
+    .map((q) => q.trim())
+    .filter((q) => q.length > 0);
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
+}
+// --- END NEW HANDLERS ---
+
+// --- Event Listener Setup ---
+function setupEventListeners() {
+  console.log('[Options Main] Setting up event listeners...');
+  try {
+    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
+    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.categoryList) {
+      UIElements.categoryList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
+        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
+        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
+        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
+      });
+    }
+    if (UIElements.assignmentList) {
+      UIElements.assignmentList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
+        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
+      });
+    }
+    if (UIElements.ruleList) {
+      UIElements.ruleList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
+        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
+      });
+    }
+    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
+    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
+    if (UIElements.dateRangeSelect)
+      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
+    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
+    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
+    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
+    if (UIElements.chartViewRadios) {
+      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
+    }
+    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+
+    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (UIElements.editRuleModal)
+      UIElements.editRuleModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
+      });
+
+    if (UIElements.closeEditAssignmentModalBtn)
+      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.cancelEditAssignmentBtn)
+      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.saveAssignmentChangesBtn)
+      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
+    if (UIElements.editAssignmentModal)
+      UIElements.editAssignmentModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
+      });
+
+    if (UIElements.idleThresholdSelect)
+      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
+    if (UIElements.dataRetentionSelect) {
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+    } else {
+      console.warn('Data retention select element not found, cannot add listener.');
+    }
+
+    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
+    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
+    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+
+    if (UIElements.productivitySettingsList) {
+      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
+    }
+
+    // NEW: Event Listeners for Block Page Customization
+    if (UIElements.blockPageCustomHeadingInput) {
+      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+          UIElements.blockPageCustomHeadingInput.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageCustomMessageTextarea) {
+      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+          UIElements.blockPageCustomMessageTextarea.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageCustomButtonTextInput) {
+      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+          UIElements.blockPageCustomButtonTextInput.value.trim()
+        )
+      );
+    }
+    if (UIElements.blockPageShowUrlCheckbox) {
+      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowReasonCheckbox) {
+      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowRuleCheckbox) {
+      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
+      );
+    }
+    if (UIElements.blockPageShowLimitInfoCheckbox) {
+      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+          UIElements.blockPageShowLimitInfoCheckbox.checked
+        )
+      );
+    }
+    if (UIElements.blockPageShowScheduleInfoCheckbox) {
+      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+          UIElements.blockPageShowScheduleInfoCheckbox.checked
+        )
+      );
+    }
+    if (UIElements.blockPageShowQuoteCheckbox) {
+      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
+    }
+    if (UIElements.blockPageUserQuotesTextarea) {
+      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
+    }
+    // --- END NEW Event Listeners ---
+
+    handleRuleTypeChange();
+    console.log('[Options Main] Event listeners setup complete.');
+  } catch (e) {
+    console.error('[Options Main] Error setting up event listeners:', e);
+  }
+}
+
+console.log('[System] options-handlers.js loaded (v0.8.2)');

@@ -75,6 +75,16 @@ function handleBlockingRequest(requestDetails) {
   const todaysCategoryData = FocusFlowState.dailyCategoryData[todayStr] || {};
   let determinedCategory = null; // Lazy load category
 
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+  const currentDayIndex = now.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const dayMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const currentDayStr = dayMap[currentDayIndex];
+
+  console.log(`[Blocking] Check time: ${currentTimeStr}, Day: ${currentDayStr}`); // Log current time/day
+
   // --- Check Limit Rules First ---
   console.log('[Blocking] === Checking Limit Rules ===');
   for (const rule of currentRules) {
@@ -146,11 +156,10 @@ function handleBlockingRequest(requestDetails) {
     }
   } // End limit rules loop
 
-  // --- Check Block Rules ---
+  // --- Check Block Rules (MODIFIED) ---
   console.log('[Blocking] === Checking Block Rules ===');
   if (!determinedCategory && currentRules.some((r) => r.type === 'block-category')) {
-    determinedCategory = getCategoryForDomain(requestedDomain); // Determine category only if needed for a block rule
-    console.log(`[Blocking] Determined category for block check: ${determinedCategory}`);
+    determinedCategory = getCategoryForDomain(requestedDomain); // Determine category only if needed
   }
 
   for (const rule of currentRules) {
@@ -161,31 +170,81 @@ function handleBlockingRequest(requestDetails) {
     let matchReason = '';
 
     try {
+      // Check if URL or Category matches first
       if (rule.type === 'block-url') {
         if (urlMatchesPattern(requestedUrl, targetValue)) {
           ruleMatches = true;
           matchReason = `URL pattern "${targetValue}" matched`;
         }
       } else if (rule.type === 'block-category') {
-        // Category determined above if needed
         if (determinedCategory && determinedCategory === targetValue) {
           ruleMatches = true;
-          matchReason = `Category "${targetValue}" matched (Domain: ${requestedDomain} -> Category: ${determinedCategory})`;
+          matchReason = `Category "${targetValue}" matched`;
         }
       }
 
+      // If it matches, THEN check the schedule
       if (ruleMatches) {
-        console.log(
-          `[Blocking] *** BLOCK ENFORCED *** for ${rule.type}='${targetValue}' (${matchReason}). Redirecting.`
-        );
-        const params = new URLSearchParams();
-        params.append('url', requestedUrl);
-        params.append('reason', 'block');
-        params.append('type', rule.type);
-        params.append('value', targetValue);
-        return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
-      }
-      // else { console.log(`[Blocking] Rule ${rule.type}="${targetValue}" did NOT match URL/Category.`); } // Verbose
+        console.log(`[Blocking] Rule ${rule.type}="${targetValue}" matched (${matchReason}). Checking schedule...`);
+
+        // --- Schedule Checking Logic ---
+        const hasSchedule = rule.startTime && rule.endTime;
+        const hasDayRestriction = rule.days && Array.isArray(rule.days) && rule.days.length > 0;
+        let blockIsActive = true; // Assume block is active unless schedule says otherwise
+
+        if (hasSchedule || hasDayRestriction) {
+          let isWithinTime = !hasSchedule; // If no time set, it's always "within time"
+          let isCorrectDay = !hasDayRestriction; // If no days set, it's always the "correct day"
+
+          // Check day if restricted
+          if (hasDayRestriction) {
+            if (rule.days.includes(currentDayStr)) {
+              isCorrectDay = true;
+            } else {
+              isCorrectDay = false; // Not the right day
+            }
+          }
+
+          // Check time if restricted (and it's the correct day or day doesn't matter)
+          if (hasSchedule && isCorrectDay) {
+            if (currentTimeStr >= rule.startTime && currentTimeStr < rule.endTime) {
+              isWithinTime = true;
+            } else {
+              isWithinTime = false; // Outside the time window
+            }
+          }
+
+          // Block is active ONLY if it's the correct day AND within the time window (if applicable)
+          blockIsActive = isCorrectDay && isWithinTime;
+
+          if (blockIsActive) {
+            console.log(`[Blocking] Schedule MATCHES current time/day (${currentTimeStr}, ${currentDayStr}).`);
+          } else {
+            console.log(`[Blocking] Schedule does NOT match current time/day. Allowing access.`);
+          }
+        } else {
+          console.log(`[Blocking] Rule has no schedule (Permanent block).`);
+          blockIsActive = true; // No schedule = always active block
+        }
+        // --- End Schedule Checking Logic ---
+
+        // If the block rule is determined to be active, redirect.
+        if (blockIsActive) {
+          console.log(`[Blocking] *** BLOCK ENFORCED *** for ${rule.type}='${targetValue}'. Redirecting.`);
+          const params = new URLSearchParams();
+          params.append('url', requestedUrl);
+          params.append('reason', 'block'); // Use 'block' or maybe 'scheduled_block'?
+          params.append('type', rule.type);
+          params.append('value', targetValue);
+          // Optionally add schedule info to params if needed on block page
+          if (hasSchedule || hasDayRestriction) {
+            params.append('schedule_start', rule.startTime || 'N/A');
+            params.append('schedule_end', rule.endTime || 'N/A');
+            params.append('schedule_days', rule.days ? rule.days.join(',') : 'All');
+          }
+          return { redirectUrl: `${blockPageBaseUrl}?${params.toString()}` };
+        }
+      } // end if (ruleMatches)
     } catch (e) {
       console.error(`[Blocking] Error during block check for rule ${JSON.stringify(rule)}:`, e);
     }

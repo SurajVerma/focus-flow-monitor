@@ -9,18 +9,34 @@
   <body>
     <div class="container">
       <div class="icon">⚠️</div>
-      <h1>Access Denied</h1>
-      <p>Your access has been restricted by the <strong>Focus Flow Monitor</strong> extension.</p>
+      <h1 id="main-heading">Access Denied</h1>
+      <p id="sub-heading">Your access has been restricted by the <strong>Focus Flow Monitor</strong> extension.</p>
+
+      <p id="custom-message-placeholder" class="custom-message" style="display: none"></p>
 
       <div class="details">
-        <p><strong>Blocked URL:</strong> <span id="display-url">loading...</span></p>
-        <p><strong>Reason:</strong> <span id="display-reason">loading...</span></p>
-        <p><strong>Matching Rule:</strong> <span id="display-rule">loading...</span></p>
+        <p id="blocked-url-container"><strong>Blocked URL:</strong> <span id="display-url">loading...</span></p>
+        <p id="blocked-reason-container"><strong>Reason:</strong> <span id="display-reason">loading...</span></p>
+        <p id="blocked-rule-container"><strong>Matching Rule:</strong> <span id="display-rule">loading...</span></p>
+
         <p id="limit-info" style="display: none">
           <strong>Time Spent Today:</strong> <span id="display-spent"></span> / <strong>Limit:</strong>
           <span id="display-limit"></span>
         </p>
+        <p id="schedule-info" style="display: none">
+          <strong>Scheduled Block Active:</strong><br />
+          <span id="schedule-time-details" style="padding-left: 15px">
+            <strong>Time:</strong> <span id="display-schedule-start"></span
+            ><span id="display-schedule-time-separator"></span><span id="display-schedule-end"></span> </span
+          ><br />
+          <span style="padding-left: 15px"><strong>Days:</strong> <span id="display-schedule-days"></span></span>
+        </p>
       </div>
+
+      <div id="motivational-quote-container" class="motivational-quote" style="display: none">
+        <p id="quote-text"></p>
+      </div>
+
       <button id="goBackButton">Go Back</button>
     </div>
 
