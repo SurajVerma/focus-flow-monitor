@@ -2,5 +2,6 @@ node_modules
 webpack.config.js
 dist
 package.json
+package-lock.json
 webpack.config__.js
 webpack.config_old.js
