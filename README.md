@@ -3,7 +3,7 @@
 **Track your time online, gain insights, control distractions, and stay productive with this privacy-focused Firefox extension.**
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Mozilla Add-on](https://img.shields.io/amo/v/focusflow-monitor?label=Firefox%20Add-on&color=blue)](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
+[![Mozilla Add-on](https://img.shields.io/amo/v/focusflow-monitor?label=Firefox%20Add-on&color=007bff)](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/SurajVerma/focus-flow-monitor)](https://github.com/SurajVerma/focus-flow-monitor/commits/main)
 [![GitHub issues](https://img.shields.io/github/issues/SurajVerma/focus-flow-monitor)](https://github.com/SurajVerma/focus-flow-monitor/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/SurajVerma/focus-flow-monitor?style=social)](https://github.com/SurajVerma/focus-flow-monitor/stargazers)
