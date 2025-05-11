@@ -2,7 +2,7 @@ node_modules
 webpack.config.js
 dist
 scripts
-package.json
-package-lock.json
+# package.json
+# package-lock.json
 webpack.config__.js
 webpack.config_old.js
