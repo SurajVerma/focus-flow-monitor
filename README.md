@@ -10,7 +10,8 @@
 
 Focus Flow Monitor helps you understand your online habits by tracking the time you spend on different websites. Gain insights through categorized statistics, visual charts, and a daily focus score. Set limits, schedule blocks, or permanently block distracting sites to stay productive. All your data stays local, prioritizing your privacy.
 
-![Quick View Popup](https://github.com/user-attachments/assets/c0edf5d2-d556-4976-88c3-e1887ff43b2f)
+![Quick View Popup](https://github.com/user-attachments/assets/a5de9a12-843e-44f3-ac29-e9b8e662eb95)
+
 
 ---
 
