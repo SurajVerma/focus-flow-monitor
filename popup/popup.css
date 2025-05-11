@@ -1,4 +1,4 @@
-/* popup/popup.css (v3 - Dark Mode Support) */
+/* popup/popup.css (v12 - Pomodoro UI Polish) */
 :root {
   --popup-bg: #f0f2f5;
   --popup-text-primary: #1c1e21;
@@ -6,11 +6,34 @@
   --popup-text-muted: #8a8d91;
   --popup-text-total: #1c1e21;
   --popup-header-border: #e0e0e0;
-  --popup-header-button-bg: #e4e6eb;
-  --popup-header-button-hover-bg: #dcdde1;
+  --popup-options-btn-bg: #e4e6eb;
+  --popup-options-btn-hover-bg: #dcdde1;
+  --popup-options-btn-text: #ffffff;
+
   --popup-progress-bg: #e4e6eb;
   --popup-chart-placeholder: #aaa;
   --popup-logo-filter: none;
+
+  /* Pomodoro specific colors */
+  --pomodoro-btn-bg: #007bff;
+  --pomodoro-btn-hover-bg: #0056b3;
+  --pomodoro-btn-text: #ffffff;
+  --pomodoro-reset-btn-bg: #6c757d;
+  --pomodoro-reset-btn-hover-bg: #5a6268;
+  --pomodoro-change-phase-btn-bg: #17a2b8;
+  --pomodoro-change-phase-btn-hover-bg: #138496;
+
+  /* UPDATED: Distinct phase colors */
+  --pomodoro-phase-work-color: #28a745; /* Green for work */
+  --pomodoro-phase-short-break-color: #ffc107;
+  --pomodoro-phase-long-break-color: #fd7e14;
+
+  /* Modal specific */
+  --modal-overlay-bg: rgba(0, 0, 0, 0.4);
+  --modal-content-bg: #ffffff;
+  --modal-text-color: #333333;
+  --modal-border-color: #cccccc;
+  --modal-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,11 +44,33 @@
     --popup-text-muted: #8d8d91;
     --popup-text-total: #ffffff;
     --popup-header-border: #3a3a3c;
-    --popup-header-button-bg: #3a3a3c;
-    --popup-header-button-hover-bg: #4a4a4c;
+    --popup-options-btn-bg: #0a84ff;
+    --popup-options-btn-hover-bg: #339cff;
+    --popup-options-btn-text: #ffffff;
+
     --popup-progress-bg: #3a3a3c;
     --popup-chart-placeholder: #888;
-    --popup-logo-filter: brightness(0) invert(1); /* Make logo white */
+    --popup-logo-filter: brightness(0) invert(1);
+
+    /* Pomodoro dark mode colors */
+    --pomodoro-btn-bg: #0a84ff;
+    --pomodoro-btn-hover-bg: #339cff;
+    --pomodoro-reset-btn-bg: #8e8e93;
+    --pomodoro-reset-btn-hover-bg: #a0a0a5;
+    --pomodoro-change-phase-btn-bg: #64d2ff;
+    --pomodoro-change-phase-btn-hover-bg: #82dfff;
+
+    /* UPDATED: Distinct phase colors - dark mode */
+    --pomodoro-phase-work-color: #30d158;
+    --pomodoro-phase-short-break-color: #fd7e14; /* Keep orange, usually visible on dark */
+    --pomodoro-phase-long-break-color: #ffd60a;
+
+    /* Modal dark mode */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.6);
+    --modal-content-bg: #2c2c2e;
+    --modal-text-color: #e0e0e0;
+    --modal-border-color: #444444;
+    --modal-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -35,13 +80,15 @@ body {
   padding: 0;
   background-color: var(--popup-bg);
   color: var(--popup-text-primary);
-  min-width: 320px;
-  max-width: 350px;
+  min-width: 300px;
+  max-width: 340px;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
 }
 
 .popup-container {
-  padding: 15px;
+  padding: 8px 15px;
 }
 
 /* Header Styles */
@@ -49,97 +96,99 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--popup-header-border);
 }
 
 .title-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
 }
 
 .logo {
-  width: 24px;
-  height: 24px;
-  filter: var(--popup-logo-filter); /* Apply filter for dark mode */
+  width: 18px;
+  height: 18px;
+  filter: var(--popup-logo-filter);
 }
 
 .title-text {
   font-size: 1.1em;
   font-weight: 600;
-  color: var(--popup-text-primary); /* Use variable */
+  color: var(--popup-text-primary);
 }
 
-.header-btn {
-  background-color: var(--popup-header-button-bg);
-  color: var(--popup-text-primary); /* Use variable */
+#optionsBtn.header-btn.icon-btn {
+  background-color: var(--popup-options-btn-bg);
+  color: var(--popup-options-btn-text);
   border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-}
-.header-btn:hover {
-  background-color: var(--popup-header-button-hover-bg);
-}
-
-.icon-btn {
-  font-size: 1.2em;
-  padding: 4px 6px;
+  border-radius: 5px;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
   line-height: 1;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.19); /* Added subtle shadow */
 }
+#optionsBtn.header-btn.icon-btn:hover {
+  background-color: var(--popup-options-btn-hover-bg);
+  /* transform: translateY(-1px); */
+}
+/* #optionsBtn.header-btn.icon-btn:active {
+  transform: translateY(0px);
+} */
 
 /* Summary Section Styles */
 .summary-section {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   text-align: center;
 }
 
 .date-display {
   font-size: 0.85em;
   color: var(--popup-text-secondary);
-  margin-bottom: 5px;
+  margin-bottom: 2px;
 }
 
 .total-time {
   font-size: 2.1em;
   font-weight: 700;
   color: var(--popup-text-total);
-  margin-bottom: 15px;
+  margin-bottom: 8px;
 }
 
 .today-summary {
   text-align: left;
-  margin-top: 15px;
+  margin-top: 8px;
   font-size: 0.9em;
-  padding: 0 5px;
+  padding: 0 2px;
 }
 
-/* Category List in Summary */
 .category-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .category-info {
   display: flex;
   align-items: center;
   flex-grow: 1;
-  margin-right: 10px;
+  margin-right: 6px;
 }
 
 .category-dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  margin-right: 8px;
+  margin-right: 5px;
   flex-shrink: 0;
 }
 
@@ -147,7 +196,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--popup-text-primary); /* Use variable */
+  color: var(--popup-text-primary);
 }
 
 .category-time-percent {
@@ -157,16 +206,15 @@ body {
   font-size: 0.95em;
 }
 .category-percent {
-  margin-left: 5px;
+  margin-left: 3px;
   color: var(--popup-text-muted);
 }
 
-/* Progress Bar */
 .progress-bar-container {
-  height: 8px;
+  height: 5px;
   background-color: var(--popup-progress-bg);
-  border-radius: 4px;
-  margin-top: 15px;
+  border-radius: 2px;
+  margin-top: 8px;
   overflow: hidden;
   display: flex;
   width: 100%;
@@ -175,75 +223,244 @@ body {
 .progress-bar-segment {
   height: 100%;
 }
-/* Colors applied via inline style in JS */
 
-/* Hourly Chart Section */
 .hourly-chart-section {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--popup-header-border); /* Use same border color */
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--popup-header-border);
 }
 
 .hourly-chart-section h4 {
   font-size: 0.9em;
   color: var(--popup-text-secondary);
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   text-align: center;
   font-weight: 600;
 }
 
 .chart-wrapper {
   position: relative;
-  height: 120px;
+  height: 90px;
   width: 100%;
-  color: var(--popup-text-secondary); /* Hint for chart text color */
+  color: var(--popup-text-secondary);
 }
 
-/* Chart placeholder text */
 .chart-wrapper canvas {
-  /* Ensure canvas inherits color for Chart.js text */
   color: inherit;
 }
 .chart-wrapper p {
-  /* Style for error messages added via JS */
   color: var(--popup-chart-placeholder);
   font-size: small;
   text-align: center;
 }
 
-/* Chart.js Tooltip Styling (Optional - requires JS config usually) */
-/* You might need Chart.js options to fully style tooltips for dark mode */
-
 .focus-score {
-  font-size: 0.95em; /* Slightly smaller than total time */
+  font-size: 0.95em;
   font-weight: 600;
-  color: var(--popup-text-secondary); /* Use secondary text color */
-  margin-top: -10px; /* Adjust spacing relative to total time */
-  margin-bottom: 15px;
+  color: var(--popup-text-secondary);
+  margin-top: -6px;
+  margin-bottom: 8px;
   text-align: center;
 }
 
-/* Optional: Add coloring based on score later if desired */
-/* .focus-score.score-low { color: #dc3545; } */
-/* .focus-score.score-medium { color: #ffc107; } */
-/* .focus-score.score-high { color: #28a745; } */
+.focus-score.score-low {
+  color: #dc3545;
+}
+.focus-score.score-medium {
+  color: #ffc107;
+}
+.focus-score.score-high {
+  color: #28a745;
+}
 
-/* Dark mode adjustments if needed (should inherit ok) */
 @media (prefers-color-scheme: dark) {
   .focus-score {
     color: var(--popup-text-secondary);
   }
-  /* .focus-score.score-low { color: #ff453a; } */
-  /* .focus-score.score-medium { color: #ffd60a; } */
-  /* .focus-score.score-high { color: #30d158; } */
+  .focus-score.score-low {
+    color: #ff453a;
+  }
+  .focus-score.score-medium {
+    color: #ffd60a;
+  }
+  .focus-score.score-high {
+    color: #30d158;
+  }
 }
-.attribution-footer {
-  font-size: 0.75em;
-  color: var(--popup-text-muted);
-  text-align: center;
-  margin-top: 15px;
-  margin-bottom: 0;
-  padding-top: 5px;
+
+/* --- Pomodoro Timer Styles --- */
+.pomodoro-section {
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--popup-header-border);
-  line-height: 1.2;
+  text-align: center;
+}
+
+.pomodoro-section h4 {
+  font-size: 0.9em;
+  color: var(--popup-text-secondary);
+  margin-bottom: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pomodoro-timer-display {
+  font-size: 2em;
+  font-weight: bold;
+  color: var(--popup-text-total);
+  margin-bottom: 8px;
+  display: flex; /* Use flex to align phase and time */
+  justify-content: center;
+  align-items: baseline; /* Align text baselines */
+}
+
+/* UPDATED: Phase text styling */
+#pomodoro-phase {
+  font-size: 0.6em; /* Smaller font size for phase text */
+  font-weight: bold; /* Less bold */
+  margin-right: 6px; /* Space between phase and time */
+  /* Color will be set by specific phase classes */
+}
+#pomodoro-phase.work {
+  color: var(--pomodoro-phase-work-color);
+}
+#pomodoro-phase.short-break {
+  color: var(--pomodoro-phase-short-break-color);
+}
+#pomodoro-phase.long-break {
+  color: var(--pomodoro-phase-long-break-color);
+}
+
+/* Time text remains more prominent */
+#pomodoro-time {
+  font-size: 1em; /* Relative to its parent .pomodoro-timer-display */
+  color: var(--popup-text-total); /* Ensure it uses the main total time color */
+}
+
+.pomodoro-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.pomodoro-btn {
+  background-color: var(--pomodoro-btn-bg);
+  color: var(--pomodoro-btn-text);
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  min-width: 60px;
+  flex-grow: 1;
+  flex-basis: auto;
+}
+.pomodoro-btn:hover {
+  background-color: var(--pomodoro-btn-hover-bg);
+}
+
+#pomodoro-reset-btn {
+  background-color: var(--pomodoro-reset-btn-bg);
+}
+#pomodoro-reset-btn:hover {
+  background-color: var(--pomodoro-reset-btn-hover-bg);
+}
+
+#pomodoro-change-phase-btn {
+  background-color: var(--pomodoro-change-phase-btn-bg);
+}
+#pomodoro-change-phase-btn:hover {
+  background-color: var(--pomodoro-change-phase-btn-hover-bg);
+}
+
+.pomodoro-secondary-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.pomodoro-notify-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#pomodoro-notify-checkbox {
+  margin: 0;
+  vertical-align: middle;
+  width: auto;
+  height: auto;
+  accent-color: var(--pomodoro-btn-bg);
+}
+
+.pomodoro-notify-container label {
+  font-size: 0.85em;
+  color: var(--popup-text-secondary);
+  cursor: pointer;
+  vertical-align: middle;
+  margin-bottom: 0;
+}
+
+.pomodoro-status {
+  font-size: 0.85em;
+  color: var(--popup-text-muted);
+  min-height: 1.1em;
+}
+
+/* --- Custom Modal Styles --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--modal-overlay-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--modal-content-bg);
+  padding: 15px 20px;
+  border-radius: 6px;
+  box-shadow: var(--modal-shadow);
+  text-align: center;
+  max-width: 90%;
+  border: 1px solid var(--modal-border-color);
+}
+
+.modal-content p {
+  font-size: 0.95em;
+  color: var(--modal-text-color);
+  margin-top: 0;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-actions .pomodoro-btn {
+  padding: 6px 12px;
+  font-size: 0.85em;
+}
+
+.modal-actions #custom-confirm-no-btn {
+  background-color: var(--pomodoro-reset-btn-bg);
+}
+.modal-actions #custom-confirm-no-btn:hover {
+  background-color: var(--pomodoro-reset-btn-hover-bg);
 }
