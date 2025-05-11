@@ -1,6 +1,6 @@
 {
   "name": "focus-flow-monitor",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "Tracks time, provides insights, allows blocking & limiting.",
   "private": true,
   "scripts": {
