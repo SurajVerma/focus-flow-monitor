@@ -1,6 +1,7 @@
 node_modules
 webpack.config.js
 dist
+scripts
 package.json
 package-lock.json
 webpack.config__.js
