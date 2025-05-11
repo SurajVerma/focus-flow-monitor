@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "FocusFlow Monitor",
+  "name": "Focus Flow Monitor",
   "version": "0.8.4",
-  "description": "Tracks time, provides insights, allows blocking & limiting.",
+  "description": "Master your online habits! Track time, visualize usage, block distractions, set limits, and enhance focus with the built-in Pomodoro (Tomato) timer.",
   "permissions": [
     "tabs",
     "storage",
@@ -35,10 +35,7 @@
     "page": "options/options.html",
     "open_in_tab": true
   },
-  "web_accessible_resources": [
-    "data/default_config.json",
-    "blocked/blocked.html"
-  ],
+  "web_accessible_resources": ["data/default_config.json", "blocked/blocked.html"],
   "icons": {
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
