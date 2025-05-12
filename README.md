@@ -15,14 +15,32 @@ Focus Flow Monitor helps you understand your online habits by tracking the time 
 
 ---
 
-## ✨ What's New in Version 0.8.0.0 ✨
+## ✨ What's New in Version 0.8.4 ✨
 
-* **🗓️ Scheduled Blocking:** Take your focus to the next level! Set specific times and days of the week for your blocking rules (for URLs or Categories). Perfect for keeping distractions off-limits during work hours or ensuring focus time. Find this when adding/editing a block rule.
-* **🎨 Personalized Block Page:** Customize the page shown when a site is blocked!
-    * Set custom headings, messages, and button text.
-    * Control displayed info (blocked URL, rule details, etc.).
-    * Opt to display random motivational quotes (curated or add your own!).
-* **🛠️ Fixes & Improvements:** Resolved chart rendering issues for specific dates and implemented minor code optimizations.
+* **🍅 Introducing Tomato Clock (Pomodoro Timer):**
+
+We're excited to announce a brand-new addition to **Focus Flow Monitor** designed to boost your productivity even further: the **Tomato Clock**!
+
+Many of you know this technique as the Pomodoro Timer – a proven time management method that breaks down work into focused intervals, traditionally 25 minutes in length, separated by short breaks. Our integrated Tomato Clock brings this power directly into your workflow.
+
+### What you can do with the new Tomato Clock:
+
+* **Stay Focused:** Work in timed sessions (defaulting to 25 minutes) to maintain high concentration.
+* **Take Regular Breaks:** Reminds you to take short breaks (5 minutes) and longer breaks (15 minutes) to rest and recharge.
+* **Classic Pomodoro Flow:** Follows the standard cycle: Work -> Short Break -> Work -> Short Break -> Work -> Short Break -> Work -> Long Break.
+* **Easy Controls:** Start, pause, reset the current timer, or switch to the next phase directly from the popup.
+* **Visual Cues:** The current phase and remaining time are clearly displayed in the popup. The extension icon badge also updates dynamically to show the active timer and its current phase color.
+* **Desktop Notifications:** Get notified when a work session or break is complete, so you know when it's time to switch gears. You can easily toggle these notifications on or off from the popup.
+
+### How to use it:
+
+1.  Click on the Focus Flow Monitor icon in your browser toolbar.
+2.  You'll find the "Tomato Clock" section right in the popup.
+3.  Click "Start" to begin your first work session!
+
+We believe this feature will be a great companion to the existing time tracking and site blocking capabilities, helping you manage not just *where* you spend your time, but *how* effectively you use it.
+
+Give the new Tomato Clock a try and let us know what you think! Your feedback is always welcome.
 
 For more details on this and previous updates, check out the [Releases Page](https://github.com/SurajVerma/focus-flow-monitor/releases).
 
