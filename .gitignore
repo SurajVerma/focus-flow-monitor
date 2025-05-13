@@ -5,3 +5,4 @@ package.json
 package-lock.json
 webpack.config__.js
 webpack.config_old.js
+scripts
