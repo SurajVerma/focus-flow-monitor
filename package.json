@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "preversion": "npm run build",
-    "version": "git add manifest.json manifest-pub.json",
+    "version": "node scripts/update-versions.js && git add manifest.json manifest-pub.json",
     "postversion": "git push && git push --tags",
     "build": "webpack --mode production --progress",
     "build:dev": "webpack --mode development --progress",
