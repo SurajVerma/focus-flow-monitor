@@ -1,4 +1,4 @@
-// options/options-state.js (v0.7.8 - Block Page Customization State)
+// options/options-state.js (v0.7.9 - Total Time Stat UI Refs)
 
 // --- Storage Keys ---
 const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
@@ -6,7 +6,7 @@ const DEFAULT_IDLE_SECONDS = 1800;
 const STORAGE_KEY_DATA_RETENTION_DAYS = 'dataRetentionPeriodDays';
 const DEFAULT_DATA_RETENTION_DAYS = 90;
 
-// NEW: Storage keys for Block Page Customization
+// Storage keys for Block Page Customization
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING = 'blockPage_customHeading';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE = 'blockPage_customMessage';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT = 'blockPage_customButtonText';
@@ -42,17 +42,17 @@ let AppState = {
   editingAssignmentOriginalDomain: null,
   categoryProductivityRatings: {},
 
-  // NEW: Block Page Customization Settings in AppState
+  // Block Page Customization Settings in AppState
   blockPageCustomHeading: '',
   blockPageCustomMessage: '',
   blockPageCustomButtonText: '',
-  blockPageShowUrl: true, // Default to true
-  blockPageShowReason: true, // Default to true
-  blockPageShowRule: true, // Default to true
-  blockPageShowLimitInfo: true, // Default to true
-  blockPageShowScheduleInfo: true, // Default to true
-  blockPageShowQuote: false, // Default to false
-  blockPageUserQuotes: [], // Default to empty array
+  blockPageShowUrl: true,
+  blockPageShowReason: true,
+  blockPageShowRule: true,
+  blockPageShowLimitInfo: true,
+  blockPageShowScheduleInfo: true,
+  blockPageShowQuote: false,
+  blockPageUserQuotes: [],
 };
 
 // --- UI Element References ---
@@ -140,7 +140,7 @@ function queryUIElements() {
   UIElements.productivityScoreLabel = document.getElementById('productivityScoreLabel');
   UIElements.productivityScoreValue = document.getElementById('productivityScoreValue');
 
-  // NEW: UI Elements for Block Page Customization
+  // UI Elements for Block Page Customization
   UIElements.blockPageCustomHeadingInput = document.getElementById('blockPageCustomHeading');
   UIElements.blockPageCustomMessageTextarea = document.getElementById('blockPageCustomMessage');
   UIElements.blockPageCustomButtonTextInput = document.getElementById('blockPageCustomButtonText');
@@ -152,6 +152,12 @@ function queryUIElements() {
   UIElements.blockPageShowQuoteCheckbox = document.getElementById('blockPageShowQuote');
   UIElements.blockPageUserQuotesContainer = document.getElementById('blockPageUserQuotesContainer');
   UIElements.blockPageUserQuotesTextarea = document.getElementById('blockPageUserQuotes');
+
+  // START: New UI Element References for Total Time Statistic
+  UIElements.totalTimeForRangeContainer = document.getElementById('totalTimeForRangeContainer');
+  UIElements.totalTimeForRangeLabel = document.getElementById('totalTimeForRangeLabel');
+  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
+  // END: New UIElement References
 
   // Basic check to ensure critical elements were found
   if (
@@ -167,11 +173,15 @@ function queryUIElements() {
     !UIElements.importFileInput ||
     !UIElements.importStatus ||
     !UIElements.productivitySettingsList ||
-    // Check some of the new elements
     !UIElements.blockPageCustomHeadingInput ||
     !UIElements.blockPageShowUrlCheckbox ||
     !UIElements.blockPageShowQuoteCheckbox ||
-    !UIElements.blockPageUserQuotesTextarea
+    !UIElements.blockPageUserQuotesTextarea ||
+    // START: Check for new elements
+    !UIElements.totalTimeForRangeContainer ||
+    !UIElements.totalTimeForRangeLabel ||
+    !UIElements.totalTimeForRangeValue
+    // END: Check for new elements
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure
@@ -189,4 +199,4 @@ function queryUIElements() {
   return true; // Indicate success
 }
 
-console.log('[System] options-state.js v0.7.8 loaded');
+console.log('[System] options-state.js v0.7.9 loaded');

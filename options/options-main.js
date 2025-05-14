@@ -1,4 +1,4 @@
-// options/options-main.js (v0.8.3 - Block Page Customization - User's Base Corrected)
+// options/options-main.js (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified)
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,13 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   loadAllData(); // Load all settings and tracking data
   setupEventListeners(); // Setup all event listeners for the options page
-  console.log("Options Main script initialized (v0.8.3 - Block Page Customization - User's Base Corrected).");
+  console.log('Options Main script initialized (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified).');
 });
 
 // --- Data Loading ---
 function loadAllData() {
   console.log('[Options Main] loadAllData starting...');
-  // Define all storage keys that need to be loaded
   const keysToLoad = [
     'trackedData',
     'categoryTimeData',
@@ -45,10 +44,9 @@ function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD, // From options-state.js
-    STORAGE_KEY_DATA_RETENTION_DAYS, // From options-state.js
-    STORAGE_KEY_PRODUCTIVITY_RATINGS, // From options-state.js
-    // NEW: Add block page customization storage keys (from options-state.js)
+    STORAGE_KEY_IDLE_THRESHOLD,
+    STORAGE_KEY_DATA_RETENTION_DAYS,
+    STORAGE_KEY_PRODUCTIVITY_RATINGS,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
@@ -66,7 +64,6 @@ function loadAllData() {
     .then((result) => {
       console.log('[Options Main] Data loaded from storage.');
       try {
-        // Update AppState for existing data, providing defaults if data is missing
         AppState.trackedData = result.trackedData || {};
         AppState.categoryTimeData = result.categoryTimeData || {};
         AppState.dailyDomainData = result.dailyDomainData || {};
@@ -80,28 +77,23 @@ function loadAllData() {
         AppState.categoryAssignments = result.categoryAssignments || {};
         AppState.rules = result.rules || [];
 
-        // Set idle threshold dropdown
         const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
         if (UIElements.idleThresholdSelect) {
           UIElements.idleThresholdSelect.value =
             savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
         }
 
-        // Set data retention dropdown
         const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
         if (UIElements.dataRetentionSelect) {
           UIElements.dataRetentionSelect.value =
             savedRetentionDays !== undefined && savedRetentionDays !== null
               ? savedRetentionDays
               : DEFAULT_DATA_RETENTION_DAYS;
-          console.log(`[Options Main] Data retention loaded: ${UIElements.dataRetentionSelect.value} days`);
         }
 
-        // --- NEW: Load and apply Block Page Customization settings ---
         AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
         AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
         AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
-
         AppState.blockPageShowUrl =
           result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
         AppState.blockPageShowReason =
@@ -121,14 +113,12 @@ function loadAllData() {
           ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
           : [];
 
-        // Populate UI elements with loaded block page settings
         if (UIElements.blockPageCustomHeadingInput)
           UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
         if (UIElements.blockPageCustomMessageTextarea)
           UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
         if (UIElements.blockPageCustomButtonTextInput)
           UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
-
         if (UIElements.blockPageShowUrlCheckbox)
           UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
         if (UIElements.blockPageShowReasonCheckbox)
@@ -139,7 +129,6 @@ function loadAllData() {
           UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
         if (UIElements.blockPageShowScheduleInfoCheckbox)
           UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
-
         if (UIElements.blockPageShowQuoteCheckbox) {
           UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
           if (UIElements.blockPageUserQuotesContainer) {
@@ -148,18 +137,16 @@ function loadAllData() {
         }
         if (UIElements.blockPageUserQuotesTextarea)
           UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
-        // --- END NEW ---
 
-        // Initial UI Population for other sections
-        populateCategoryList(); // from options-ui.js
-        populateCategorySelect(); // from options-ui.js
-        populateAssignmentList(); // from options-ui.js
-        populateRuleCategorySelect(); // from options-ui.js
-        populateRuleList(); // from options-ui.js
-        populateProductivitySettings(); // from options-ui.js
-        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth()); // from options-ui.js
-        updateDisplayForSelectedRangeUI(); // Defined below
-        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
+        populateCategoryList();
+        populateCategorySelect();
+        populateAssignmentList();
+        populateRuleCategorySelect();
+        populateRuleList();
+        populateProductivitySettings();
+        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
+        updateDisplayForSelectedRangeUI();
+        highlightSelectedCalendarDay(AppState.selectedDateStr);
       } catch (processingError) {
         console.error(
           '[Options Main] Error during data processing/UI update after loading from storage!',
@@ -177,7 +164,7 @@ function loadAllData() {
           errorLi.textContent = 'Error loading data.';
           UIElements.detailedTimeList.appendChild(errorLi);
         }
-        clearChartOnError('Error processing data'); // from options-ui.js
+        clearChartOnError('Error processing data');
       }
     })
     .catch((error) => {
@@ -194,7 +181,7 @@ function loadAllData() {
         errorLi.textContent = 'Failed to load data.';
         UIElements.detailedTimeList.appendChild(errorLi);
       }
-      clearChartOnError('Failed to load data'); // from options-ui.js
+      clearChartOnError('Failed to load data');
     });
 }
 
@@ -204,21 +191,26 @@ function updateDisplayForSelectedRangeUI() {
     console.warn('Date range select element not found.');
     return;
   }
-  let selectedRange = UIElements.dateRangeSelect.value;
+  let selectedRangeValue = UIElements.dateRangeSelect.value;
   const loader = document.getElementById('statsLoader');
   const dashboard = document.querySelector('.stats-dashboard');
 
-  let dataFetchKey = selectedRange;
-  let displayLabelKey = selectedRange;
+  let dataFetchKey = selectedRangeValue;
+  let displayLabelKey = selectedRangeValue;
+  // START: MODIFIED to determine if the current view is for a range or a single day
+  let isRangeView = ['week', 'month', 'all'].includes(selectedRangeValue);
 
-  if (selectedRange === '' && AppState.selectedDateStr) {
+  if (selectedRangeValue === '' && AppState.selectedDateStr) {
     dataFetchKey = AppState.selectedDateStr;
     displayLabelKey = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
-  } else if (selectedRange === '') {
+    isRangeView = false; // Explicitly set to false for single day calendar selection
+  } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
     if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
+    isRangeView = false; // Explicitly set to false for "Today"
   }
+  // END: MODIFIED
 
   const showLoader = ['week', 'month', 'all'].includes(dataFetchKey);
 
@@ -235,7 +227,7 @@ function updateDisplayForSelectedRangeUI() {
       label = `Error (${displayLabelKey || dataFetchKey})`;
     try {
       const isSpecificDateFetch = /^\d{4}-\d{2}-\d{2}$/.test(dataFetchKey);
-      const rangeData = getFilteredDataForRange(dataFetchKey, isSpecificDateFetch); // Defined below
+      const rangeData = getFilteredDataForRange(dataFetchKey, isSpecificDateFetch);
       domainData = rangeData.domainData;
       categoryData = rangeData.categoryData;
       label = isSpecificDateFetch ? displayLabelKey : rangeData.label;
@@ -244,11 +236,14 @@ function updateDisplayForSelectedRangeUI() {
         AppState.selectedDateStr = getCurrentDateString(); // from options-utils.js
         highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
       }
-
-      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr); // Defined below
+      // START: MODIFIED to pass isRangeView to updateStatsDisplay
+      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
+      // END: MODIFIED
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
-      updateStatsDisplay({}, {}, label);
+      // START: MODIFIED to pass isRangeView even on error
+      updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
+      // END: MODIFIED
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -284,16 +279,23 @@ function updateDomainDisplayAndPagination() {
 }
 
 /**
- * Updates all statistic display elements (lists, score, chart, labels) with the provided data.
+ * Updates all statistic display elements (lists, score, chart, labels, and new total time).
  * @param {object} domainData - Domain time data object { domain: seconds, ... }
  * @param {object} categoryData - Category time data object { category: seconds, ... }
  * @param {string} label - The label for the period (e.g., "Today", "This Week", "May 2, 2025")
  * @param {string} [chartDateStr] - Optional. The specific date string (YYYY-MM-DD) for chart rendering. Defaults to AppState.selectedDateStr if not provided.
+ * @param {boolean} isRangeView - True if displaying data for a range (week, month, all), false for a single day.
  */
-function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppState.selectedDateStr) {
+function updateStatsDisplay(
+  domainData,
+  categoryData,
+  label,
+  chartDateStr = AppState.selectedDateStr,
+  isRangeView = false
+) {
   try {
     console.log(
-      `[Options Main] updateStatsDisplay called for label: ${label}, chartDateStr for chart: ${chartDateStr}`
+      `[Options Main] updateStatsDisplay called for label: ${label}, chartDateStr for chart: ${chartDateStr}, isRangeView: ${isRangeView}`
     );
 
     const currentDomainData = domainData || {};
@@ -314,15 +316,42 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
     try {
       const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings); // from options-utils.js
       displayProductivityScore(scoreData, label); // Display the score
-      console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
     } catch (scoreError) {
       console.error(`[Options Main] Error calculating focus score for label "${label}":`, scoreError);
       displayProductivityScore(null, label, true);
     }
 
+    // START: Total Time for Range Logic - MODIFIED
+    if (
+      UIElements.totalTimeForRangeContainer &&
+      UIElements.totalTimeForRangeLabel &&
+      UIElements.totalTimeForRangeValue
+    ) {
+      if (isRangeView) {
+        // Only show for ranges
+        let totalSecondsForRange = 0;
+        for (const domain in currentDomainData) {
+          totalSecondsForRange += currentDomainData[domain];
+        }
+        UIElements.totalTimeForRangeValue.textContent = formatTime(totalSecondsForRange, true); // from options-utils.js
+
+        // Update the label for the total time container
+        const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period');
+        if (periodSpanInTotalLabel) {
+          periodSpanInTotalLabel.textContent = label; // Update only the span if it exists
+        } else {
+          // Fallback if the span isn't there for some reason (should be)
+          UIElements.totalTimeForRangeLabel.textContent = `Total Time Online (${label})`;
+        }
+        UIElements.totalTimeForRangeContainer.style.display = 'block'; // Show the container
+      } else {
+        UIElements.totalTimeForRangeContainer.style.display = 'none'; // Hide for single day views
+      }
+    }
+    // END: Total Time for Range Logic - MODIFIED
+
     const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData;
     const chartLabelForRender = label;
-
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
     if (hasSignificantData) {
@@ -334,8 +363,6 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
     if (UIElements.chartTitleElement) {
       UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabelForRender})`;
     }
-
-    console.log(`[Options Main] Stats display updated for label: ${label}`);
   } catch (error) {
     console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
     displayCategoryTime({});
@@ -346,13 +373,14 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
     if (UIElements.chartTitleElement) {
       UIElements.chartTitleElement.textContent = `Usage Chart (Error)`;
     }
+    // START: MODIFIED to ensure total time container is hidden on error too
+    if (UIElements.totalTimeForRangeContainer) {
+      UIElements.totalTimeForRangeContainer.style.display = 'none';
+    }
+    // END: MODIFIED
   }
 }
 
-/**
- * Updates the statistics display areas to show a "No data" message for a specific date.
- * @param {string} displayDateLabel - The user-friendly formatted date string (e.g., "May 3, 2025").
- */
 function displayNoDataForDate(displayDateLabel) {
   console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
@@ -392,6 +420,12 @@ function displayNoDataForDate(displayDateLabel) {
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
   }
+
+  // START: MODIFIED to hide Total Time for Range when no data for a specific date
+  if (UIElements.totalTimeForRangeContainer) {
+    UIElements.totalTimeForRangeContainer.style.display = 'none';
+  }
+  // END: MODIFIED
 }
 
 function renderChartForSelectedDateUI() {
@@ -449,7 +483,7 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       periodLabel = 'This Month';
       const y = today.getFullYear();
       const m = today.getMonth();
-      const dIM = today.getDate();
+      const dIM = today.getDate(); // days in current month up to today
       for (let day = 1; day <= dIM; day++) {
         const date = new Date(y, m, day);
         const dateStr = formatDate(date);
@@ -466,7 +500,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       // 'all'
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
-        console.log("[Options Main] Recalculating 'All Time' from daily data for display.");
         initialDomainData = {};
         initialCategoryData = {};
         for (const dateStr in AppState.dailyDomainData) {
@@ -482,7 +515,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
           }
         }
       } else {
-        console.warn("[Options Main] Daily data is empty, falling back to stored 'All Time' totals.");
         initialDomainData = AppState.trackedData || {};
         initialCategoryData = AppState.categoryTimeData || {};
       }
@@ -504,182 +536,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
     return { domainData: {}, categoryData: {}, label: periodLabel };
   }
   return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
-}
-
-// --- NEW: Handlers for Block Page Customization ---
-// These functions will handle saving the settings when they are changed.
-function handleBlockPageSettingChange(storageKey, value) {
-  browser.storage.local
-    .set({ [storageKey]: value })
-    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
-    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
-}
-
-function handleBlockPageShowQuoteChange() {
-  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
-  // Toggle visibility of the custom quotes textarea
-  if (UIElements.blockPageUserQuotesContainer) {
-    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
-  }
-}
-
-function handleBlockPageUserQuotesChange() {
-  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
-  // Split by newline, trim whitespace, and filter out empty lines
-  const quotesArray = quotesText
-    .split('\n')
-    .map((q) => q.trim())
-    .filter((q) => q.length > 0);
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
-}
-// --- END NEW HANDLERS ---
-
-// --- Event Listener Setup ---
-function setupEventListeners() {
-  console.log('[Options Main] Setting up event listeners...');
-  try {
-    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
-    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
-    if (UIElements.categoryList) {
-      UIElements.categoryList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
-        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
-        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
-        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
-      });
-    }
-    if (UIElements.assignmentList) {
-      UIElements.assignmentList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
-        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
-      });
-    }
-    if (UIElements.ruleList) {
-      UIElements.ruleList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
-        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
-      });
-    }
-    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
-    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
-    if (UIElements.dateRangeSelect)
-      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
-    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
-    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
-    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
-    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
-    if (UIElements.chartViewRadios) {
-      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
-    }
-    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
-    // Rule Modal
-    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
-    if (UIElements.editRuleModal)
-      UIElements.editRuleModal.addEventListener('click', (event) => {
-        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
-      });
-    // Assignment Modal
-    if (UIElements.closeEditAssignmentModalBtn)
-      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.cancelEditAssignmentBtn)
-      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.saveAssignmentChangesBtn)
-      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
-    if (UIElements.editAssignmentModal)
-      UIElements.editAssignmentModal.addEventListener('click', (event) => {
-        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
-      });
-    // Settings
-    if (UIElements.idleThresholdSelect)
-      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
-    if (UIElements.dataRetentionSelect) {
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
-    } else {
-      console.warn('Data retention select element not found, cannot add listener.');
-    }
-
-    // Data Management Listeners
-    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
-    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
-    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
-
-    // Productivity Settings Listener
-    if (UIElements.productivitySettingsList) {
-      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
-    }
-
-    // --- NEW: Event Listeners for Block Page Customization ---
-    if (UIElements.blockPageCustomHeadingInput) {
-      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
-          UIElements.blockPageCustomHeadingInput.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageCustomMessageTextarea) {
-      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
-          UIElements.blockPageCustomMessageTextarea.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageCustomButtonTextInput) {
-      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
-          UIElements.blockPageCustomButtonTextInput.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageShowUrlCheckbox) {
-      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowReasonCheckbox) {
-      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowRuleCheckbox) {
-      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowLimitInfoCheckbox) {
-      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
-          UIElements.blockPageShowLimitInfoCheckbox.checked
-        )
-      );
-    }
-    if (UIElements.blockPageShowScheduleInfoCheckbox) {
-      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
-          UIElements.blockPageShowScheduleInfoCheckbox.checked
-        )
-      );
-    }
-    if (UIElements.blockPageShowQuoteCheckbox) {
-      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
-    }
-    if (UIElements.blockPageUserQuotesTextarea) {
-      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
-    }
-    // --- END NEW Event Listeners ---
-
-    handleRuleTypeChange(); // Initialize rule input display
-    console.log('[Options Main] Event listeners setup complete.');
-  } catch (e) {
-    console.error('[Options Main] Error setting up event listeners:', e);
-  }
 }
 
 // --- Data Saving Functions ---
@@ -776,7 +632,7 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     const result = await browser.storage.local.get(['trackedData', 'dailyDomainData', 'categoryAssignments']);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    const currentAssignments = AppState.categoryAssignments || {};
+    const currentAssignments = AppState.categoryAssignments || {}; // Use AppState for current assignments
 
     const getCategoryForDomain = (domain, assignments) => {
       if (!domain) return 'Other';
@@ -818,7 +674,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       }
     }
 
-    console.log('[Recalc] Saving REBUILT category totals...');
     await browser.storage.local.set({
       categoryTimeData: rebuiltCategoryTimeData,
       dailyCategoryData: rebuiltDailyCategoryData,
@@ -826,7 +681,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
 
     AppState.categoryTimeData = rebuiltCategoryTimeData;
     AppState.dailyCategoryData = rebuiltDailyCategoryData;
-
     console.log('[Recalc] Category totals rebuilt and saved.');
   } catch (error) {
     console.error('[Options Main] Error during category recalculation (rebuild):', error);
@@ -862,4 +716,172 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-console.log("[System] options-main.js loaded (v0.8.3 - Block Page Customization - User's Base Corrected)");
+// --- Handlers for Block Page Customization (assumed to be here as per user's original file structure) ---
+function handleBlockPageSettingChange(storageKey, value) {
+  browser.storage.local
+    .set({ [storageKey]: value })
+    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
+    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
+}
+
+function handleBlockPageShowQuoteChange() {
+  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
+  if (UIElements.blockPageUserQuotesContainer) {
+    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
+  }
+}
+
+function handleBlockPageUserQuotesChange() {
+  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
+  const quotesArray = quotesText
+    .split('\n')
+    .map((q) => q.trim())
+    .filter((q) => q.length > 0);
+  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
+}
+
+// --- Event Listener Setup ---
+// This function now correctly assumes that specific event handler functions
+// (like handleAddCategory, handleDeleteRule, etc.) are defined in options-handlers.js
+// or are otherwise globally available if they were part of the original options-main.js.
+function setupEventListeners() {
+  console.log('[Options Main] Setting up event listeners...');
+  try {
+    // Category Management
+    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
+    if (UIElements.categoryList) {
+      UIElements.categoryList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
+        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
+        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
+        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
+      });
+    }
+
+    // Assignment Management
+    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.assignmentList) {
+      UIElements.assignmentList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
+        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
+      });
+    }
+    // Assignment Modal
+    if (UIElements.closeEditAssignmentModalBtn)
+      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.cancelEditAssignmentBtn)
+      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.saveAssignmentChangesBtn)
+      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
+    if (UIElements.editAssignmentModal)
+      UIElements.editAssignmentModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
+      });
+
+    // Rule Management
+    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
+    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
+    if (UIElements.ruleList) {
+      UIElements.ruleList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
+        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
+      });
+    }
+    // Rule Modal
+    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (UIElements.editRuleModal)
+      UIElements.editRuleModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
+      });
+
+    // Stats Display
+    if (UIElements.dateRangeSelect)
+      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
+    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
+    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
+    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
+    if (UIElements.chartViewRadios) {
+      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
+    }
+    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+
+    // General Settings
+    if (UIElements.idleThresholdSelect)
+      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
+    if (UIElements.dataRetentionSelect)
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+
+    // Data Management
+    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
+    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
+    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+
+    // Productivity Settings
+    if (UIElements.productivitySettingsList) {
+      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
+    }
+
+    // Block Page Customization (using handlers defined in this file as per original structure)
+    if (UIElements.blockPageCustomHeadingInput)
+      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+          UIElements.blockPageCustomHeadingInput.value.trim()
+        )
+      );
+    if (UIElements.blockPageCustomMessageTextarea)
+      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+          UIElements.blockPageCustomMessageTextarea.value.trim()
+        )
+      );
+    if (UIElements.blockPageCustomButtonTextInput)
+      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+          UIElements.blockPageCustomButtonTextInput.value.trim()
+        )
+      );
+    if (UIElements.blockPageShowUrlCheckbox)
+      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
+      );
+    if (UIElements.blockPageShowReasonCheckbox)
+      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
+      );
+    if (UIElements.blockPageShowRuleCheckbox)
+      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
+      );
+    if (UIElements.blockPageShowLimitInfoCheckbox)
+      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+          UIElements.blockPageShowLimitInfoCheckbox.checked
+        )
+      );
+    if (UIElements.blockPageShowScheduleInfoCheckbox)
+      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+          UIElements.blockPageShowScheduleInfoCheckbox.checked
+        )
+      );
+    if (UIElements.blockPageShowQuoteCheckbox)
+      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
+    if (UIElements.blockPageUserQuotesTextarea)
+      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
+
+    handleRuleTypeChange(); // Initialize rule input display based on current selection
+    console.log('[Options Main] Event listeners setup complete.');
+  } catch (e) {
+    console.error('[Options Main] Error setting up event listeners:', e);
+  }
+}
+console.log('[System] options-main.js loaded (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified)');
