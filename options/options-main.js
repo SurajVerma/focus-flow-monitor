@@ -248,20 +248,21 @@ async function loadAllData() {
   } catch (error) {
     console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
     if (UIElements.categoryTimeList) {
-      UIElements.categoryTimeList.innerHTML = '<li>Error loading data. Please try refreshing.</li>';
+      UIElements.categoryTimeList.innerHTML = '';
+      const li = document.createElement('li');
+      li.textContent = errorMessage;
+      UIElements.categoryTimeList.appendChild(li);
     }
     if (UIElements.detailedTimeList) {
-      UIElements.detailedTimeList.innerHTML = '<li>Error loading data. Please try refreshing.</li>';
+      UIElements.detailedTimeList.innerHTML = '';
+      const li = document.createElement('li');
+      li.textContent = errorMessage;
+      UIElements.detailedTimeList.appendChild(li);
     }
     if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
   }
-  // This was duplicated, removing the second call to scroll logic.
-  // The scroll logic is now inside the loadAllData().then() block in DOMContentLoaded.
 }
 
-// --- NEW: Function to update the permission status display ---
-// This function should be present in your options-main.js or options-handlers.js
-// Ensure it's correctly defined and accessible.
 async function updatePomodoroPermissionStatusDisplay() {
   if (!UIElements.pomodoroNotificationPermissionStatus) {
     console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
