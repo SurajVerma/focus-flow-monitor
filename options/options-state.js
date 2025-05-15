@@ -1,4 +1,4 @@
-// options/options-state.js (v0.7.8 - Block Page Customization State)
+// options/options-state.js (v0.8.0 - Pomodoro Notification UI Refs)
 
 // --- Storage Keys ---
 const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
@@ -6,7 +6,7 @@ const DEFAULT_IDLE_SECONDS = 1800;
 const STORAGE_KEY_DATA_RETENTION_DAYS = 'dataRetentionPeriodDays';
 const DEFAULT_DATA_RETENTION_DAYS = 90;
 
-// NEW: Storage keys for Block Page Customization
+// Storage keys for Block Page Customization
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING = 'blockPage_customHeading';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE = 'blockPage_customMessage';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT = 'blockPage_customButtonText';
@@ -17,6 +17,7 @@ const STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO = 'blockPage_showLimitInfo';
 const STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO = 'blockPage_showScheduleInfo';
 const STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE = 'blockPage_showQuote';
 const STORAGE_KEY_BLOCK_PAGE_USER_QUOTES = 'blockPage_userQuotes';
+const STORAGE_KEY_POMODORO_SETTINGS = 'pomodoroUserSettings';
 
 // --- Global App State ---
 let AppState = {
@@ -36,23 +37,28 @@ let AppState = {
   domainItemsPerPage: 10,
   fullDomainDataSorted: [],
   calendarDate: new Date(),
-  selectedDateStr: getCurrentDateString(), // Assumes getCurrentDateString is available from utils
+  selectedDateStr:
+    typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0], // Ensure getCurrentDateString is available
   currentChartViewMode: 'domain',
   editingRuleIndex: -1,
   editingAssignmentOriginalDomain: null,
   categoryProductivityRatings: {},
 
-  // NEW: Block Page Customization Settings in AppState
+  // Block Page Customization Settings in AppState
   blockPageCustomHeading: '',
   blockPageCustomMessage: '',
   blockPageCustomButtonText: '',
-  blockPageShowUrl: true, // Default to true
-  blockPageShowReason: true, // Default to true
-  blockPageShowRule: true, // Default to true
-  blockPageShowLimitInfo: true, // Default to true
-  blockPageShowScheduleInfo: true, // Default to true
-  blockPageShowQuote: false, // Default to false
-  blockPageUserQuotes: [], // Default to empty array
+  blockPageShowUrl: true,
+  blockPageShowReason: true,
+  blockPageShowRule: true,
+  blockPageShowLimitInfo: true,
+  blockPageShowScheduleInfo: true,
+  blockPageShowQuote: false,
+  blockPageUserQuotes: [],
+
+  // NEW: Pomodoro settings state for options page
+  pomodoroNotifyEnabled: true, // Default, will be loaded from storage
+  isRequestingPermission: false,
 };
 
 // --- UI Element References ---
@@ -140,7 +146,6 @@ function queryUIElements() {
   UIElements.productivityScoreLabel = document.getElementById('productivityScoreLabel');
   UIElements.productivityScoreValue = document.getElementById('productivityScoreValue');
 
-  // NEW: UI Elements for Block Page Customization
   UIElements.blockPageCustomHeadingInput = document.getElementById('blockPageCustomHeading');
   UIElements.blockPageCustomMessageTextarea = document.getElementById('blockPageCustomMessage');
   UIElements.blockPageCustomButtonTextInput = document.getElementById('blockPageCustomButtonText');
@@ -152,6 +157,16 @@ function queryUIElements() {
   UIElements.blockPageShowQuoteCheckbox = document.getElementById('blockPageShowQuote');
   UIElements.blockPageUserQuotesContainer = document.getElementById('blockPageUserQuotesContainer');
   UIElements.blockPageUserQuotesTextarea = document.getElementById('blockPageUserQuotes');
+
+  UIElements.totalTimeForRangeContainer = document.getElementById('totalTimeForRangeContainer');
+  UIElements.totalTimeForRangeLabel = document.getElementById('totalTimeForRangeLabel');
+  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
+
+  // NEW: UI Element References for Pomodoro Notification Settings
+  UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
+  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus');
+  // Add references for other Pomodoro settings if you add them (e.g., duration inputs)
+  // UIElements.pomodoroWorkDurationInput = document.getElementById('pomodoroWorkDuration');
 
   // Basic check to ensure critical elements were found
   if (
@@ -167,11 +182,16 @@ function queryUIElements() {
     !UIElements.importFileInput ||
     !UIElements.importStatus ||
     !UIElements.productivitySettingsList ||
-    // Check some of the new elements
     !UIElements.blockPageCustomHeadingInput ||
     !UIElements.blockPageShowUrlCheckbox ||
     !UIElements.blockPageShowQuoteCheckbox ||
-    !UIElements.blockPageUserQuotesTextarea
+    !UIElements.blockPageUserQuotesTextarea ||
+    !UIElements.totalTimeForRangeContainer ||
+    !UIElements.totalTimeForRangeLabel ||
+    !UIElements.totalTimeForRangeValue ||
+    // NEW: Check for new Pomodoro elements
+    !UIElements.pomodoroEnableNotificationsCheckbox ||
+    !UIElements.pomodoroNotificationPermissionStatus
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure
@@ -189,4 +209,14 @@ function queryUIElements() {
   return true; // Indicate success
 }
 
-console.log('[System] options-state.js v0.7.8 loaded');
+if (typeof getCurrentDateString === 'undefined') {
+  function getCurrentDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+}
+
+console.log('[System] options-state.js v0.8.0 loaded');

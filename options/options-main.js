@@ -1,4 +1,23 @@
-// options/options-main.js (v0.8.3 - Block Page Customization - User's Base Corrected)
+// options/options-main.js (v0.8.7 - Replace all unsafe innerHTML)
+
+// --- Helper function to safely set list item content ---
+/**
+ * Clears an element and appends a new list item with the given text message.
+ * @param {HTMLElement} element - The UL or OL element to update.
+ * @param {string} message - The text message to display in the list item.
+ * @param {object} [options] - Optional styling for the list item.
+ * @param {string} [options.textAlign='center'] - Text alignment for the list item.
+ * @param {string} [options.color='var(--text-color-muted)'] - Text color for the list item.
+ */
+function setListMessage(element, message, options = {}) {
+  if (!element) return;
+  element.innerHTML = ''; // Clear previous content
+  const li = document.createElement('li');
+  li.textContent = message;
+  li.style.textAlign = options.textAlign || 'center';
+  li.style.color = options.color || 'var(--text-color-muted)'; // Ensure this CSS variable is defined
+  element.appendChild(li);
+}
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,8 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Failed to initialize UI elements. Aborting setup.');
     const container = document.querySelector('.container');
     if (container) {
-      container.innerHTML =
-        '<p style="color: red; text-align: center; padding: 20px;">Error: Could not load page elements. Please try refreshing.</p>';
+      // Safely set error message
+      container.innerHTML = ''; // Clear existing content first
+      const p = document.createElement('p');
+      p.textContent = 'Error: Could not load page elements. Please try refreshing.';
+      p.style.color = 'red';
+      p.style.textAlign = 'center';
+      p.style.padding = '20px';
+      container.appendChild(p);
     }
     return;
   }
@@ -22,20 +47,74 @@ document.addEventListener('DOMContentLoaded', () => {
       radioToCheck.checked = true;
     } else {
       const fallback = document.querySelector('input[name="chartView"][value="domain"]');
-      if (fallback) fallback.checked = true;
+      if (fallback) fallback.checked = true; // Default to 'domain' if currentChartViewMode is somehow invalid
     }
   } catch (e) {
     console.error('Error setting initial chart view radio button:', e);
   }
-  loadAllData(); // Load all settings and tracking data
-  setupEventListeners(); // Setup all event listeners for the options page
-  console.log("Options Main script initialized (v0.8.3 - Block Page Customization - User's Base Corrected).");
+
+  loadAllData().then(() => {
+    setupEventListeners(); // Setup all event listeners for the options page
+
+    // Register storage change listener for Pomodoro settings
+    if (browser.storage && browser.storage.onChanged) {
+      browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
+      console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
+    }
+
+    // Handle scrolling to a specific section if a hash is present in the URL
+    if (window.location.hash) {
+      const sectionId = window.location.hash.substring(1);
+      if (sectionId === 'pomodoro-settings-section') {
+        const sectionElement = document.getElementById(sectionId);
+        if (sectionElement) {
+          console.log(`[Options Main] Scrolling to section: ${sectionId}`);
+          sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          sectionElement.style.transition = 'background-color 0.9s ease-in-out';
+          sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
+          setTimeout(() => {
+            sectionElement.style.backgroundColor = '';
+          }, 2000);
+        } else {
+          console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
+        }
+      }
+    }
+  });
+  console.log('Options Main script initialized (v0.8.7 - Replace all unsafe innerHTML).');
 });
 
+// --- Function to handle storage changes for Pomodoro notification settings ---
+function handlePomodoroSettingsStorageChange(changes, area) {
+  if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
+    const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
+
+    if (newStorageValue && newStorageValue.notifyEnabled !== undefined) {
+      const newNotifyState = newStorageValue.notifyEnabled;
+      console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
+
+      if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
+        AppState.pomodoroNotifyEnabled = newNotifyState;
+      }
+
+      if (
+        UIElements.pomodoroEnableNotificationsCheckbox &&
+        UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
+      ) {
+        UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState;
+        console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
+      }
+
+      if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
+        updatePomodoroPermissionStatusDisplay();
+      }
+    }
+  }
+}
+
 // --- Data Loading ---
-function loadAllData() {
+async function loadAllData() {
   console.log('[Options Main] loadAllData starting...');
-  // Define all storage keys that need to be loaded
   const keysToLoad = [
     'trackedData',
     'categoryTimeData',
@@ -45,10 +124,9 @@ function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD, // From options-state.js
-    STORAGE_KEY_DATA_RETENTION_DAYS, // From options-state.js
-    STORAGE_KEY_PRODUCTIVITY_RATINGS, // From options-state.js
-    // NEW: Add block page customization storage keys (from options-state.js)
+    STORAGE_KEY_IDLE_THRESHOLD,
+    STORAGE_KEY_DATA_RETENTION_DAYS,
+    STORAGE_KEY_PRODUCTIVITY_RATINGS,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
@@ -59,165 +137,164 @@ function loadAllData() {
     STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
     STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
     STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
+    STORAGE_KEY_POMODORO_SETTINGS,
   ];
 
-  browser.storage.local
-    .get(keysToLoad)
-    .then((result) => {
-      console.log('[Options Main] Data loaded from storage.');
-      try {
-        // Update AppState for existing data, providing defaults if data is missing
-        AppState.trackedData = result.trackedData || {};
-        AppState.categoryTimeData = result.categoryTimeData || {};
-        AppState.dailyDomainData = result.dailyDomainData || {};
-        AppState.dailyCategoryData = result.dailyCategoryData || {};
-        AppState.hourlyData = result.hourlyData || {};
-        AppState.categories = result.categories || ['Other'];
-        AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
-        if (!AppState.categories.includes('Other')) {
-          AppState.categories.push('Other');
-        }
-        AppState.categoryAssignments = result.categoryAssignments || {};
-        AppState.rules = result.rules || [];
+  try {
+    const result = await browser.storage.local.get(keysToLoad);
+    console.log('[Options Main] Data loaded from storage:', result);
 
-        // Set idle threshold dropdown
-        const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
-        if (UIElements.idleThresholdSelect) {
-          UIElements.idleThresholdSelect.value =
-            savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
-        }
+    AppState.trackedData = result.trackedData || {};
+    AppState.categoryTimeData = result.categoryTimeData || {};
+    AppState.dailyDomainData = result.dailyDomainData || {};
+    AppState.dailyCategoryData = result.dailyCategoryData || {};
+    AppState.hourlyData = result.hourlyData || {};
+    AppState.categories = result.categories || ['Other'];
+    AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
 
-        // Set data retention dropdown
-        const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
-        if (UIElements.dataRetentionSelect) {
-          UIElements.dataRetentionSelect.value =
-            savedRetentionDays !== undefined && savedRetentionDays !== null
-              ? savedRetentionDays
-              : DEFAULT_DATA_RETENTION_DAYS;
-          console.log(`[Options Main] Data retention loaded: ${UIElements.dataRetentionSelect.value} days`);
-        }
+    if (!AppState.categories.includes('Other')) {
+      AppState.categories.push('Other');
+    }
 
-        // --- NEW: Load and apply Block Page Customization settings ---
-        AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
-        AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
-        AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
+    AppState.categoryAssignments = result.categoryAssignments || {};
+    AppState.rules = result.rules || [];
 
-        AppState.blockPageShowUrl =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
-        AppState.blockPageShowReason =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
-        AppState.blockPageShowRule =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
-        AppState.blockPageShowLimitInfo =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
-            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
-            : true;
-        AppState.blockPageShowScheduleInfo =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
-            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
-            : true;
-        AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
-        AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
-          ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
-          : [];
+    const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
+    if (UIElements.idleThresholdSelect) {
+      UIElements.idleThresholdSelect.value =
+        savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
+    }
 
-        // Populate UI elements with loaded block page settings
-        if (UIElements.blockPageCustomHeadingInput)
-          UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
-        if (UIElements.blockPageCustomMessageTextarea)
-          UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
-        if (UIElements.blockPageCustomButtonTextInput)
-          UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
+    const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
+    if (UIElements.dataRetentionSelect) {
+      UIElements.dataRetentionSelect.value =
+        savedRetentionDays !== undefined && savedRetentionDays !== null
+          ? savedRetentionDays
+          : DEFAULT_DATA_RETENTION_DAYS;
+    }
 
-        if (UIElements.blockPageShowUrlCheckbox)
-          UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
-        if (UIElements.blockPageShowReasonCheckbox)
-          UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
-        if (UIElements.blockPageShowRuleCheckbox)
-          UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
-        if (UIElements.blockPageShowLimitInfoCheckbox)
-          UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
-        if (UIElements.blockPageShowScheduleInfoCheckbox)
-          UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
+    AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
+    AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
+    AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
+    AppState.blockPageShowUrl =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
+    AppState.blockPageShowReason =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
+    AppState.blockPageShowRule =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
+    AppState.blockPageShowLimitInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
+        : true;
+    AppState.blockPageShowScheduleInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
+        : true;
+    AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
+    AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
+      ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
+      : [];
 
-        if (UIElements.blockPageShowQuoteCheckbox) {
-          UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
-          if (UIElements.blockPageUserQuotesContainer) {
-            UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
-          }
-        }
-        if (UIElements.blockPageUserQuotesTextarea)
-          UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
-        // --- END NEW ---
-
-        // Initial UI Population for other sections
-        populateCategoryList(); // from options-ui.js
-        populateCategorySelect(); // from options-ui.js
-        populateAssignmentList(); // from options-ui.js
-        populateRuleCategorySelect(); // from options-ui.js
-        populateRuleList(); // from options-ui.js
-        populateProductivitySettings(); // from options-ui.js
-        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth()); // from options-ui.js
-        updateDisplayForSelectedRangeUI(); // Defined below
-        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
-      } catch (processingError) {
-        console.error(
-          '[Options Main] Error during data processing/UI update after loading from storage!',
-          processingError
-        );
-        if (UIElements.categoryTimeList) {
-          UIElements.categoryTimeList.replaceChildren();
-          const errorLi = document.createElement('li');
-          errorLi.textContent = 'Error loading data.';
-          UIElements.categoryTimeList.appendChild(errorLi);
-        }
-        if (UIElements.detailedTimeList) {
-          UIElements.detailedTimeList.replaceChildren();
-          const errorLi = document.createElement('li');
-          errorLi.textContent = 'Error loading data.';
-          UIElements.detailedTimeList.appendChild(errorLi);
-        }
-        clearChartOnError('Error processing data'); // from options-ui.js
+    if (UIElements.blockPageCustomHeadingInput)
+      UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
+    if (UIElements.blockPageCustomMessageTextarea)
+      UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
+    if (UIElements.blockPageCustomButtonTextInput)
+      UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
+    if (UIElements.blockPageShowUrlCheckbox) UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
+    if (UIElements.blockPageShowReasonCheckbox)
+      UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
+    if (UIElements.blockPageShowRuleCheckbox) UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
+    if (UIElements.blockPageShowLimitInfoCheckbox)
+      UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
+    if (UIElements.blockPageShowScheduleInfoCheckbox)
+      UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
+    if (UIElements.blockPageShowQuoteCheckbox) {
+      UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
+      if (UIElements.blockPageUserQuotesContainer) {
+        UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
       }
-    })
-    .catch((error) => {
-      console.error('[Options Main] storage.local.get FAILED!', error);
-      if (UIElements.categoryTimeList) {
-        UIElements.categoryTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = 'Failed to load data.';
-        UIElements.categoryTimeList.appendChild(errorLi);
-      }
-      if (UIElements.detailedTimeList) {
-        UIElements.detailedTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = 'Failed to load data.';
-        UIElements.detailedTimeList.appendChild(errorLi);
-      }
-      clearChartOnError('Failed to load data'); // from options-ui.js
-    });
+    }
+    if (UIElements.blockPageUserQuotesTextarea)
+      UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
+
+    const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
+    AppState.pomodoroNotifyEnabled =
+      pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true;
+    console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`);
+
+    if (UIElements.pomodoroEnableNotificationsCheckbox) {
+      UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
+    }
+    await updatePomodoroPermissionStatusDisplay();
+
+    if (typeof populateCategoryList === 'function') populateCategoryList();
+    if (typeof populateCategorySelect === 'function') populateCategorySelect();
+    if (typeof populateAssignmentList === 'function') populateAssignmentList();
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
+    if (typeof populateRuleList === 'function') populateRuleList();
+    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
+    if (typeof renderCalendar === 'function')
+      renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
+    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+    if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
+  } catch (error) {
+    console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
+    const errorMessage = 'Error loading data. Please try refreshing.';
+
+    setListMessage(UIElements.categoryTimeList, errorMessage);
+    setListMessage(UIElements.detailedTimeList, errorMessage);
+
+    if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
+  }
+}
+
+// --- Function to update the permission status display ---
+async function updatePomodoroPermissionStatusDisplay() {
+  if (!UIElements.pomodoroNotificationPermissionStatus) {
+    console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
+    return;
+  }
+  try {
+    const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
+    if (hasPermission) {
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text granted';
+    } else {
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Not Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text denied';
+    }
+  } catch (err) {
+    console.error('Error checking notification permissions:', err);
+    UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Status Unknown)';
+    UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text';
+  }
 }
 
 // --- UI Update Wrappers ---
 function updateDisplayForSelectedRangeUI() {
   if (!UIElements.dateRangeSelect) {
-    console.warn('Date range select element not found.');
+    console.warn('Date range select element not found for UI update.');
     return;
   }
-  let selectedRange = UIElements.dateRangeSelect.value;
+  let selectedRangeValue = UIElements.dateRangeSelect.value;
   const loader = document.getElementById('statsLoader');
   const dashboard = document.querySelector('.stats-dashboard');
 
-  let dataFetchKey = selectedRange;
-  let displayLabelKey = selectedRange;
+  let dataFetchKey = selectedRangeValue;
+  let displayLabelKey = selectedRangeValue;
+  let isRangeView = ['week', 'month', 'all'].includes(selectedRangeValue);
 
-  if (selectedRange === '' && AppState.selectedDateStr) {
+  if (selectedRangeValue === '' && AppState.selectedDateStr) {
     dataFetchKey = AppState.selectedDateStr;
-    displayLabelKey = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
-  } else if (selectedRange === '') {
+    displayLabelKey =
+      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+    isRangeView = false;
+  } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
     if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
+    isRangeView = false;
   }
 
   const showLoader = ['week', 'month', 'all'].includes(dataFetchKey);
@@ -235,20 +312,20 @@ function updateDisplayForSelectedRangeUI() {
       label = `Error (${displayLabelKey || dataFetchKey})`;
     try {
       const isSpecificDateFetch = /^\d{4}-\d{2}-\d{2}$/.test(dataFetchKey);
-      const rangeData = getFilteredDataForRange(dataFetchKey, isSpecificDateFetch); // Defined below
+      const rangeData = getFilteredDataForRange(dataFetchKey, isSpecificDateFetch);
       domainData = rangeData.domainData;
       categoryData = rangeData.categoryData;
       label = isSpecificDateFetch ? displayLabelKey : rangeData.label;
 
       if (dataFetchKey === 'today' && !isSpecificDateFetch) {
-        AppState.selectedDateStr = getCurrentDateString(); // from options-utils.js
-        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
+        AppState.selectedDateStr =
+          typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0];
+        if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
       }
-
-      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr); // Defined below
+      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
-      updateStatsDisplay({}, {}, label);
+      updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -264,7 +341,7 @@ function updateDomainDisplayAndPagination() {
     !UIElements.domainNextBtn ||
     !UIElements.domainPageInfo
   ) {
-    console.warn('Pagination or detailed list elements not found.');
+    console.warn('Pagination or detailed list elements not found for domain display.');
     return;
   }
   const totalItems = AppState.fullDomainDataSorted.length;
@@ -275,7 +352,7 @@ function updateDomainDisplayAndPagination() {
   const endIndex = startIndex + AppState.domainItemsPerPage;
   const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex);
 
-  displayDomainTime(itemsToShow); // from options-ui.js
+  if (typeof displayDomainTime === 'function') displayDomainTime(itemsToShow);
 
   UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`;
   UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1;
@@ -283,17 +360,16 @@ function updateDomainDisplayAndPagination() {
   UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
 }
 
-/**
- * Updates all statistic display elements (lists, score, chart, labels) with the provided data.
- * @param {object} domainData - Domain time data object { domain: seconds, ... }
- * @param {object} categoryData - Category time data object { category: seconds, ... }
- * @param {string} label - The label for the period (e.g., "Today", "This Week", "May 2, 2025")
- * @param {string} [chartDateStr] - Optional. The specific date string (YYYY-MM-DD) for chart rendering. Defaults to AppState.selectedDateStr if not provided.
- */
-function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppState.selectedDateStr) {
+function updateStatsDisplay(
+  domainData,
+  categoryData,
+  label,
+  chartDateStr = AppState.selectedDateStr,
+  isRangeView = false
+) {
   try {
     console.log(
-      `[Options Main] updateStatsDisplay called for label: ${label}, chartDateStr for chart: ${chartDateStr}`
+      `[Options Main] updateStatsDisplay called for label: ${label}, chartDateStr for chart: ${chartDateStr}, isRangeView: ${isRangeView}`
     );
 
     const currentDomainData = domainData || {};
@@ -309,50 +385,74 @@ function updateStatsDisplay(domainData, categoryData, label, chartDateStr = AppS
     AppState.domainCurrentPage = 1;
     updateDomainDisplayAndPagination();
 
-    displayCategoryTime(currentCategoryData); // from options-ui.js
+    if (typeof displayCategoryTime === 'function') displayCategoryTime(currentCategoryData);
 
     try {
-      const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings); // from options-utils.js
-      displayProductivityScore(scoreData, label); // Display the score
-      console.log(`[Options Main] Focus score calculated for "${label}": ${scoreData?.score}%`);
+      const scoreData =
+        typeof calculateFocusScore === 'function'
+          ? calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings)
+          : { score: 0 };
+      if (typeof displayProductivityScore === 'function') displayProductivityScore(scoreData, label);
     } catch (scoreError) {
       console.error(`[Options Main] Error calculating focus score for label "${label}":`, scoreError);
-      displayProductivityScore(null, label, true);
+      if (typeof displayProductivityScore === 'function') displayProductivityScore(null, label, true);
+    }
+
+    if (
+      UIElements.totalTimeForRangeContainer &&
+      UIElements.totalTimeForRangeLabel &&
+      UIElements.totalTimeForRangeValue
+    ) {
+      if (isRangeView) {
+        let totalSecondsForRange = 0;
+        for (const domain in currentDomainData) {
+          totalSecondsForRange += currentDomainData[domain];
+        }
+        UIElements.totalTimeForRangeValue.textContent =
+          typeof formatTime === 'function' ? formatTime(totalSecondsForRange, true) : totalSecondsForRange + 's';
+
+        const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period');
+        if (periodSpanInTotalLabel) {
+          periodSpanInTotalLabel.textContent = label;
+        } else {
+          UIElements.totalTimeForRangeLabel.textContent = `Total Time Online (${label})`;
+        }
+        UIElements.totalTimeForRangeContainer.style.display = 'block';
+      } else {
+        UIElements.totalTimeForRangeContainer.style.display = 'none';
+      }
     }
 
     const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData;
     const chartLabelForRender = label;
-
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
     if (hasSignificantData) {
-      renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode); // from options-ui.js
+      if (typeof renderChart === 'function')
+        renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode);
     } else {
-      clearChartOnError(`No significant data for ${chartLabelForRender}`); // from options-ui.js
+      if (typeof clearChartOnError === 'function') clearChartOnError(`No significant data for ${chartLabelForRender}`);
     }
 
     if (UIElements.chartTitleElement) {
       UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabelForRender})`;
     }
-
-    console.log(`[Options Main] Stats display updated for label: ${label}`);
   } catch (error) {
     console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
-    displayCategoryTime({});
+    if (typeof displayCategoryTime === 'function') displayCategoryTime({});
     AppState.fullDomainDataSorted = [];
     updateDomainDisplayAndPagination();
-    displayProductivityScore(null, label, true);
-    clearChartOnError(`Error loading data for ${label}`);
+    if (typeof displayProductivityScore === 'function') displayProductivityScore(null, label, true);
+    if (typeof clearChartOnError === 'function') clearChartOnError(`Error loading data for ${label}`);
     if (UIElements.chartTitleElement) {
       UIElements.chartTitleElement.textContent = `Usage Chart (Error)`;
+    }
+    if (UIElements.totalTimeForRangeContainer) {
+      UIElements.totalTimeForRangeContainer.style.display = 'none';
     }
   }
 }
 
-/**
- * Updates the statistics display areas to show a "No data" message for a specific date.
- * @param {string} displayDateLabel - The user-friendly formatted date string (e.g., "May 3, 2025").
- */
 function displayNoDataForDate(displayDateLabel) {
   console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
@@ -360,22 +460,10 @@ function displayNoDataForDate(displayDateLabel) {
   if (UIElements.statsPeriodSpans) {
     UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   }
-  if (UIElements.categoryTimeList) {
-    UIElements.categoryTimeList.replaceChildren();
-    const li = document.createElement('li');
-    li.textContent = noDataMessage;
-    li.style.textAlign = 'center';
-    li.style.color = 'var(--text-color-muted)';
-    UIElements.categoryTimeList.appendChild(li);
-  }
-  if (UIElements.detailedTimeList) {
-    UIElements.detailedTimeList.replaceChildren();
-    const li = document.createElement('li');
-    li.textContent = noDataMessage;
-    li.style.textAlign = 'center';
-    li.style.color = 'var(--text-color-muted)';
-    UIElements.detailedTimeList.appendChild(li);
-  }
+
+  setListMessage(UIElements.categoryTimeList, noDataMessage);
+  setListMessage(UIElements.detailedTimeList, noDataMessage);
+
   if (UIElements.domainPaginationDiv) {
     UIElements.domainPaginationDiv.style.display = 'none';
   }
@@ -388,15 +476,18 @@ function displayNoDataForDate(displayDateLabel) {
     UIElements.productivityScoreValue.textContent = 'N/A';
     UIElements.productivityScoreValue.className = 'score-value';
   }
-  clearChartOnError(noDataMessage); // from options-ui.js
+  if (typeof clearChartOnError === 'function') clearChartOnError(noDataMessage);
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
+  }
+  if (UIElements.totalTimeForRangeContainer) {
+    UIElements.totalTimeForRangeContainer.style.display = 'none';
   }
 }
 
 function renderChartForSelectedDateUI() {
   if (!AppState.selectedDateStr) {
-    clearChartOnError('Select a date from the calendar.'); // from options-ui.js
+    if (typeof clearChartOnError === 'function') clearChartOnError('Select a date from the calendar.');
     return;
   }
   const data =
@@ -404,8 +495,9 @@ function renderChartForSelectedDateUI() {
       ? AppState.dailyDomainData[AppState.selectedDateStr] || {}
       : AppState.dailyCategoryData[AppState.selectedDateStr] || {};
 
-  const displayDate = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
-  renderChart(data, displayDate, AppState.currentChartViewMode); // from options-ui.js
+  const displayDate =
+    typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+  if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode);
 
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
@@ -424,9 +516,9 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
     if (isSpecificDate && /^\d{4}-\d{2}-\d{2}$/.test(range)) {
       initialDomainData = AppState.dailyDomainData[range] || {};
       initialCategoryData = AppState.dailyCategoryData[range] || {};
-      periodLabel = formatDisplayDate(range); // from options-utils.js
+      periodLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(range) : range;
     } else if (range === 'today') {
-      const todayStr = formatDate(today); // from options-utils.js
+      const todayStr = typeof formatDate === 'function' ? formatDate(today) : new Date().toISOString().split('T')[0];
       initialDomainData = AppState.dailyDomainData[todayStr] || {};
       initialCategoryData = AppState.dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
@@ -435,7 +527,7 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
-        const dateStr = formatDate(date);
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -449,10 +541,10 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       periodLabel = 'This Month';
       const y = today.getFullYear();
       const m = today.getMonth();
-      const dIM = today.getDate();
-      for (let day = 1; day <= dIM; day++) {
+      const daysInCurrentMonthSoFar = today.getDate();
+      for (let day = 1; day <= daysInCurrentMonthSoFar; day++) {
         const date = new Date(y, m, day);
-        const dateStr = formatDate(date);
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -463,10 +555,8 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
         }
       }
     } else {
-      // 'all'
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
-        console.log("[Options Main] Recalculating 'All Time' from daily data for display.");
         initialDomainData = {};
         initialCategoryData = {};
         for (const dateStr in AppState.dailyDomainData) {
@@ -482,7 +572,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
           }
         }
       } else {
-        console.warn("[Options Main] Daily data is empty, falling back to stored 'All Time' totals.");
         initialDomainData = AppState.trackedData || {};
         initialCategoryData = AppState.categoryTimeData || {};
       }
@@ -499,187 +588,11 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       }
     }
   } catch (filterError) {
-    console.error(`Error filtering/merging for range "${range}":`, filterError);
+    console.error(`Error filtering/merging data for range "${range}":`, filterError);
     periodLabel = `Error (${range})`;
     return { domainData: {}, categoryData: {}, label: periodLabel };
   }
   return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
-}
-
-// --- NEW: Handlers for Block Page Customization ---
-// These functions will handle saving the settings when they are changed.
-function handleBlockPageSettingChange(storageKey, value) {
-  browser.storage.local
-    .set({ [storageKey]: value })
-    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
-    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
-}
-
-function handleBlockPageShowQuoteChange() {
-  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
-  // Toggle visibility of the custom quotes textarea
-  if (UIElements.blockPageUserQuotesContainer) {
-    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
-  }
-}
-
-function handleBlockPageUserQuotesChange() {
-  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
-  // Split by newline, trim whitespace, and filter out empty lines
-  const quotesArray = quotesText
-    .split('\n')
-    .map((q) => q.trim())
-    .filter((q) => q.length > 0);
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
-}
-// --- END NEW HANDLERS ---
-
-// --- Event Listener Setup ---
-function setupEventListeners() {
-  console.log('[Options Main] Setting up event listeners...');
-  try {
-    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
-    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
-    if (UIElements.categoryList) {
-      UIElements.categoryList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
-        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
-        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
-        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
-      });
-    }
-    if (UIElements.assignmentList) {
-      UIElements.assignmentList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
-        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
-      });
-    }
-    if (UIElements.ruleList) {
-      UIElements.ruleList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
-        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
-      });
-    }
-    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
-    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
-    if (UIElements.dateRangeSelect)
-      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
-    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
-    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
-    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
-    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
-    if (UIElements.chartViewRadios) {
-      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
-    }
-    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
-    // Rule Modal
-    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
-    if (UIElements.editRuleModal)
-      UIElements.editRuleModal.addEventListener('click', (event) => {
-        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
-      });
-    // Assignment Modal
-    if (UIElements.closeEditAssignmentModalBtn)
-      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.cancelEditAssignmentBtn)
-      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.saveAssignmentChangesBtn)
-      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
-    if (UIElements.editAssignmentModal)
-      UIElements.editAssignmentModal.addEventListener('click', (event) => {
-        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
-      });
-    // Settings
-    if (UIElements.idleThresholdSelect)
-      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
-    if (UIElements.dataRetentionSelect) {
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
-    } else {
-      console.warn('Data retention select element not found, cannot add listener.');
-    }
-
-    // Data Management Listeners
-    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
-    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
-    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
-
-    // Productivity Settings Listener
-    if (UIElements.productivitySettingsList) {
-      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
-    }
-
-    // --- NEW: Event Listeners for Block Page Customization ---
-    if (UIElements.blockPageCustomHeadingInput) {
-      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
-          UIElements.blockPageCustomHeadingInput.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageCustomMessageTextarea) {
-      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
-          UIElements.blockPageCustomMessageTextarea.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageCustomButtonTextInput) {
-      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
-          UIElements.blockPageCustomButtonTextInput.value.trim()
-        )
-      );
-    }
-    if (UIElements.blockPageShowUrlCheckbox) {
-      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowReasonCheckbox) {
-      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowRuleCheckbox) {
-      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
-      );
-    }
-    if (UIElements.blockPageShowLimitInfoCheckbox) {
-      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
-          UIElements.blockPageShowLimitInfoCheckbox.checked
-        )
-      );
-    }
-    if (UIElements.blockPageShowScheduleInfoCheckbox) {
-      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
-        handleBlockPageSettingChange(
-          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
-          UIElements.blockPageShowScheduleInfoCheckbox.checked
-        )
-      );
-    }
-    if (UIElements.blockPageShowQuoteCheckbox) {
-      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
-    }
-    if (UIElements.blockPageUserQuotesTextarea) {
-      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
-    }
-    // --- END NEW Event Listeners ---
-
-    handleRuleTypeChange(); // Initialize rule input display
-    console.log('[Options Main] Event listeners setup complete.');
-  } catch (e) {
-    console.error('[Options Main] Error setting up event listeners:', e);
-  }
 }
 
 // --- Data Saving Functions ---
@@ -718,7 +631,7 @@ function saveRules() {
 function convertDataToCsv(dataObject) {
   if (!dataObject) return '';
   const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
-  let csvString = headers.map(escapeCsvValue).join(',') + '\n'; // escapeCsvValue from options-utils.js
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
 
   const sortedData = Object.entries(dataObject)
     .map(([d, s]) => ({ domain: d, seconds: s }))
@@ -740,7 +653,7 @@ function convertDataToCsv(dataObject) {
 
   sortedData.forEach((item) => {
     const category = getCategory(item.domain);
-    const timeHMS = formatTime(item.seconds, true, true); // from options-utils.js
+    const timeHMS = typeof formatTime === 'function' ? formatTime(item.seconds, true, true) : item.seconds + 's';
     const row = [item.domain, category, timeHMS, item.seconds];
     csvString += row.map(escapeCsvValue).join(',') + '\n';
   });
@@ -761,7 +674,9 @@ function triggerCsvDownload(csvString, filename) {
       URL.revokeObjectURL(url);
       console.log('CSV download triggered:', filename);
     } else {
-      alert('CSV export might not be fully supported by your browser.');
+      alert(
+        'CSV export might not be fully supported by your browser. Please try a different browser or copy the data manually.'
+      );
     }
   } catch (e) {
     console.error('Error triggering CSV download:', e);
@@ -771,23 +686,29 @@ function triggerCsvDownload(csvString, filename) {
 
 // --- Recalculation Logic ---
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
-  console.log('[Options Main] REBUILDING category totals STARTING', changeDetails);
+  console.log('[Options Main] RECALCULATING category totals. Change Details:', changeDetails);
   try {
-    const result = await browser.storage.local.get(['trackedData', 'dailyDomainData', 'categoryAssignments']);
+    const result = await browser.storage.local.get([
+      'trackedData',
+      'dailyDomainData',
+      'categoryAssignments',
+      'categories',
+    ]);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
     const currentAssignments = AppState.categoryAssignments || {};
+    const currentCategories = AppState.categories || ['Other'];
 
-    const getCategoryForDomain = (domain, assignments) => {
+    const getCategoryForDomain = (domain, assignments, categoriesList) => {
       if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
-        return assignments[domain];
+        return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other';
       }
       const parts = domain.split('.');
       for (let i = 1; i < parts.length; i++) {
         const wildcardPattern = '*.' + parts.slice(i).join('.');
         if (assignments.hasOwnProperty(wildcardPattern)) {
-          return assignments[wildcardPattern];
+          return categoriesList.includes(assignments[wildcardPattern]) ? assignments[wildcardPattern] : 'Other';
         }
       }
       return 'Other';
@@ -797,7 +718,7 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
       if (time > 0) {
-        const category = getCategoryForDomain(domain, currentAssignments);
+        const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
         rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
       }
     }
@@ -809,7 +730,7 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       for (const domain in domainsForDate) {
         const time = domainsForDate[domain];
         if (time > 0) {
-          const category = getCategoryForDomain(domain, currentAssignments);
+          const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
       }
@@ -818,7 +739,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       }
     }
 
-    console.log('[Recalc] Saving REBUILT category totals...');
     await browser.storage.local.set({
       categoryTimeData: rebuiltCategoryTimeData,
       dailyCategoryData: rebuiltDailyCategoryData,
@@ -827,12 +747,12 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     AppState.categoryTimeData = rebuiltCategoryTimeData;
     AppState.dailyCategoryData = rebuiltDailyCategoryData;
 
-    console.log('[Recalc] Category totals rebuilt and saved.');
+    console.log('[Options Main] Category totals rebuilt and saved successfully.');
   } catch (error) {
-    console.error('[Options Main] Error during category recalculation (rebuild):', error);
-    alert('An error occurred while recalculating category totals.');
+    console.error('[Options Main] Error during category recalculation:', error);
+    alert('An error occurred while recalculating category totals. Please check the console.');
   } finally {
-    console.log('[Options Main] REBUILDING category totals FINISHED');
+    console.log('[Options Main] RECALCULATING category totals FINISHED.');
   }
 }
 
@@ -862,4 +782,178 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-console.log("[System] options-main.js loaded (v0.8.3 - Block Page Customization - User's Base Corrected)");
+// --- Event Listener Setup ---
+function setupEventListeners() {
+  console.log('[Options Main] Setting up event listeners...');
+  try {
+    // Category Management
+    if (UIElements.addCategoryBtn && typeof handleAddCategory === 'function')
+      UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
+    if (UIElements.categoryList) {
+      UIElements.categoryList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('category-delete-btn') && typeof handleDeleteCategory === 'function')
+          handleDeleteCategory(event);
+        else if (event.target.classList.contains('category-edit-btn') && typeof handleEditCategoryClick === 'function')
+          handleEditCategoryClick(event);
+        else if (event.target.classList.contains('category-save-btn') && typeof handleSaveCategoryClick === 'function')
+          handleSaveCategoryClick(event);
+        else if (
+          event.target.classList.contains('category-cancel-btn') &&
+          typeof handleCancelCategoryEditClick === 'function'
+        )
+          handleCancelCategoryEditClick(event);
+      });
+    }
+
+    // Assignment Management
+    if (UIElements.assignDomainBtn && typeof handleAssignDomain === 'function')
+      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.assignmentList) {
+      UIElements.assignmentList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('assignment-delete-btn') && typeof handleDeleteAssignment === 'function')
+          handleDeleteAssignment(event);
+        else if (
+          event.target.classList.contains('assignment-edit-btn') &&
+          typeof handleEditAssignmentClick === 'function'
+        )
+          handleEditAssignmentClick(event);
+      });
+    }
+    if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
+      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
+      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
+      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
+    if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
+      UIElements.editAssignmentModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
+      });
+
+    // Rule Management
+    if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
+      UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
+    if (UIElements.addRuleBtn && typeof handleAddRule === 'function')
+      UIElements.addRuleBtn.addEventListener('click', handleAddRule);
+    if (UIElements.ruleList) {
+      UIElements.ruleList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('delete-btn') && typeof handleDeleteRule === 'function')
+          handleDeleteRule(event);
+        else if (event.target.classList.contains('edit-btn') && typeof handleEditRuleClick === 'function')
+          handleEditRuleClick(event);
+      });
+    }
+    if (UIElements.closeEditModalBtn && typeof handleCancelEditClick === 'function')
+      UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.cancelEditRuleBtn && typeof handleCancelEditClick === 'function')
+      UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.saveRuleChangesBtn && typeof handleSaveChangesClick === 'function')
+      UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
+      UIElements.editRuleModal.addEventListener('click', (event) => {
+        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
+      });
+
+    // Stats Display
+    if (UIElements.dateRangeSelect)
+      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
+    if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
+      UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (UIElements.domainNextBtn && typeof handleDomainNext === 'function')
+      UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
+    if (UIElements.prevMonthBtn && typeof handlePrevMonth === 'function')
+      UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
+    if (UIElements.nextMonthBtn && typeof handleNextMonth === 'function')
+      UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
+    if (UIElements.chartViewRadios) {
+      UIElements.chartViewRadios.forEach((radio) => {
+        if (typeof handleChartViewChange === 'function') radio.addEventListener('change', handleChartViewChange);
+      });
+    }
+    if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+
+    // General Settings
+    if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
+      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
+    if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+
+    // Data Management
+    if (UIElements.exportDataBtn && typeof handleExportData === 'function')
+      UIElements.exportDataBtn.addEventListener('click', handleExportData);
+    if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
+      UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
+    if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+
+    // Productivity Settings
+    if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
+      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
+    }
+
+    // Pomodoro Notification Settings Listener
+    if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
+      UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
+    }
+
+    // Block Page Customization
+    if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+          UIElements.blockPageCustomHeadingInput.value.trim()
+        )
+      );
+    if (UIElements.blockPageCustomMessageTextarea && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+          UIElements.blockPageCustomMessageTextarea.value.trim()
+        )
+      );
+    if (UIElements.blockPageCustomButtonTextInput && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+          UIElements.blockPageCustomButtonTextInput.value.trim()
+        )
+      );
+    if (UIElements.blockPageShowUrlCheckbox && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
+      );
+    if (UIElements.blockPageShowReasonCheckbox && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
+      );
+    if (UIElements.blockPageShowRuleCheckbox && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
+      );
+    if (UIElements.blockPageShowLimitInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+          UIElements.blockPageShowLimitInfoCheckbox.checked
+        )
+      );
+    if (UIElements.blockPageShowScheduleInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
+      UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(
+          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+          UIElements.blockPageShowScheduleInfoCheckbox.checked
+        )
+      );
+    if (UIElements.blockPageShowQuoteCheckbox && typeof handleBlockPageShowQuoteChange === 'function')
+      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
+    if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
+      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
+
+    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
+    console.log('[Options Main] Event listeners setup complete.');
+  } catch (e) {
+    console.error('[Options Main] Error setting up event listeners:', e);
+  }
+}
+console.log('[System] options-main.js loaded (v0.8.7 - Replace all unsafe innerHTML)');

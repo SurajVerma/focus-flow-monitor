@@ -1,4 +1,4 @@
-/* popup/popup.css (v12 - Pomodoro UI Polish) */
+/* popup/popup.css (v14.7.1 - Robust Bell Icon Button) */
 :root {
   --popup-bg: #f0f2f5;
   --popup-text-primary: #1c1e21;
@@ -6,29 +6,31 @@
   --popup-text-muted: #8a8d91;
   --popup-text-total: #1c1e21;
   --popup-header-border: #e0e0e0;
-  --popup-options-btn-bg: #e4e6eb;
+  --popup-options-btn-bg: #e4e6eb; /* Default light mode button background */
   --popup-options-btn-hover-bg: #dcdde1;
-  --popup-options-btn-text: #ffffff;
+  --popup-options-btn-text: #050505; /* Color for the SVG icon in light mode */
+  --popup-options-btn-border: #caced4; /* Subtle border for the button */
 
   --popup-progress-bg: #e4e6eb;
   --popup-chart-placeholder: #aaa;
   --popup-logo-filter: none;
 
   /* Pomodoro specific colors */
-  --pomodoro-btn-bg: #007bff;
-  --pomodoro-btn-hover-bg: #0056b3;
+  --pomodoro-btn-primary-bg: #007bff;
+  --pomodoro-btn-primary-hover-bg: #0056b3;
+  --pomodoro-btn-secondary-bg: #6c757d;
+  --pomodoro-btn-secondary-hover-bg: #5a6268;
   --pomodoro-btn-text: #ffffff;
-  --pomodoro-reset-btn-bg: #6c757d;
-  --pomodoro-reset-btn-hover-bg: #5a6268;
   --pomodoro-change-phase-btn-bg: #17a2b8;
   --pomodoro-change-phase-btn-hover-bg: #138496;
-
-  /* UPDATED: Distinct phase colors */
-  --pomodoro-phase-work-color: #28a745; /* Green for work */
-  --pomodoro-phase-short-break-color: #ffc107;
-  --pomodoro-phase-long-break-color: #fd7e14;
-
-  /* Modal specific */
+  --pomodoro-phase-work-bg: #28a745;
+  --pomodoro-phase-work-text: #ffffff;
+  --pomodoro-phase-short-break-bg: #ffc107;
+  --pomodoro-phase-short-break-text: #212529;
+  --pomodoro-phase-long-break-bg: #fd7e14;
+  --pomodoro-phase-long-break-text: #ffffff;
+  --pomodoro-phase-default-bg: var(--pomodoro-btn-secondary-bg);
+  --pomodoro-phase-default-text: var(--pomodoro-btn-text);
   --modal-overlay-bg: rgba(0, 0, 0, 0.4);
   --modal-content-bg: #ffffff;
   --modal-text-color: #333333;
@@ -44,28 +46,28 @@
     --popup-text-muted: #8d8d91;
     --popup-text-total: #ffffff;
     --popup-header-border: #3a3a3c;
-    --popup-options-btn-bg: #0a84ff;
-    --popup-options-btn-hover-bg: #339cff;
-    --popup-options-btn-text: #ffffff;
+    --popup-options-btn-bg: #3a3a3c; /* Dark mode button background */
+    --popup-options-btn-hover-bg: #4a4a4e;
+    --popup-options-btn-text: #f5f5f7; /* Color for the SVG icon in dark mode */
+    --popup-options-btn-border: #545458; /* Subtle border for dark mode button */
 
     --popup-progress-bg: #3a3a3c;
     --popup-chart-placeholder: #888;
     --popup-logo-filter: brightness(0) invert(1);
-
-    /* Pomodoro dark mode colors */
-    --pomodoro-btn-bg: #0a84ff;
-    --pomodoro-btn-hover-bg: #339cff;
-    --pomodoro-reset-btn-bg: #8e8e93;
-    --pomodoro-reset-btn-hover-bg: #a0a0a5;
+    --pomodoro-btn-primary-bg: #0a84ff;
+    --pomodoro-btn-primary-hover-bg: #339cff;
+    --pomodoro-btn-secondary-bg: #58585a;
+    --pomodoro-btn-secondary-hover-bg: #6c6c6e;
     --pomodoro-change-phase-btn-bg: #64d2ff;
     --pomodoro-change-phase-btn-hover-bg: #82dfff;
-
-    /* UPDATED: Distinct phase colors - dark mode */
-    --pomodoro-phase-work-color: #30d158;
-    --pomodoro-phase-short-break-color: #fd7e14; /* Keep orange, usually visible on dark */
-    --pomodoro-phase-long-break-color: #ffd60a;
-
-    /* Modal dark mode */
+    --pomodoro-phase-work-bg: #30d158;
+    --pomodoro-phase-work-text: #ffffff;
+    --pomodoro-phase-short-break-bg: #ffd60a;
+    --pomodoro-phase-short-break-text: #1c1c1e;
+    --pomodoro-phase-long-break-bg: #ff9f0a;
+    --pomodoro-phase-long-break-text: #ffffff;
+    --pomodoro-phase-default-bg: var(--pomodoro-btn-secondary-bg);
+    --pomodoro-phase-default-text: var(--pomodoro-btn-text);
     --modal-overlay-bg: rgba(0, 0, 0, 0.6);
     --modal-content-bg: #2c2c2e;
     --modal-text-color: #e0e0e0;
@@ -91,7 +93,6 @@ body {
   padding: 8px 15px;
 }
 
-/* Header Styles */
 .popup-header {
   display: flex;
   justify-content: space-between;
@@ -122,28 +123,28 @@ body {
 #optionsBtn.header-btn.icon-btn {
   background-color: var(--popup-options-btn-bg);
   color: var(--popup-options-btn-text);
-  border: none;
+  border: 1px solid var(--popup-options-btn-border);
   border-radius: 5px;
-  width: 32px;
+  width: 30px;
   height: 28px;
-  padding: 0;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1em;
-  line-height: 1;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.19); /* Added subtle shadow */
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 #optionsBtn.header-btn.icon-btn:hover {
   background-color: var(--popup-options-btn-hover-bg);
-  /* transform: translateY(-1px); */
+  border-color: var(--popup-options-btn-text);
 }
-/* #optionsBtn.header-btn.icon-btn:active {
-  transform: translateY(0px);
-} */
 
-/* Summary Section Styles */
+#optionsBtn.header-btn.icon-btn .settings-svg-icon {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .summary-section {
   margin-bottom: 6px;
   text-align: center;
@@ -288,89 +289,145 @@ body {
   }
 }
 
-/* --- Pomodoro Timer Styles --- */
 .pomodoro-section {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--popup-header-border);
-  text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
-.pomodoro-section h4 {
+.pomodoro-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pomodoro-section-header h4 {
   font-size: 0.9em;
   color: var(--popup-text-secondary);
-  margin-bottom: 6px;
-  text-align: center;
   font-weight: 600;
+  text-align: left;
+  margin: 0;
+  flex-grow: 1;
 }
+
+/* MODIFIED Styles for the icon-only button (bell icon) */
+.pomodoro-icon-btn.title-align-icon {
+  background: none;
+  border: none;
+  /* Added symmetrical padding to make the button's clickable area more robust */
+  padding: 4px 6px;
+  margin-left: 8px; /* Space from the title, was padding-left before */
+  cursor: pointer;
+  color: var(--popup-text-secondary);
+  flex-shrink: 0;
+  display: inline-flex; /* Helps center the span content */
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  /* Ensure pointer events are enabled, though default is auto */
+  pointer-events: auto;
+}
+
+/* Style for the span INSIDE the button, which holds the icon text */
+.pomodoro-icon-btn.title-align-icon span#pomodoro-notify-icon {
+  font-size: 1.1em; /* Size of the bell character */
+  display: inline-block; /* Ensures it behaves well within the flex button */
+}
+
+.pomodoro-icon-btn.title-align-icon:hover {
+  color: var(--popup-text-primary);
+}
+/* End of MODIFIED Styles */
 
 .pomodoro-timer-display {
   font-size: 2em;
   font-weight: bold;
   color: var(--popup-text-total);
-  margin-bottom: 8px;
-  display: flex; /* Use flex to align phase and time */
+  margin-bottom: 10px;
+  display: flex;
   justify-content: center;
-  align-items: baseline; /* Align text baselines */
+  align-items: center;
+  gap: 8px;
 }
 
-/* UPDATED: Phase text styling */
 #pomodoro-phase {
-  font-size: 0.6em; /* Smaller font size for phase text */
-  font-weight: bold; /* Less bold */
-  margin-right: 6px; /* Space between phase and time */
-  /* Color will be set by specific phase classes */
+  font-size: 0.5em;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: var(--pomodoro-phase-default-bg);
+  color: var(--pomodoro-phase-default-text);
+  margin-right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(1.2em + 8px);
 }
+
 #pomodoro-phase.work {
-  color: var(--pomodoro-phase-work-color);
+  background-color: var(--pomodoro-phase-work-bg);
+  color: var(--pomodoro-phase-work-text);
 }
 #pomodoro-phase.short-break {
-  color: var(--pomodoro-phase-short-break-color);
+  background-color: var(--pomodoro-phase-short-break-bg);
+  color: var(--pomodoro-phase-short-break-text);
 }
 #pomodoro-phase.long-break {
-  color: var(--pomodoro-phase-long-break-color);
+  background-color: var(--pomodoro-phase-long-break-bg);
+  color: var(--pomodoro-phase-long-break-text);
 }
 
-/* Time text remains more prominent */
 #pomodoro-time {
-  font-size: 1em; /* Relative to its parent .pomodoro-timer-display */
-  color: var(--popup-text-total); /* Ensure it uses the main total time color */
+  font-size: 1.2em;
+  color: var(--popup-text-total);
+  line-height: 1;
 }
 
 .pomodoro-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
 .pomodoro-btn {
-  background-color: var(--pomodoro-btn-bg);
   color: var(--pomodoro-btn-text);
   border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
+  border-radius: 5px;
+  padding: 7px 12px;
   cursor: pointer;
   font-size: 0.9em;
   font-weight: 500;
   transition: background-color 0.2s ease;
-  min-width: 60px;
-  flex-grow: 1;
+  min-width: 75px;
+  flex-grow: 0;
   flex-basis: auto;
-}
-.pomodoro-btn:hover {
-  background-color: var(--pomodoro-btn-hover-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+.pomodoro-btn:active {
+  filter: brightness(0.95);
+}
+#pomodoro-start-pause-btn {
+  background-color: var(--pomodoro-btn-primary-bg);
+}
+#pomodoro-start-pause-btn:hover {
+  background-color: var(--pomodoro-btn-primary-hover-bg);
+}
 #pomodoro-reset-btn {
-  background-color: var(--pomodoro-reset-btn-bg);
+  background-color: var(--pomodoro-btn-secondary-bg);
 }
 #pomodoro-reset-btn:hover {
-  background-color: var(--pomodoro-reset-btn-hover-bg);
+  background-color: var(--pomodoro-btn-secondary-hover-bg);
 }
-
 #pomodoro-change-phase-btn {
   background-color: var(--pomodoro-change-phase-btn-bg);
 }
@@ -378,44 +435,37 @@ body {
   background-color: var(--pomodoro-change-phase-btn-hover-bg);
 }
 
-.pomodoro-secondary-controls {
+/*
+.pomodoro-secondary-controls { 
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  margin-top: 4px;
-  margin-bottom: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
 }
-
 .pomodoro-notify-container {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
-
-#pomodoro-notify-checkbox {
-  margin: 0;
-  vertical-align: middle;
-  width: auto;
-  height: auto;
-  accent-color: var(--pomodoro-btn-bg);
+.pomodoro-notify-container #pomodoro-notify-label {
+    vertical-align: middle;
+    font-size: 0.9em;
+    color: var(--popup-text-secondary);
+    cursor: pointer; 
 }
-
-.pomodoro-notify-container label {
-  font-size: 0.85em;
-  color: var(--popup-text-secondary);
-  cursor: pointer;
-  vertical-align: middle;
-  margin-bottom: 0;
-}
+*/
 
 .pomodoro-status {
   font-size: 0.85em;
   color: var(--popup-text-muted);
-  min-height: 1.1em;
+  min-height: 1.2em;
+  font-style: italic;
+  margin-top: 4px;
+  text-align: center;
 }
 
-/* --- Custom Modal Styles --- */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -423,7 +473,7 @@ body {
   width: 100%;
   height: 100%;
   background-color: var(--modal-overlay-bg);
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: center;
   z-index: 1000;
@@ -457,10 +507,17 @@ body {
   padding: 6px 12px;
   font-size: 0.85em;
 }
-
+.modal-actions #custom-confirm-yes-btn {
+  background-color: var(--pomodoro-btn-primary-bg);
+  color: var(--pomodoro-btn-text);
+}
+.modal-actions #custom-confirm-yes-btn:hover {
+  background-color: var(--pomodoro-btn-primary-hover-bg);
+}
 .modal-actions #custom-confirm-no-btn {
-  background-color: var(--pomodoro-reset-btn-bg);
+  background-color: var(--pomodoro-btn-secondary-bg);
+  color: var(--pomodoro-btn-text);
 }
 .modal-actions #custom-confirm-no-btn:hover {
-  background-color: var(--pomodoro-reset-btn-hover-bg);
+  background-color: var(--pomodoro-btn-secondary-hover-bg);
 }
