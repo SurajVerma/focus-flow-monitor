@@ -1,4 +1,23 @@
-// options/options-main.js (v0.8.6 - Listen for Storage Changes for Pomodoro Sync)
+// options/options-main.js (v0.8.7 - Replace all unsafe innerHTML)
+
+// --- Helper function to safely set list item content ---
+/**
+ * Clears an element and appends a new list item with the given text message.
+ * @param {HTMLElement} element - The UL or OL element to update.
+ * @param {string} message - The text message to display in the list item.
+ * @param {object} [options] - Optional styling for the list item.
+ * @param {string} [options.textAlign='center'] - Text alignment for the list item.
+ * @param {string} [options.color='var(--text-color-muted)'] - Text color for the list item.
+ */
+function setListMessage(element, message, options = {}) {
+  if (!element) return;
+  element.innerHTML = ''; // Clear previous content
+  const li = document.createElement('li');
+  li.textContent = message;
+  li.style.textAlign = options.textAlign || 'center';
+  li.style.color = options.color || 'var(--text-color-muted)'; // Ensure this CSS variable is defined
+  element.appendChild(li);
+}
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,8 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Failed to initialize UI elements. Aborting setup.');
     const container = document.querySelector('.container');
     if (container) {
-      container.innerHTML =
-        '<p style="color: red; text-align: center; padding: 20px;">Error: Could not load page elements. Please try refreshing.</p>';
+      // Safely set error message
+      container.innerHTML = ''; // Clear existing content first
+      const p = document.createElement('p');
+      p.textContent = 'Error: Could not load page elements. Please try refreshing.';
+      p.style.color = 'red';
+      p.style.textAlign = 'center';
+      p.style.padding = '20px';
+      container.appendChild(p);
     }
     return;
   }
@@ -31,64 +56,47 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAllData().then(() => {
     setupEventListeners(); // Setup all event listeners for the options page
 
-    // --- NEW: Register storage change listener for Pomodoro settings ---
+    // Register storage change listener for Pomodoro settings
     if (browser.storage && browser.storage.onChanged) {
       browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
       console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
     }
-    // --- END NEW ---
 
     // Handle scrolling to a specific section if a hash is present in the URL
     if (window.location.hash) {
       const sectionId = window.location.hash.substring(1);
-      // Ensure this ID matches your HTML for the Pomodoro settings section
       if (sectionId === 'pomodoro-settings-section') {
         const sectionElement = document.getElementById(sectionId);
         if (sectionElement) {
           console.log(`[Options Main] Scrolling to section: ${sectionId}`);
           sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Optional: Add a temporary highlight for visual feedback
           sectionElement.style.transition = 'background-color 0.9s ease-in-out';
-          sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)'; // Light yellow
+          sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
           setTimeout(() => {
-            sectionElement.style.backgroundColor = ''; // Remove highlight
-          }, 2000); // Highlight for 2 seconds
+            sectionElement.style.backgroundColor = '';
+          }, 2000);
         } else {
           console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
         }
       }
     }
   });
-  console.log('Options Main script initialized (v0.8.6 - Listen for Storage Changes for Pomodoro Sync).');
+  console.log('Options Main script initialized (v0.8.7 - Replace all unsafe innerHTML).');
 });
 
-// --- NEW: Function to handle storage changes for Pomodoro notification settings ---
-/**
- * Handles changes to browser.storage.local, specifically looking for updates
- * to the Pomodoro notification settings. If a change is detected, it updates
- * the UI elements on the options page to reflect the new state.
- * @param {object} changes - An object describing the changes. Each key is the name of a changed item,
- * and its value is a browser.storage.StorageChange object.
- * @param {string} area - The name of the storage area ("sync", "local", or "managed") that changed.
- */
+// --- Function to handle storage changes for Pomodoro notification settings ---
 function handlePomodoroSettingsStorageChange(changes, area) {
-  // We are only interested in changes to 'local' storage and specifically to our Pomodoro settings key
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
-    // STORAGE_KEY_POMODORO_SETTINGS from options-state.js
     const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
 
-    // Check if the new value exists and has the notifyEnabled property
     if (newStorageValue && newStorageValue.notifyEnabled !== undefined) {
       const newNotifyState = newStorageValue.notifyEnabled;
-
       console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
 
-      // Update the AppState (options page's internal state) if it's different
       if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
         AppState.pomodoroNotifyEnabled = newNotifyState;
       }
 
-      // Update the checkbox UI element if it's different from the new state
       if (
         UIElements.pomodoroEnableNotificationsCheckbox &&
         UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
@@ -97,21 +105,15 @@ function handlePomodoroSettingsStorageChange(changes, area) {
         console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
       }
 
-      // Also update the permission status text display (e.g., "(Permission: Granted)"),
-      // as the actual browser permission status might need to be re-evaluated in conjunction
-      // with the new setting state.
       if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
-        // This function should ideally re-check browser.permissions.contains()
         updatePomodoroPermissionStatusDisplay();
       }
     }
   }
 }
-// --- END NEW ---
 
 // --- Data Loading ---
 async function loadAllData() {
-  // Made async to await permission check
   console.log('[Options Main] loadAllData starting...');
   const keysToLoad = [
     'trackedData',
@@ -122,36 +124,34 @@ async function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD, // From options-state.js
-    STORAGE_KEY_DATA_RETENTION_DAYS, // From options-state.js
-    STORAGE_KEY_PRODUCTIVITY_RATINGS, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_URL, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, // From options-state.js
-    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, // From options-state.js
-    STORAGE_KEY_POMODORO_SETTINGS, // From options-state.js (Added Pomodoro settings key)
+    STORAGE_KEY_IDLE_THRESHOLD,
+    STORAGE_KEY_DATA_RETENTION_DAYS,
+    STORAGE_KEY_PRODUCTIVITY_RATINGS,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
+    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
+    STORAGE_KEY_POMODORO_SETTINGS,
   ];
 
   try {
     const result = await browser.storage.local.get(keysToLoad);
     console.log('[Options Main] Data loaded from storage:', result);
 
-    // --- Standard Data Processing ---
     AppState.trackedData = result.trackedData || {};
     AppState.categoryTimeData = result.categoryTimeData || {};
     AppState.dailyDomainData = result.dailyDomainData || {};
     AppState.dailyCategoryData = result.dailyCategoryData || {};
     AppState.hourlyData = result.hourlyData || {};
-    AppState.categories = result.categories || ['Other']; // Default if no categories exist
+    AppState.categories = result.categories || ['Other'];
     AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
 
-    // Ensure 'Other' category exists
     if (!AppState.categories.includes('Other')) {
       AppState.categories.push('Other');
     }
@@ -159,14 +159,12 @@ async function loadAllData() {
     AppState.categoryAssignments = result.categoryAssignments || {};
     AppState.rules = result.rules || [];
 
-    // Idle Threshold Setting
     const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
     if (UIElements.idleThresholdSelect) {
       UIElements.idleThresholdSelect.value =
         savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
     }
 
-    // Data Retention Setting
     const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
     if (UIElements.dataRetentionSelect) {
       UIElements.dataRetentionSelect.value =
@@ -175,7 +173,6 @@ async function loadAllData() {
           : DEFAULT_DATA_RETENTION_DAYS;
     }
 
-    // Block Page Customization AppState and UI updates
     AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
     AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
     AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
@@ -221,20 +218,16 @@ async function loadAllData() {
     if (UIElements.blockPageUserQuotesTextarea)
       UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
 
-    // Load and Apply Pomodoro Notification Settings
     const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
     AppState.pomodoroNotifyEnabled =
-      pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true; // Default to true
+      pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true;
     console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`);
 
     if (UIElements.pomodoroEnableNotificationsCheckbox) {
       UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
-    // updatePomodoroPermissionStatusDisplay will be called by the storage listener if needed,
-    // and also when the checkbox is manually toggled. It's also called after loadAllData completes.
     await updatePomodoroPermissionStatusDisplay();
 
-    // Populate UI Lists and Render Initial Stats
     if (typeof populateCategoryList === 'function') populateCategoryList();
     if (typeof populateCategorySelect === 'function') populateCategorySelect();
     if (typeof populateAssignmentList === 'function') populateAssignmentList();
@@ -247,28 +240,21 @@ async function loadAllData() {
     if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
   } catch (error) {
     console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
-    if (UIElements.categoryTimeList) {
-      UIElements.categoryTimeList.innerHTML = '';
-      const li = document.createElement('li');
-      li.textContent = errorMessage;
-      UIElements.categoryTimeList.appendChild(li);
-    }
-    if (UIElements.detailedTimeList) {
-      UIElements.detailedTimeList.innerHTML = '';
-      const li = document.createElement('li');
-      li.textContent = errorMessage;
-      UIElements.detailedTimeList.appendChild(li);
-    }
+    const errorMessage = 'Error loading data. Please try refreshing.';
+
+    setListMessage(UIElements.categoryTimeList, errorMessage);
+    setListMessage(UIElements.detailedTimeList, errorMessage);
+
     if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
   }
 }
 
+// --- Function to update the permission status display ---
 async function updatePomodoroPermissionStatusDisplay() {
   if (!UIElements.pomodoroNotificationPermissionStatus) {
     console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
     return;
   }
-
   try {
     const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
     if (hasPermission) {
@@ -286,8 +272,6 @@ async function updatePomodoroPermissionStatusDisplay() {
 }
 
 // --- UI Update Wrappers ---
-// (updateDisplayForSelectedRangeUI, updateDomainDisplayAndPagination, updateStatsDisplay, displayNoDataForDate, renderChartForSelectedDateUI)
-// ... these functions should remain as they are ...
 function updateDisplayForSelectedRangeUI() {
   if (!UIElements.dateRangeSelect) {
     console.warn('Date range select element not found for UI update.');
@@ -476,12 +460,10 @@ function displayNoDataForDate(displayDateLabel) {
   if (UIElements.statsPeriodSpans) {
     UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   }
-  if (UIElements.categoryTimeList) {
-    UIElements.categoryTimeList.innerHTML = `<li style="text-align: center; color: var(--text-color-muted);">${noDataMessage}</li>`;
-  }
-  if (UIElements.detailedTimeList) {
-    UIElements.detailedTimeList.innerHTML = `<li style="text-align: center; color: var(--text-color-muted);">${noDataMessage}</li>`;
-  }
+
+  setListMessage(UIElements.categoryTimeList, noDataMessage);
+  setListMessage(UIElements.detailedTimeList, noDataMessage);
+
   if (UIElements.domainPaginationDiv) {
     UIElements.domainPaginationDiv.style.display = 'none';
   }
@@ -523,8 +505,6 @@ function renderChartForSelectedDateUI() {
 }
 
 // --- Get Filtered Data ---
-// (getFilteredDataForRange)
-// ... this function should remain as it is ...
 function getFilteredDataForRange(range, isSpecificDate = false) {
   let initialDomainData = {};
   let initialCategoryData = {};
@@ -575,7 +555,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
         }
       }
     } else {
-      // 'all'
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
         initialDomainData = {};
@@ -617,8 +596,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
 }
 
 // --- Data Saving Functions ---
-// (saveCategoriesAndAssignments, saveRules)
-// ... these functions should remain as they are ...
 function saveCategoriesAndAssignments() {
   return browser.storage.local
     .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments })
@@ -651,8 +628,6 @@ function saveRules() {
 }
 
 // --- CSV Generation/Download ---
-// (convertDataToCsv, triggerCsvDownload)
-// ... these functions should remain as they are ...
 function convertDataToCsv(dataObject) {
   if (!dataObject) return '';
   const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
@@ -710,8 +685,6 @@ function triggerCsvDownload(csvString, filename) {
 }
 
 // --- Recalculation Logic ---
-// (recalculateAndUpdateCategoryTotals)
-// ... this function should remain as it is ...
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
   console.log('[Options Main] RECALCULATING category totals. Change Details:', changeDetails);
   try {
@@ -783,8 +756,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
   }
 }
 
-// (displayProductivityScore)
-// ... this function should remain as it is ...
 function displayProductivityScore(scoreData, periodLabel = 'Selected Period', isError = false) {
   if (!UIElements.productivityScoreValue || !UIElements.productivityScoreLabel) {
     console.warn('Productivity score UI elements not found in Options.');
@@ -848,7 +819,6 @@ function setupEventListeners() {
           handleEditAssignmentClick(event);
       });
     }
-    // Assignment Modal
     if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
       UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
     if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
@@ -873,7 +843,6 @@ function setupEventListeners() {
           handleEditRuleClick(event);
       });
     }
-    // Rule Modal
     if (UIElements.closeEditModalBtn && typeof handleCancelEditClick === 'function')
       UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
     if (UIElements.cancelEditRuleBtn && typeof handleCancelEditClick === 'function')
@@ -987,4 +956,4 @@ function setupEventListeners() {
     console.error('[Options Main] Error setting up event listeners:', e);
   }
 }
-console.log('[System] options-main.js loaded (v0.8.6 - Listen for Storage Changes for Pomodoro Sync)');
+console.log('[System] options-main.js loaded (v0.8.7 - Replace all unsafe innerHTML)');
