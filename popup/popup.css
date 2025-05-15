@@ -1,4 +1,4 @@
-/* popup/popup.css (v14.5 - Pomodoro - Center Aligned Badge/Time) */
+/* popup/popup.css (v14.7.1 - Robust Bell Icon Button) */
 :root {
   --popup-bg: #f0f2f5;
   --popup-text-primary: #1c1e21;
@@ -6,26 +6,23 @@
   --popup-text-muted: #8a8d91;
   --popup-text-total: #1c1e21;
   --popup-header-border: #e0e0e0;
-  --popup-options-btn-bg: #e4e6eb;
+  --popup-options-btn-bg: #e4e6eb; /* Default light mode button background */
   --popup-options-btn-hover-bg: #dcdde1;
-  --popup-options-btn-text: #050505;
+  --popup-options-btn-text: #050505; /* Color for the SVG icon in light mode */
+  --popup-options-btn-border: #caced4; /* Subtle border for the button */
 
   --popup-progress-bg: #e4e6eb;
   --popup-chart-placeholder: #aaa;
   --popup-logo-filter: none;
 
   /* Pomodoro specific colors */
-  --pomodoro-btn-primary-bg: #007bff; /* For Start/Pause & Modal Yes */
+  --pomodoro-btn-primary-bg: #007bff;
   --pomodoro-btn-primary-hover-bg: #0056b3;
-  --pomodoro-btn-secondary-bg: #6c757d; /* For Reset & Modal No */
+  --pomodoro-btn-secondary-bg: #6c757d;
   --pomodoro-btn-secondary-hover-bg: #5a6268;
   --pomodoro-btn-text: #ffffff;
-
-  /* Distinct colors for Switch Timer button */
   --pomodoro-change-phase-btn-bg: #17a2b8;
   --pomodoro-change-phase-btn-hover-bg: #138496;
-
-  /* Phase colors FOR BADGE */
   --pomodoro-phase-work-bg: #28a745;
   --pomodoro-phase-work-text: #ffffff;
   --pomodoro-phase-short-break-bg: #ffc107;
@@ -34,8 +31,6 @@
   --pomodoro-phase-long-break-text: #ffffff;
   --pomodoro-phase-default-bg: var(--pomodoro-btn-secondary-bg);
   --pomodoro-phase-default-text: var(--pomodoro-btn-text);
-
-  /* Modal specific */
   --modal-overlay-bg: rgba(0, 0, 0, 0.4);
   --modal-content-bg: #ffffff;
   --modal-text-color: #333333;
@@ -51,25 +46,20 @@
     --popup-text-muted: #8d8d91;
     --popup-text-total: #ffffff;
     --popup-header-border: #3a3a3c;
-    --popup-options-btn-bg: #0a84ff;
-    --popup-options-btn-hover-bg: #339cff;
-    --popup-options-btn-text: #ffffff;
+    --popup-options-btn-bg: #3a3a3c; /* Dark mode button background */
+    --popup-options-btn-hover-bg: #4a4a4e;
+    --popup-options-btn-text: #f5f5f7; /* Color for the SVG icon in dark mode */
+    --popup-options-btn-border: #545458; /* Subtle border for dark mode button */
 
     --popup-progress-bg: #3a3a3c;
     --popup-chart-placeholder: #888;
     --popup-logo-filter: brightness(0) invert(1);
-
-    /* Pomodoro dark mode colors */
     --pomodoro-btn-primary-bg: #0a84ff;
     --pomodoro-btn-primary-hover-bg: #339cff;
     --pomodoro-btn-secondary-bg: #58585a;
     --pomodoro-btn-secondary-hover-bg: #6c6c6e;
-
-    /* Distinct colors for Switch Timer button - dark mode */
     --pomodoro-change-phase-btn-bg: #64d2ff;
     --pomodoro-change-phase-btn-hover-bg: #82dfff;
-
-    /* Phase colors - dark mode FOR BADGE */
     --pomodoro-phase-work-bg: #30d158;
     --pomodoro-phase-work-text: #ffffff;
     --pomodoro-phase-short-break-bg: #ffd60a;
@@ -78,8 +68,6 @@
     --pomodoro-phase-long-break-text: #ffffff;
     --pomodoro-phase-default-bg: var(--pomodoro-btn-secondary-bg);
     --pomodoro-phase-default-text: var(--pomodoro-btn-text);
-
-    /* Modal dark mode */
     --modal-overlay-bg: rgba(0, 0, 0, 0.6);
     --modal-content-bg: #2c2c2e;
     --modal-text-color: #e0e0e0;
@@ -105,7 +93,6 @@ body {
   padding: 8px 15px;
 }
 
-/* Header Styles */
 .popup-header {
   display: flex;
   justify-content: space-between;
@@ -136,24 +123,28 @@ body {
 #optionsBtn.header-btn.icon-btn {
   background-color: var(--popup-options-btn-bg);
   color: var(--popup-options-btn-text);
-  border: none;
+  border: 1px solid var(--popup-options-btn-border);
   border-radius: 5px;
-  width: 32px;
+  width: 30px;
   height: 28px;
-  padding: 0;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1em;
-  line-height: 1;
-  transition: background-color 0.2s ease;
-  box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.19);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 #optionsBtn.header-btn.icon-btn:hover {
   background-color: var(--popup-options-btn-hover-bg);
+  border-color: var(--popup-options-btn-text);
 }
 
-/* Summary Section Styles */
+#optionsBtn.header-btn.icon-btn .settings-svg-icon {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .summary-section {
   margin-bottom: 6px;
   text-align: center;
@@ -298,21 +289,58 @@ body {
   }
 }
 
-/* --- Pomodoro Timer Styles --- */
 .pomodoro-section {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--popup-header-border);
-  text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
-.pomodoro-section h4 {
+.pomodoro-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pomodoro-section-header h4 {
   font-size: 0.9em;
   color: var(--popup-text-secondary);
-  margin-bottom: 10px;
-  text-align: center;
   font-weight: 600;
+  text-align: left;
+  margin: 0;
+  flex-grow: 1;
 }
+
+/* MODIFIED Styles for the icon-only button (bell icon) */
+.pomodoro-icon-btn.title-align-icon {
+  background: none;
+  border: none;
+  /* Added symmetrical padding to make the button's clickable area more robust */
+  padding: 4px 6px;
+  margin-left: 8px; /* Space from the title, was padding-left before */
+  cursor: pointer;
+  color: var(--popup-text-secondary);
+  flex-shrink: 0;
+  display: inline-flex; /* Helps center the span content */
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  /* Ensure pointer events are enabled, though default is auto */
+  pointer-events: auto;
+}
+
+/* Style for the span INSIDE the button, which holds the icon text */
+.pomodoro-icon-btn.title-align-icon span#pomodoro-notify-icon {
+  font-size: 1.1em; /* Size of the bell character */
+  display: inline-block; /* Ensures it behaves well within the flex button */
+}
+
+.pomodoro-icon-btn.title-align-icon:hover {
+  color: var(--popup-text-primary);
+}
+/* End of MODIFIED Styles */
 
 .pomodoro-timer-display {
   font-size: 2em;
@@ -321,26 +349,25 @@ body {
   margin-bottom: 10px;
   display: flex;
   justify-content: center;
-  /* CHANGED: Align items to center vertically */
   align-items: center;
   gap: 8px;
 }
 
 #pomodoro-phase {
-  font-size: 0.5em; /* Relative to parent's 2em -> 1em */
+  font-size: 0.5em;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 12px;
-  line-height: 1.2; /* Adjusted line-height for better vertical centering within badge */
+  line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   background-color: var(--pomodoro-phase-default-bg);
   color: var(--pomodoro-phase-default-text);
   margin-right: 0;
-  display: inline-flex; /* Helps with vertical alignment of text inside */
-  align-items: center; /* Helps with vertical alignment of text inside */
-  justify-content: center; /* Helps with horizontal alignment of text inside */
-  min-height: calc(1.2em + 8px); /* Match approx height of time for better visual balance if needed */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(1.2em + 8px);
 }
 
 #pomodoro-phase.work {
@@ -357,9 +384,9 @@ body {
 }
 
 #pomodoro-time {
-  font-size: 1.2em; /* Relative to parent's 2em -> 2.4em total */
+  font-size: 1.2em;
   color: var(--popup-text-total);
-  line-height: 1; /* Keep it tight */
+  line-height: 1;
 }
 
 .pomodoro-controls {
@@ -389,21 +416,18 @@ body {
 .pomodoro-btn:active {
   filter: brightness(0.95);
 }
-
 #pomodoro-start-pause-btn {
   background-color: var(--pomodoro-btn-primary-bg);
 }
 #pomodoro-start-pause-btn:hover {
   background-color: var(--pomodoro-btn-primary-hover-bg);
 }
-
 #pomodoro-reset-btn {
   background-color: var(--pomodoro-btn-secondary-bg);
 }
 #pomodoro-reset-btn:hover {
   background-color: var(--pomodoro-btn-secondary-hover-bg);
 }
-
 #pomodoro-change-phase-btn {
   background-color: var(--pomodoro-change-phase-btn-bg);
 }
@@ -411,7 +435,8 @@ body {
   background-color: var(--pomodoro-change-phase-btn-hover-bg);
 }
 
-.pomodoro-secondary-controls {
+/*
+.pomodoro-secondary-controls { 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -419,28 +444,18 @@ body {
   margin-top: 6px;
   margin-bottom: 8px;
 }
-
 .pomodoro-notify-container {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-
-#pomodoro-notify-checkbox {
-  margin: 0;
-  vertical-align: middle;
-  width: auto;
-  height: auto;
-  accent-color: var(--pomodoro-btn-primary-bg);
+.pomodoro-notify-container #pomodoro-notify-label {
+    vertical-align: middle;
+    font-size: 0.9em;
+    color: var(--popup-text-secondary);
+    cursor: pointer; 
 }
-
-.pomodoro-notify-container label {
-  font-size: 0.9em;
-  color: var(--popup-text-secondary);
-  cursor: pointer;
-  vertical-align: middle;
-  margin-bottom: 0;
-}
+*/
 
 .pomodoro-status {
   font-size: 0.85em;
@@ -448,9 +463,9 @@ body {
   min-height: 1.2em;
   font-style: italic;
   margin-top: 4px;
+  text-align: center;
 }
 
-/* --- Custom Modal Styles --- */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -458,7 +473,7 @@ body {
   width: 100%;
   height: 100%;
   background-color: var(--modal-overlay-bg);
-  display: none; /* JS handles display */
+  display: none;
   justify-content: center;
   align-items: center;
   z-index: 1000;
@@ -488,13 +503,10 @@ body {
   gap: 10px;
 }
 
-/* General button style within modal actions */
 .modal-actions .pomodoro-btn {
   padding: 6px 12px;
   font-size: 0.85em;
 }
-
-/* Specific styling for "Yes" button in modal */
 .modal-actions #custom-confirm-yes-btn {
   background-color: var(--pomodoro-btn-primary-bg);
   color: var(--pomodoro-btn-text);
@@ -502,8 +514,6 @@ body {
 .modal-actions #custom-confirm-yes-btn:hover {
   background-color: var(--pomodoro-btn-primary-hover-bg);
 }
-
-/* Specific styling for "No" button in modal */
 .modal-actions #custom-confirm-no-btn {
   background-color: var(--pomodoro-btn-secondary-bg);
   color: var(--pomodoro-btn-text);

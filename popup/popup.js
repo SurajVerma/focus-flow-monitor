@@ -1,16 +1,13 @@
-// popup.js (v9.13 - Apply Specific Phase Classes for Coloring)
+// popup.js (v9.24 - Scroll to Options & Refined Logic)
 
 // --- Global Chart Instance ---
 let hourlyChartInstance = null;
 // --- Interval ID for live popup updates ---
 let popupUpdateIntervalId = null;
 
-// --- Chart Rendering Function (no changes from previous version) ---
+// --- Chart Rendering Function ---
 function renderHourlyChart(canvasCtx, hourlyDataToday) {
-  if (hourlyChartInstance) {
-    hourlyChartInstance.destroy();
-    hourlyChartInstance = null;
-  }
+  // Ensure Chart.js is loaded
   if (typeof Chart === 'undefined') {
     console.error('Chart.js library is not loaded or available!');
     if (canvasCtx && canvasCtx.canvas) {
@@ -22,9 +19,16 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     }
     return;
   }
+
+  if (hourlyChartInstance) {
+    hourlyChartInstance.destroy();
+    hourlyChartInstance = null;
+  }
+
   const labels = [];
   const data = [];
   let maxTime = 0;
+
   for (let i = 0; i < 24; i++) {
     const hour = i % 12 === 0 ? 12 : i % 12;
     const ampm = i < 12 ? 'AM' : 'PM';
@@ -36,6 +40,7 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
       maxTime = seconds;
     }
   }
+
   if (maxTime <= 0 && canvasCtx && canvasCtx.canvas) {
     canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
     canvasCtx.font = '12px sans-serif';
@@ -44,6 +49,7 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     canvasCtx.fillText('No hourly usage data for today.', canvasCtx.canvas.width / 2, canvasCtx.canvas.height / 2);
     return;
   }
+
   try {
     hourlyChartInstance = new Chart(canvasCtx, {
       type: 'bar',
@@ -76,7 +82,7 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
               },
               label: function (context) {
                 const seconds = context.parsed.y || 0;
-                return `Time: ${formatTime(seconds, true)}`;
+                return `Time: ${typeof formatTime === 'function' ? formatTime(seconds, true) : seconds + 's'}`;
               },
             },
           },
@@ -87,7 +93,7 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
             suggestedMax: maxTime * 1.1,
             ticks: {
               callback: function (value) {
-                return formatTime(value, false);
+                return typeof formatTime === 'function' ? formatTime(value, false) : value;
               },
               maxTicksLimit: 4,
               font: { size: 10 },
@@ -129,16 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const focusScoreEl = document.getElementById('focusScoreToday');
   let hourlyChartCtx = null;
 
-  // --- Pomodoro Timer UI Elements ---
   const pomodoroPhaseEl = document.getElementById('pomodoro-phase');
   const pomodoroTimeEl = document.getElementById('pomodoro-time');
   const pomodoroStartPauseBtn = document.getElementById('pomodoro-start-pause-btn');
   const pomodoroResetBtn = document.getElementById('pomodoro-reset-btn');
   const pomodoroStatusMessageEl = document.getElementById('pomodoro-status-message');
   const pomodoroChangePhaseBtn = document.getElementById('pomodoro-change-phase-btn');
-  const pomodoroNotifyCheckbox = document.getElementById('pomodoro-notify-checkbox');
 
-  // --- Custom Confirmation Modal Elements ---
+  const pomodoroNotifyToggleBtn = document.getElementById('pomodoro-notify-toggle');
+  const pomodoroNotifyIcon = document.getElementById('pomodoro-notify-icon');
+
   const customConfirmModalEl = document.getElementById('custom-confirm-modal');
   const customConfirmMessageEl = document.getElementById('custom-confirm-message');
   const customConfirmYesBtn = document.getElementById('custom-confirm-yes-btn');
@@ -146,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let confirmYesCallback = null;
   let confirmNoCallback = null;
 
-  // Initialize Chart Canvas Context
   if (hourlyChartCanvas) {
     try {
       hourlyChartCtx = hourlyChartCanvas.getContext('2d');
@@ -158,19 +163,16 @@ document.addEventListener('DOMContentLoaded', () => {
         chartWrapper.innerHTML =
           "<p style='color: red; font-size: small; text-align: center;'>Could not initialize chart canvas.</p>";
     }
-  } else {
-    console.error('Hourly chart canvas element not found!');
   }
 
-  // Display Current Date
   if (dateEl) {
     const today = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const displayOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     try {
       dateEl.textContent =
         typeof formatDisplayDate === 'function'
           ? formatDisplayDate(today.toISOString().split('T')[0])
-          : today.toLocaleDateString(navigator.language || 'en-US', options);
+          : today.toLocaleDateString(navigator.language || 'en-US', displayOptions);
     } catch (e) {
       console.warn('Could not format date using browser locale, using default.', e);
       dateEl.textContent = today.toDateString();
@@ -183,22 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
       : () => new Date().toISOString().split('T')[0].replace(/-/g, '-');
   const todayStr = dateStringFetcher();
 
-  // Load Summary and Chart Data
   browser.storage.local
     .get(['dailyDomainData', 'dailyCategoryData', 'hourlyData', 'categoryProductivityRatings'])
     .then((result) => {
-      // ... (summary and chart data loading logic remains the same) ...
       const todaysCategoryData = result.dailyCategoryData?.[todayStr] || {};
       const todaysDomainData = result.dailyDomainData?.[todayStr] || {};
       const todaysHourlyData = result.hourlyData?.[todayStr] || {};
       const userRatings = result.categoryProductivityRatings || {};
       let totalSecondsToday = 0;
+
       if (todaysDomainData && Object.keys(todaysDomainData).length > 0) {
         totalSecondsToday = Object.values(todaysDomainData).reduce((sum, time) => sum + time, 0);
       } else if (todaysCategoryData && Object.keys(todaysCategoryData).length > 0) {
         totalSecondsToday = Object.values(todaysCategoryData).reduce((sum, time) => sum + time, 0);
       }
-      if (totalTimeEl) totalTimeEl.textContent = formatTime(totalSecondsToday, true);
+
+      if (totalTimeEl)
+        totalTimeEl.textContent =
+          typeof formatTime === 'function' ? formatTime(totalSecondsToday, true) : totalSecondsToday + 's';
+
       if (summaryEl && progressBarEl) {
         summaryEl.innerHTML = '';
         progressBarEl.innerHTML = '';
@@ -212,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }))
             .filter((cat) => cat.time > 0.1)
             .sort((a, b) => b.time - a.time);
+
           const maxItemsToDisplay = 5;
           let finalDisplayItems = [];
           if (categoryArray.length <= maxItemsToDisplay) {
@@ -221,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const remainingCategories = categoryArray.slice(maxItemsToDisplay);
             const remainingTime = remainingCategories.reduce((sum, cat) => sum + cat.time, 0);
             const realOtherIndexInTop = topSlice.findIndex((c) => c.name === 'Other');
+
             if (realOtherIndexInTop !== -1) {
               topSlice[realOtherIndexInTop].time += remainingTime;
               topSlice[realOtherIndexInTop].percentage =
@@ -240,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (finalDisplayItems.length > maxItemsToDisplay)
               finalDisplayItems = finalDisplayItems.slice(0, maxItemsToDisplay);
           }
+
           finalDisplayItems.forEach((cat) => {
             const displayPercentage = cat.time > 0.1 ? Math.max(1, Math.round(cat.percentage)) : 0;
             const itemDiv = document.createElement('div');
@@ -248,7 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
             infoDiv.className = 'category-info';
             const dotSpan = document.createElement('span');
             dotSpan.className = 'category-dot';
-            dotSpan.style.backgroundColor = getCategoryColor(cat.name);
+            dotSpan.style.backgroundColor =
+              typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
             const nameSpan = document.createElement('span');
             nameSpan.className = 'category-name';
             nameSpan.textContent = cat.name;
@@ -256,22 +265,31 @@ document.addEventListener('DOMContentLoaded', () => {
             infoDiv.appendChild(nameSpan);
             const timePercentSpan = document.createElement('span');
             timePercentSpan.className = 'category-time-percent';
-            timePercentSpan.appendChild(document.createTextNode(formatTime(cat.time, true) + ' '));
-            const percentSpan = document.createElement('span');
-            percentSpan.className = 'category-percent';
-            percentSpan.textContent = `(${displayPercentage}%)`;
-            timePercentSpan.appendChild(percentSpan);
+            timePercentSpan.appendChild(
+              document.createTextNode(
+                (typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's') + ' '
+              )
+            );
+            const percentSpanElement = document.createElement('span');
+            percentSpanElement.className = 'category-percent';
+            percentSpanElement.textContent = `(${displayPercentage}%)`;
+            timePercentSpan.appendChild(percentSpanElement);
             itemDiv.appendChild(infoDiv);
             itemDiv.appendChild(timePercentSpan);
             summaryEl.appendChild(itemDiv);
+
             const segmentDiv = document.createElement('div');
             segmentDiv.className = 'progress-bar-segment';
             const widthPercentage = Math.max(0.5, cat.percentage);
             segmentDiv.style.width = `${widthPercentage}%`;
-            segmentDiv.style.backgroundColor = getCategoryColor(cat.name);
-            segmentDiv.title = `${cat.name}: ${formatTime(cat.time, true)} (${displayPercentage}%)`;
+            segmentDiv.style.backgroundColor =
+              typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
+            segmentDiv.title = `${cat.name}: ${
+              typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's'
+            } (${displayPercentage}%)`;
             progressBarEl.appendChild(segmentDiv);
           });
+
           const totalSegmentWidth = Array.from(progressBarEl.children).reduce(
             (sum, el) => sum + parseFloat(el.style.width || 0),
             0
@@ -287,10 +305,14 @@ document.addEventListener('DOMContentLoaded', () => {
           progressBarEl.style.display = 'none';
         }
       }
+
       if (hourlyChartCtx) renderHourlyChart(hourlyChartCtx, todaysHourlyData);
       if (focusScoreEl) {
         try {
-          const scoreData = calculateFocusScore(todaysCategoryData, userRatings);
+          const scoreData =
+            typeof calculateFocusScore === 'function'
+              ? calculateFocusScore(todaysCategoryData, userRatings)
+              : { score: 0 };
           focusScoreEl.textContent = `Focus Score: ${scoreData.score}%`;
           focusScoreEl.classList.remove('score-low', 'score-medium', 'score-high');
           if (scoreData.score < 40) focusScoreEl.classList.add('score-low');
@@ -322,8 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (optionsBtn) {
     optionsBtn.addEventListener('click', () => browser.runtime.openOptionsPage());
-  } else {
-    console.error('Options button not found');
   }
 
   const POMODORO_PHASES = {
@@ -338,43 +358,78 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
-  function updatePomodoroDisplay(state) {
-    if (!state) {
-      console.warn('[Pomodoro Popup] No state received to update display.');
-      if (pomodoroPhaseEl) pomodoroPhaseEl.textContent = 'N/A';
-      if (pomodoroTimeEl) pomodoroTimeEl.textContent = '--:--';
-      if (pomodoroStartPauseBtn) pomodoroStartPauseBtn.textContent = 'Start';
-      if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Loading...';
-      if (pomodoroNotifyCheckbox) pomodoroNotifyCheckbox.checked = true;
+  async function updatePomodoroDisplay(state) {
+    if (
+      !pomodoroPhaseEl ||
+      !pomodoroTimeEl ||
+      !pomodoroStartPauseBtn ||
+      !pomodoroNotifyIcon ||
+      !pomodoroNotifyToggleBtn
+    ) {
+      console.warn('[Pomodoro Popup] One or more Pomodoro UI elements are missing. Cannot update display.');
       return;
     }
 
-    if (pomodoroPhaseEl) {
-      pomodoroPhaseEl.textContent = state.currentPhase;
-      // Apply specific classes for phase colors
-      pomodoroPhaseEl.classList.remove('work', 'short-break', 'long-break'); // Remove old classes first
-      if (state.currentPhase === POMODORO_PHASES.WORK) {
-        pomodoroPhaseEl.classList.add('work');
-      } else if (state.currentPhase === POMODORO_PHASES.SHORT_BREAK) {
-        pomodoroPhaseEl.classList.add('short-break');
-      } else if (state.currentPhase === POMODORO_PHASES.LONG_BREAK) {
-        pomodoroPhaseEl.classList.add('long-break');
+    if (!state) {
+      console.warn('[Pomodoro Popup] No state received to update display.');
+      pomodoroPhaseEl.textContent = 'N/A';
+      pomodoroTimeEl.textContent = '--:--';
+      pomodoroStartPauseBtn.textContent = 'Start';
+      if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Loading...';
+
+      pomodoroNotifyIcon.textContent = '🔕'; // Default to notifications off icon if state is missing
+      pomodoroNotifyToggleBtn.title = 'Enable Notifications / Setup';
+      pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
+      return;
+    }
+
+    pomodoroPhaseEl.textContent = state.currentPhase;
+    pomodoroPhaseEl.classList.remove('work', 'short-break', 'long-break');
+    if (state.currentPhase === POMODORO_PHASES.WORK) pomodoroPhaseEl.classList.add('work');
+    else if (state.currentPhase === POMODORO_PHASES.SHORT_BREAK) pomodoroPhaseEl.classList.add('short-break');
+    else if (state.currentPhase === POMODORO_PHASES.LONG_BREAK) pomodoroPhaseEl.classList.add('long-break');
+
+    pomodoroTimeEl.textContent = formatTimeForDisplay(state.remainingTime);
+    pomodoroStartPauseBtn.textContent = state.timerState === 'running' ? 'Pause' : 'Start';
+
+    // The 'state.notifyEnabled' comes directly from the background script,
+    // which has already reconciled it with actual browser permissions.
+    // So, we can trust this value to reflect whether notifications *can* and *will* be shown.
+    const isNotifyEffectivelyEnabled = state.notifyEnabled === true;
+
+    if (isNotifyEffectivelyEnabled) {
+      pomodoroNotifyIcon.textContent = '🔔';
+      pomodoroNotifyToggleBtn.title = 'Notifications: On (Click to disable)';
+      pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Disable Notifications');
+    } else {
+      pomodoroNotifyIcon.textContent = '🔕';
+      // If notifications are not effectively enabled, check if it's due to missing permission
+      // to guide the user appropriately.
+      try {
+        const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
+        if (hasPermission) {
+          // Permission exists, but notifyEnabled is false (user turned them off)
+          pomodoroNotifyToggleBtn.title = 'Notifications: Off (Click to enable)';
+          pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Enable Notifications');
+        } else {
+          // Permission does NOT exist, and notifyEnabled is false (likely because of missing permission)
+          pomodoroNotifyToggleBtn.title = 'Notifications: Setup Required (Click to open settings)';
+          pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
+        }
+      } catch (err) {
+        console.warn('[Popup] Error checking notification permission for title (updatePomodoroDisplay):', err);
+        pomodoroNotifyToggleBtn.title = 'Notifications: Check Settings'; // Fallback title
+        pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Check Notification Settings');
       }
     }
-    if (pomodoroTimeEl) pomodoroTimeEl.textContent = formatTimeForDisplay(state.remainingTime);
-    if (pomodoroStartPauseBtn) {
-      pomodoroStartPauseBtn.textContent = state.timerState === 'running' ? 'Pause' : 'Start';
-    }
-    if (pomodoroNotifyCheckbox) {
-      pomodoroNotifyCheckbox.checked = state.notifyEnabled !== undefined ? state.notifyEnabled : true;
-    }
+
     if (pomodoroStatusMessageEl) {
       if (state.timerState === 'paused') {
         pomodoroStatusMessageEl.textContent = 'Paused';
       } else if (
         state.timerState === 'stopped' &&
         state.currentPhase !== POMODORO_PHASES.WORK &&
-        state.durations &&
+        state.durations && // Ensure durations is present
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `${state.currentPhase} complete. Start next?`;
@@ -382,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.timerState === 'stopped' &&
         state.currentPhase === POMODORO_PHASES.WORK &&
         state.workSessionsCompleted > 0 &&
-        state.durations &&
+        state.durations && // Ensure durations is present
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `Work session complete.`;
@@ -433,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentButtonText === 'Start' || currentButtonText === 'Resume' ? 'startPomodoro' : 'pausePomodoro';
       browser.runtime
         .sendMessage({ action: action })
-        .then(fetchAndUpdatePomodoroStatus)
+        .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI after action
         .catch((err) => console.error(`Error sending ${action}:`, err));
     });
   }
@@ -455,15 +510,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (isAtVeryStartOfCycle) {
             if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Timer is already at the start.';
-            setTimeout(() => updatePomodoroDisplay(state), 1500);
+            setTimeout(() => updatePomodoroDisplay(state), 1500); // Revert message after a delay
             return;
           }
-
           const message = `Reset current ${state.currentPhase} timer?`;
           showCustomConfirm(message, () => {
             browser.runtime
               .sendMessage({ action: 'resetPomodoro', resetCycle: false })
-              .then(fetchAndUpdatePomodoroStatus)
+              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
               .catch((err) => console.error('Error sending resetPomodoro:', err));
           });
         })
@@ -471,7 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Event Listener for "Switch Timer" (pomodoroChangePhaseBtn) Button
   if (pomodoroChangePhaseBtn) {
     pomodoroChangePhaseBtn.addEventListener('click', () => {
       browser.runtime
@@ -485,13 +538,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showCustomConfirm('Switching the timer will stop the current session. Continue?', () => {
               browser.runtime
                 .sendMessage({ action: 'changePomodoroPhase' })
-                .then(fetchAndUpdatePomodoroStatus)
+                .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
                 .catch((err) => console.error('Error sending changePomodoroPhase:', err));
             });
           } else {
             browser.runtime
               .sendMessage({ action: 'changePomodoroPhase' })
-              .then(fetchAndUpdatePomodoroStatus)
+              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
               .catch((err) => console.error('Error sending changePomodoroPhase:', err));
           }
         })
@@ -499,45 +552,94 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Event Listener for Notify Me Checkbox
-  if (pomodoroNotifyCheckbox) {
-    pomodoroNotifyCheckbox.addEventListener('change', () => {
-      const notifyEnabled = pomodoroNotifyCheckbox.checked;
-      browser.runtime
-        .sendMessage({ action: 'updatePomodoroNotificationSetting', enabled: notifyEnabled })
-        .then((response) => {
-          if (response && response.success) {
-            console.log('Notification setting updated via popup.');
-          } else {
-            console.error('Failed to update notification setting via popup.');
-          }
-          fetchAndUpdatePomodoroStatus();
-        })
-        .catch((err) => {
-          console.error('Error sending updatePomodoroNotificationSetting:', err);
-        });
-    });
+  async function handleNotifyToggleClick() {
+    console.log('[Popup] handleNotifyToggleClick initiated.');
+    if (!pomodoroNotifyToggleBtn) {
+      console.error('[Popup] pomodoroNotifyToggleBtn not found in handleNotifyToggleClick.');
+      return;
+    }
+
+    try {
+      console.log('[Popup] Checking notification permissions...');
+      const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
+      console.log(`[Popup] Notification permission present: ${hasPermission}`);
+
+      if (hasPermission) {
+        console.log('[Popup] Permission granted. Getting current Pomodoro status to determine toggle direction...');
+        // Fetch the current state from the background, which includes the *reconciled* notifyEnabled.
+        const currentState = await browser.runtime.sendMessage({ action: 'getPomodoroStatus' });
+
+        if (currentState) {
+          const currentNotifySettingEnabled = currentState.notifyEnabled; // This is the authoritative state
+          const newDesiredState = !currentNotifySettingEnabled; // User's intent is to toggle
+          console.log(
+            `[Popup] Current notifyEnabled from background: ${currentNotifySettingEnabled}. Requesting change to: ${newDesiredState}`
+          );
+
+          // Send the user's *intent* to the background.
+          // The background will handle saving this intent, reconciling with permissions if needed,
+          // and then broadcasting the final state via 'pomodoroStatusUpdate'.
+          browser.runtime
+            .sendMessage({
+              action: 'updatePomodoroNotificationSetting',
+              enabled: newDesiredState,
+            })
+            // No explicit call to fetchAndUpdatePomodoroStatus() here.
+            // The UI will be updated reactively by the 'pomodoroStatusUpdate' message
+            // listener when the background broadcasts the new state.
+            .catch((err) => {
+              console.error('[Popup] Error sending notification toggle message to background:', err);
+              fetchAndUpdatePomodoroStatus(); // Fallback UI refresh on error
+            });
+        } else {
+          console.error('[Popup] Could not get current Pomodoro status to determine toggle direction.');
+          fetchAndUpdatePomodoroStatus(); // Attempt to refresh UI as a fallback
+        }
+      } else {
+        // Permission not granted, open options page with hash for scrolling
+        console.log('[Popup] Notification permission not granted. Opening options page to #pomodoro-settings-section.');
+        const optionsUrl = browser.runtime.getURL('options/options.html#pomodoro-settings-section');
+        browser.tabs.create({ url: optionsUrl });
+        window.close(); // Close the popup after opening the options page
+      }
+    } catch (err) {
+      console.error('[Popup] Error in handleNotifyToggleClick:', err);
+      try {
+        // Fallback: try to open options page without hash on error
+        browser.runtime.openOptionsPage();
+        window.close();
+      } catch (openErr) {
+        console.error('[Popup] Could not open options page on error:', openErr);
+      }
+    }
+  }
+
+  if (pomodoroNotifyToggleBtn) {
+    console.log('[Popup] Adding click listener to pomodoroNotifyToggleBtn.');
+    pomodoroNotifyToggleBtn.addEventListener('click', handleNotifyToggleClick);
+  } else {
+    console.error('[Popup] pomodoroNotifyToggleBtn element not found. Cannot add listener.');
   }
 
   function fetchAndUpdatePomodoroStatus() {
     if (!browser.runtime || !browser.runtime.sendMessage) {
       console.warn('[Pomodoro Popup] Browser runtime or sendMessage not available. Cannot fetch status.');
-      updatePomodoroDisplay(null);
+      updatePomodoroDisplay(null); // Update UI to a "loading/error" state
       return Promise.resolve();
     }
     return browser.runtime
       .sendMessage({ action: 'getPomodoroStatus' })
       .then((response) => {
         if (response) {
-          updatePomodoroDisplay(response);
+          updatePomodoroDisplay(response); // Update UI with fresh status
         } else {
           console.warn('[Pomodoro Popup] No response or error from getPomodoroStatus.');
-          updatePomodoroDisplay(null);
+          updatePomodoroDisplay(null); // Update UI to a "loading/error" state
         }
       })
       .catch((err) => {
         console.error('Error fetching Pomodoro status:', err);
-        updatePomodoroDisplay(null);
+        updatePomodoroDisplay(null); // Update UI to a "loading/error" state
       });
   }
 
@@ -550,15 +652,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.visibilityState === 'visible') {
       fetchAndUpdatePomodoroStatus();
     }
-  }, 1000);
+  }, 1000); // Refresh every second
 
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'pomodoroStatusUpdate' && request.status) {
-      console.log('[Popup] Received pomodoroStatusUpdate from background:', request.status);
-      updatePomodoroDisplay(request.status);
+      console.log('[Popup] Received direct pomodoroStatusUpdate from background:', request.status);
+      updatePomodoroDisplay(request.status); // Update UI with the broadcasted status
     }
+
     return false;
   });
 });
 
-console.log('[System] popup.js loaded (v9.12 - Final Pomodoro Controls & UI Polish Logic)');
+console.log('[System] popup.js loaded (v9.24 - Scroll to Options & Refined Logic)');

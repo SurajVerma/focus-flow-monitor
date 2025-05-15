@@ -1,4 +1,4 @@
-// options/options-state.js (v0.7.9 - Total Time Stat UI Refs)
+// options/options-state.js (v0.8.0 - Pomodoro Notification UI Refs)
 
 // --- Storage Keys ---
 const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
@@ -17,6 +17,7 @@ const STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO = 'blockPage_showLimitInfo';
 const STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO = 'blockPage_showScheduleInfo';
 const STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE = 'blockPage_showQuote';
 const STORAGE_KEY_BLOCK_PAGE_USER_QUOTES = 'blockPage_userQuotes';
+const STORAGE_KEY_POMODORO_SETTINGS = 'pomodoroUserSettings';
 
 // --- Global App State ---
 let AppState = {
@@ -36,7 +37,8 @@ let AppState = {
   domainItemsPerPage: 10,
   fullDomainDataSorted: [],
   calendarDate: new Date(),
-  selectedDateStr: getCurrentDateString(), // Assumes getCurrentDateString is available from utils
+  selectedDateStr:
+    typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0], // Ensure getCurrentDateString is available
   currentChartViewMode: 'domain',
   editingRuleIndex: -1,
   editingAssignmentOriginalDomain: null,
@@ -53,6 +55,10 @@ let AppState = {
   blockPageShowScheduleInfo: true,
   blockPageShowQuote: false,
   blockPageUserQuotes: [],
+
+  // NEW: Pomodoro settings state for options page
+  pomodoroNotifyEnabled: true, // Default, will be loaded from storage
+  isRequestingPermission: false,
 };
 
 // --- UI Element References ---
@@ -140,7 +146,6 @@ function queryUIElements() {
   UIElements.productivityScoreLabel = document.getElementById('productivityScoreLabel');
   UIElements.productivityScoreValue = document.getElementById('productivityScoreValue');
 
-  // UI Elements for Block Page Customization
   UIElements.blockPageCustomHeadingInput = document.getElementById('blockPageCustomHeading');
   UIElements.blockPageCustomMessageTextarea = document.getElementById('blockPageCustomMessage');
   UIElements.blockPageCustomButtonTextInput = document.getElementById('blockPageCustomButtonText');
@@ -153,11 +158,15 @@ function queryUIElements() {
   UIElements.blockPageUserQuotesContainer = document.getElementById('blockPageUserQuotesContainer');
   UIElements.blockPageUserQuotesTextarea = document.getElementById('blockPageUserQuotes');
 
-  // START: New UI Element References for Total Time Statistic
   UIElements.totalTimeForRangeContainer = document.getElementById('totalTimeForRangeContainer');
   UIElements.totalTimeForRangeLabel = document.getElementById('totalTimeForRangeLabel');
   UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
-  // END: New UIElement References
+
+  // NEW: UI Element References for Pomodoro Notification Settings
+  UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
+  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus');
+  // Add references for other Pomodoro settings if you add them (e.g., duration inputs)
+  // UIElements.pomodoroWorkDurationInput = document.getElementById('pomodoroWorkDuration');
 
   // Basic check to ensure critical elements were found
   if (
@@ -177,11 +186,12 @@ function queryUIElements() {
     !UIElements.blockPageShowUrlCheckbox ||
     !UIElements.blockPageShowQuoteCheckbox ||
     !UIElements.blockPageUserQuotesTextarea ||
-    // START: Check for new elements
     !UIElements.totalTimeForRangeContainer ||
     !UIElements.totalTimeForRangeLabel ||
-    !UIElements.totalTimeForRangeValue
-    // END: Check for new elements
+    !UIElements.totalTimeForRangeValue ||
+    // NEW: Check for new Pomodoro elements
+    !UIElements.pomodoroEnableNotificationsCheckbox ||
+    !UIElements.pomodoroNotificationPermissionStatus
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure
@@ -199,4 +209,14 @@ function queryUIElements() {
   return true; // Indicate success
 }
 
-console.log('[System] options-state.js v0.7.9 loaded');
+if (typeof getCurrentDateString === 'undefined') {
+  function getCurrentDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+}
+
+console.log('[System] options-state.js v0.8.0 loaded');

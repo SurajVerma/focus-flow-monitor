@@ -1,4 +1,4 @@
-/* options.css (v0.8.6 - Added Total Time for Range Styles) */
+/* options.css (v0.8.7 - Added Pomodoro Notification Settings Styles) */
 
 /* --- Base & Variables --- */
 :root {
@@ -31,6 +31,8 @@
   --text-color-warning-button: #212529;
   --text-color-link: var(--bg-button-primary);
   --text-color-disabled: #666666;
+  --text-color-permission-granted: var(--bg-button-success);
+  --text-color-permission-denied: var(--bg-button-danger);
 
   --border-color-light: #e9ecef;
   --border-color-medium: #dee2e6;
@@ -123,7 +125,7 @@ h4 {
 }
 
 hr {
-  display: none; /* We use spacing between sections instead of visible hr */
+  display: none;
 }
 
 .form-group {
@@ -559,7 +561,6 @@ button.export-button:hover {
 }
 
 #domainPagination,
-/* #calendarDetailPopup, - This is displayed by JS */
 #importFileInput,
 #importStatus,
 #editRuleModal,
@@ -618,7 +619,7 @@ button.export-button:hover {
 .stats-list-container {
   display: flex;
   flex-direction: column;
-  min-height: 150px; /* Default min-height */
+  min-height: 150px;
 }
 .stats-list-container h3 {
   margin-top: 0;
@@ -746,7 +747,7 @@ button.export-button:hover {
   max-width: 250px;
   z-index: 10;
   pointer-events: none;
-  display: none; /* Initially hidden, shown by JS */
+  display: none;
 }
 .calendar-detail-popup strong {
   display: block;
@@ -832,7 +833,7 @@ button.export-button:hover {
   height: 100%;
   overflow: auto;
   background-color: rgba(0, 0, 0, 0.5);
-  display: none; /* Initially hidden, shown by JS */
+  display: none;
   align-items: center;
   justify-content: center;
 }
@@ -1077,7 +1078,6 @@ button.export-button:hover {
   margin-right: auto;
 }
 
-/* Block Page Customization Styles */
 #block-page-customization-section .form-group {
   margin-bottom: var(--spacing-lg);
 }
@@ -1112,30 +1112,73 @@ button.export-button:hover {
   margin-top: var(--spacing-sm);
 }
 
-/* START: Styles for Total Time for Range */
 .total-time-range-container {
-  text-align: center; /* Center the content within this box */
-  margin-top: var(--spacing-lg); /* Add some space above it */
-  padding: var(--spacing-lg); /* Consistent padding */
-  min-height: auto; /* Override min-height from .stats-list-container if needed, or set specific */
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  min-height: auto;
   display: flex;
 }
 
 .total-time-range-container h3 {
-  margin-top: 0; /* Remove default h3 margin if it's too much */
-  margin-bottom: var(--spacing-sm); /* Space between label and value */
-  font-size: 1.1rem; /* Slightly smaller than main section h3 */
+  margin-top: 0;
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--text-color-secondary);
 }
 
 .total-time-value {
-  font-size: 1.6em; /* Make the total time value prominent */
+  font-size: 1.6em;
   font-weight: 700;
   color: var(--text-color-primary);
-  padding: var(--spacing-xs) 0; /* Add a little vertical padding */
+  padding: var(--spacing-xs) 0;
 }
-/* END: Styles for Total Time for Range */
+
+/* New Styles for Pomodoro Notification Settings */
+#pomodoro-settings-section .form-group > label {
+  /* General label for the setting */
+  display: block; /*Make it full width before the inline group */
+  margin-bottom: var(--spacing-sm); /* Add some space below this main label */
+}
+.permission-status-label {
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-label-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-group-inline {
+  display: flex; /* Align items in a row */
+  align-items: center; /* Vertically align checkbox and text */
+  gap: var(--spacing-sm); /* Space between checkbox and status text */
+  margin-top: var(--spacing-xs); /* Space above the checkbox and status text */
+}
+
+.checkbox-group-inline input[type='checkbox'] {
+  width: auto; /* Don't make checkbox full width */
+  margin-right: var(--spacing-xs); /* Space between checkbox and its implicit label (if any) */
+  vertical-align: middle;
+}
+
+.permission-status-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  font-style: italic;
+  vertical-align: middle;
+}
+
+.permission-status-text.granted {
+  color: var(--text-color-permission-granted);
+  font-weight: 500;
+}
+
+.permission-status-text.denied {
+  color: var(--text-color-permission-denied);
+  font-weight: 500;
+}
+/* End New Styles */
 
 @media (max-width: 900px) {
   .stats-dashboard {
@@ -1230,9 +1273,12 @@ button.export-button:hover {
   #block-page-customization-section .checkbox-group {
     padding-left: 0;
   }
-  /* Adjust total time value font size for smaller screens */
   .total-time-value {
     font-size: 1.4em;
+  }
+  .checkbox-group-inline {
+    /* Ensure it doesn't break on small screens */
+    flex-wrap: wrap; /* Allow wrapping if space is very tight */
   }
 }
 
@@ -1277,6 +1323,8 @@ button.export-button:hover {
     --text-color-warning-button: #1c1c1e;
     --text-color-link: var(--bg-button-primary);
     --text-color-disabled: #999;
+    --text-color-permission-granted: var(--accent-color-green); /* Dark mode success color */
+    --text-color-permission-denied: var(--accent-color-red); /* Dark mode danger color */
     --border-color-light: #3a3a3c;
     --border-color-medium: #4a4a4c;
     --border-color-input: #545456;
@@ -1343,7 +1391,6 @@ button.export-button:hover {
   #block-page-customization-section .checkbox-group label {
     color: var(--text-color-primary);
   }
-  /* Dark mode for total time value */
   .total-time-value {
     color: var(--text-color-primary);
   }

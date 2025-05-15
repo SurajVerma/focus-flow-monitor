@@ -1,4 +1,4 @@
-// options/options-main.js (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified)
+// options/options-main.js (v0.8.6 - Listen for Storage Changes for Pomodoro Sync)
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,18 +22,96 @@ document.addEventListener('DOMContentLoaded', () => {
       radioToCheck.checked = true;
     } else {
       const fallback = document.querySelector('input[name="chartView"][value="domain"]');
-      if (fallback) fallback.checked = true;
+      if (fallback) fallback.checked = true; // Default to 'domain' if currentChartViewMode is somehow invalid
     }
   } catch (e) {
     console.error('Error setting initial chart view radio button:', e);
   }
-  loadAllData(); // Load all settings and tracking data
-  setupEventListeners(); // Setup all event listeners for the options page
-  console.log('Options Main script initialized (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified).');
+
+  loadAllData().then(() => {
+    setupEventListeners(); // Setup all event listeners for the options page
+
+    // --- NEW: Register storage change listener for Pomodoro settings ---
+    if (browser.storage && browser.storage.onChanged) {
+      browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
+      console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
+    }
+    // --- END NEW ---
+
+    // Handle scrolling to a specific section if a hash is present in the URL
+    if (window.location.hash) {
+      const sectionId = window.location.hash.substring(1);
+      // Ensure this ID matches your HTML for the Pomodoro settings section
+      if (sectionId === 'pomodoro-settings-section') {
+        const sectionElement = document.getElementById(sectionId);
+        if (sectionElement) {
+          console.log(`[Options Main] Scrolling to section: ${sectionId}`);
+          sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Optional: Add a temporary highlight for visual feedback
+          sectionElement.style.transition = 'background-color 0.9s ease-in-out';
+          sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)'; // Light yellow
+          setTimeout(() => {
+            sectionElement.style.backgroundColor = ''; // Remove highlight
+          }, 2000); // Highlight for 2 seconds
+        } else {
+          console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
+        }
+      }
+    }
+  });
+  console.log('Options Main script initialized (v0.8.6 - Listen for Storage Changes for Pomodoro Sync).');
 });
 
+// --- NEW: Function to handle storage changes for Pomodoro notification settings ---
+/**
+ * Handles changes to browser.storage.local, specifically looking for updates
+ * to the Pomodoro notification settings. If a change is detected, it updates
+ * the UI elements on the options page to reflect the new state.
+ * @param {object} changes - An object describing the changes. Each key is the name of a changed item,
+ * and its value is a browser.storage.StorageChange object.
+ * @param {string} area - The name of the storage area ("sync", "local", or "managed") that changed.
+ */
+function handlePomodoroSettingsStorageChange(changes, area) {
+  // We are only interested in changes to 'local' storage and specifically to our Pomodoro settings key
+  if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
+    // STORAGE_KEY_POMODORO_SETTINGS from options-state.js
+    const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
+
+    // Check if the new value exists and has the notifyEnabled property
+    if (newStorageValue && newStorageValue.notifyEnabled !== undefined) {
+      const newNotifyState = newStorageValue.notifyEnabled;
+
+      console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
+
+      // Update the AppState (options page's internal state) if it's different
+      if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
+        AppState.pomodoroNotifyEnabled = newNotifyState;
+      }
+
+      // Update the checkbox UI element if it's different from the new state
+      if (
+        UIElements.pomodoroEnableNotificationsCheckbox &&
+        UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
+      ) {
+        UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState;
+        console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
+      }
+
+      // Also update the permission status text display (e.g., "(Permission: Granted)"),
+      // as the actual browser permission status might need to be re-evaluated in conjunction
+      // with the new setting state.
+      if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
+        // This function should ideally re-check browser.permissions.contains()
+        updatePomodoroPermissionStatusDisplay();
+      }
+    }
+  }
+}
+// --- END NEW ---
+
 // --- Data Loading ---
-function loadAllData() {
+async function loadAllData() {
+  // Made async to await permission check
   console.log('[Options Main] loadAllData starting...');
   const keysToLoad = [
     'trackedData',
@@ -44,151 +122,174 @@ function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD,
-    STORAGE_KEY_DATA_RETENTION_DAYS,
-    STORAGE_KEY_PRODUCTIVITY_RATINGS,
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
-    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
-    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
+    STORAGE_KEY_IDLE_THRESHOLD, // From options-state.js
+    STORAGE_KEY_DATA_RETENTION_DAYS, // From options-state.js
+    STORAGE_KEY_PRODUCTIVITY_RATINGS, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_URL, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, // From options-state.js
+    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, // From options-state.js
+    STORAGE_KEY_POMODORO_SETTINGS, // From options-state.js (Added Pomodoro settings key)
   ];
 
-  browser.storage.local
-    .get(keysToLoad)
-    .then((result) => {
-      console.log('[Options Main] Data loaded from storage.');
-      try {
-        AppState.trackedData = result.trackedData || {};
-        AppState.categoryTimeData = result.categoryTimeData || {};
-        AppState.dailyDomainData = result.dailyDomainData || {};
-        AppState.dailyCategoryData = result.dailyCategoryData || {};
-        AppState.hourlyData = result.hourlyData || {};
-        AppState.categories = result.categories || ['Other'];
-        AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
-        if (!AppState.categories.includes('Other')) {
-          AppState.categories.push('Other');
-        }
-        AppState.categoryAssignments = result.categoryAssignments || {};
-        AppState.rules = result.rules || [];
+  try {
+    const result = await browser.storage.local.get(keysToLoad);
+    console.log('[Options Main] Data loaded from storage:', result);
 
-        const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
-        if (UIElements.idleThresholdSelect) {
-          UIElements.idleThresholdSelect.value =
-            savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
-        }
+    // --- Standard Data Processing ---
+    AppState.trackedData = result.trackedData || {};
+    AppState.categoryTimeData = result.categoryTimeData || {};
+    AppState.dailyDomainData = result.dailyDomainData || {};
+    AppState.dailyCategoryData = result.dailyCategoryData || {};
+    AppState.hourlyData = result.hourlyData || {};
+    AppState.categories = result.categories || ['Other']; // Default if no categories exist
+    AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
 
-        const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
-        if (UIElements.dataRetentionSelect) {
-          UIElements.dataRetentionSelect.value =
-            savedRetentionDays !== undefined && savedRetentionDays !== null
-              ? savedRetentionDays
-              : DEFAULT_DATA_RETENTION_DAYS;
-        }
+    // Ensure 'Other' category exists
+    if (!AppState.categories.includes('Other')) {
+      AppState.categories.push('Other');
+    }
 
-        AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
-        AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
-        AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
-        AppState.blockPageShowUrl =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
-        AppState.blockPageShowReason =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
-        AppState.blockPageShowRule =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
-        AppState.blockPageShowLimitInfo =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
-            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
-            : true;
-        AppState.blockPageShowScheduleInfo =
-          result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
-            ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
-            : true;
-        AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
-        AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
-          ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
-          : [];
+    AppState.categoryAssignments = result.categoryAssignments || {};
+    AppState.rules = result.rules || [];
 
-        if (UIElements.blockPageCustomHeadingInput)
-          UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
-        if (UIElements.blockPageCustomMessageTextarea)
-          UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
-        if (UIElements.blockPageCustomButtonTextInput)
-          UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
-        if (UIElements.blockPageShowUrlCheckbox)
-          UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
-        if (UIElements.blockPageShowReasonCheckbox)
-          UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
-        if (UIElements.blockPageShowRuleCheckbox)
-          UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
-        if (UIElements.blockPageShowLimitInfoCheckbox)
-          UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
-        if (UIElements.blockPageShowScheduleInfoCheckbox)
-          UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
-        if (UIElements.blockPageShowQuoteCheckbox) {
-          UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
-          if (UIElements.blockPageUserQuotesContainer) {
-            UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
-          }
-        }
-        if (UIElements.blockPageUserQuotesTextarea)
-          UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
+    // Idle Threshold Setting
+    const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
+    if (UIElements.idleThresholdSelect) {
+      UIElements.idleThresholdSelect.value =
+        savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
+    }
 
-        populateCategoryList();
-        populateCategorySelect();
-        populateAssignmentList();
-        populateRuleCategorySelect();
-        populateRuleList();
-        populateProductivitySettings();
-        renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
-        updateDisplayForSelectedRangeUI();
-        highlightSelectedCalendarDay(AppState.selectedDateStr);
-      } catch (processingError) {
-        console.error(
-          '[Options Main] Error during data processing/UI update after loading from storage!',
-          processingError
-        );
-        if (UIElements.categoryTimeList) {
-          UIElements.categoryTimeList.replaceChildren();
-          const errorLi = document.createElement('li');
-          errorLi.textContent = 'Error loading data.';
-          UIElements.categoryTimeList.appendChild(errorLi);
-        }
-        if (UIElements.detailedTimeList) {
-          UIElements.detailedTimeList.replaceChildren();
-          const errorLi = document.createElement('li');
-          errorLi.textContent = 'Error loading data.';
-          UIElements.detailedTimeList.appendChild(errorLi);
-        }
-        clearChartOnError('Error processing data');
+    // Data Retention Setting
+    const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
+    if (UIElements.dataRetentionSelect) {
+      UIElements.dataRetentionSelect.value =
+        savedRetentionDays !== undefined && savedRetentionDays !== null
+          ? savedRetentionDays
+          : DEFAULT_DATA_RETENTION_DAYS;
+    }
+
+    // Block Page Customization AppState and UI updates
+    AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
+    AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
+    AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
+    AppState.blockPageShowUrl =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
+    AppState.blockPageShowReason =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
+    AppState.blockPageShowRule =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
+    AppState.blockPageShowLimitInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
+        : true;
+    AppState.blockPageShowScheduleInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
+        : true;
+    AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
+    AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
+      ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
+      : [];
+
+    if (UIElements.blockPageCustomHeadingInput)
+      UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
+    if (UIElements.blockPageCustomMessageTextarea)
+      UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
+    if (UIElements.blockPageCustomButtonTextInput)
+      UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
+    if (UIElements.blockPageShowUrlCheckbox) UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
+    if (UIElements.blockPageShowReasonCheckbox)
+      UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
+    if (UIElements.blockPageShowRuleCheckbox) UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
+    if (UIElements.blockPageShowLimitInfoCheckbox)
+      UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
+    if (UIElements.blockPageShowScheduleInfoCheckbox)
+      UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
+    if (UIElements.blockPageShowQuoteCheckbox) {
+      UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
+      if (UIElements.blockPageUserQuotesContainer) {
+        UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
       }
-    })
-    .catch((error) => {
-      console.error('[Options Main] storage.local.get FAILED!', error);
-      if (UIElements.categoryTimeList) {
-        UIElements.categoryTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = 'Failed to load data.';
-        UIElements.categoryTimeList.appendChild(errorLi);
-      }
-      if (UIElements.detailedTimeList) {
-        UIElements.detailedTimeList.replaceChildren();
-        const errorLi = document.createElement('li');
-        errorLi.textContent = 'Failed to load data.';
-        UIElements.detailedTimeList.appendChild(errorLi);
-      }
-      clearChartOnError('Failed to load data');
-    });
+    }
+    if (UIElements.blockPageUserQuotesTextarea)
+      UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
+
+    // Load and Apply Pomodoro Notification Settings
+    const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
+    AppState.pomodoroNotifyEnabled =
+      pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true; // Default to true
+    console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`);
+
+    if (UIElements.pomodoroEnableNotificationsCheckbox) {
+      UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
+    }
+    // updatePomodoroPermissionStatusDisplay will be called by the storage listener if needed,
+    // and also when the checkbox is manually toggled. It's also called after loadAllData completes.
+    await updatePomodoroPermissionStatusDisplay();
+
+    // Populate UI Lists and Render Initial Stats
+    if (typeof populateCategoryList === 'function') populateCategoryList();
+    if (typeof populateCategorySelect === 'function') populateCategorySelect();
+    if (typeof populateAssignmentList === 'function') populateAssignmentList();
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
+    if (typeof populateRuleList === 'function') populateRuleList();
+    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
+    if (typeof renderCalendar === 'function')
+      renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
+    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+    if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
+  } catch (error) {
+    console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
+    if (UIElements.categoryTimeList) {
+      UIElements.categoryTimeList.innerHTML = '<li>Error loading data. Please try refreshing.</li>';
+    }
+    if (UIElements.detailedTimeList) {
+      UIElements.detailedTimeList.innerHTML = '<li>Error loading data. Please try refreshing.</li>';
+    }
+    if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
+  }
+  // This was duplicated, removing the second call to scroll logic.
+  // The scroll logic is now inside the loadAllData().then() block in DOMContentLoaded.
+}
+
+// --- NEW: Function to update the permission status display ---
+// This function should be present in your options-main.js or options-handlers.js
+// Ensure it's correctly defined and accessible.
+async function updatePomodoroPermissionStatusDisplay() {
+  if (!UIElements.pomodoroNotificationPermissionStatus) {
+    console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
+    return;
+  }
+
+  try {
+    const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
+    if (hasPermission) {
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text granted';
+    } else {
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Not Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text denied';
+    }
+  } catch (err) {
+    console.error('Error checking notification permissions:', err);
+    UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Status Unknown)';
+    UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text';
+  }
 }
 
 // --- UI Update Wrappers ---
+// (updateDisplayForSelectedRangeUI, updateDomainDisplayAndPagination, updateStatsDisplay, displayNoDataForDate, renderChartForSelectedDateUI)
+// ... these functions should remain as they are ...
 function updateDisplayForSelectedRangeUI() {
   if (!UIElements.dateRangeSelect) {
-    console.warn('Date range select element not found.');
+    console.warn('Date range select element not found for UI update.');
     return;
   }
   let selectedRangeValue = UIElements.dateRangeSelect.value;
@@ -197,20 +298,19 @@ function updateDisplayForSelectedRangeUI() {
 
   let dataFetchKey = selectedRangeValue;
   let displayLabelKey = selectedRangeValue;
-  // START: MODIFIED to determine if the current view is for a range or a single day
   let isRangeView = ['week', 'month', 'all'].includes(selectedRangeValue);
 
   if (selectedRangeValue === '' && AppState.selectedDateStr) {
     dataFetchKey = AppState.selectedDateStr;
-    displayLabelKey = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
-    isRangeView = false; // Explicitly set to false for single day calendar selection
+    displayLabelKey =
+      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+    isRangeView = false;
   } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
     if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
-    isRangeView = false; // Explicitly set to false for "Today"
+    isRangeView = false;
   }
-  // END: MODIFIED
 
   const showLoader = ['week', 'month', 'all'].includes(dataFetchKey);
 
@@ -233,17 +333,14 @@ function updateDisplayForSelectedRangeUI() {
       label = isSpecificDateFetch ? displayLabelKey : rangeData.label;
 
       if (dataFetchKey === 'today' && !isSpecificDateFetch) {
-        AppState.selectedDateStr = getCurrentDateString(); // from options-utils.js
-        highlightSelectedCalendarDay(AppState.selectedDateStr); // from options-ui.js
+        AppState.selectedDateStr =
+          typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0];
+        if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
       }
-      // START: MODIFIED to pass isRangeView to updateStatsDisplay
       updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
-      // END: MODIFIED
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
-      // START: MODIFIED to pass isRangeView even on error
       updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
-      // END: MODIFIED
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -259,7 +356,7 @@ function updateDomainDisplayAndPagination() {
     !UIElements.domainNextBtn ||
     !UIElements.domainPageInfo
   ) {
-    console.warn('Pagination or detailed list elements not found.');
+    console.warn('Pagination or detailed list elements not found for domain display.');
     return;
   }
   const totalItems = AppState.fullDomainDataSorted.length;
@@ -270,7 +367,7 @@ function updateDomainDisplayAndPagination() {
   const endIndex = startIndex + AppState.domainItemsPerPage;
   const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex);
 
-  displayDomainTime(itemsToShow); // from options-ui.js
+  if (typeof displayDomainTime === 'function') displayDomainTime(itemsToShow);
 
   UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`;
   UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1;
@@ -278,14 +375,6 @@ function updateDomainDisplayAndPagination() {
   UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
 }
 
-/**
- * Updates all statistic display elements (lists, score, chart, labels, and new total time).
- * @param {object} domainData - Domain time data object { domain: seconds, ... }
- * @param {object} categoryData - Category time data object { category: seconds, ... }
- * @param {string} label - The label for the period (e.g., "Today", "This Week", "May 2, 2025")
- * @param {string} [chartDateStr] - Optional. The specific date string (YYYY-MM-DD) for chart rendering. Defaults to AppState.selectedDateStr if not provided.
- * @param {boolean} isRangeView - True if displaying data for a range (week, month, all), false for a single day.
- */
 function updateStatsDisplay(
   domainData,
   categoryData,
@@ -311,53 +400,53 @@ function updateStatsDisplay(
     AppState.domainCurrentPage = 1;
     updateDomainDisplayAndPagination();
 
-    displayCategoryTime(currentCategoryData); // from options-ui.js
+    if (typeof displayCategoryTime === 'function') displayCategoryTime(currentCategoryData);
 
     try {
-      const scoreData = calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings); // from options-utils.js
-      displayProductivityScore(scoreData, label); // Display the score
+      const scoreData =
+        typeof calculateFocusScore === 'function'
+          ? calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings)
+          : { score: 0 };
+      if (typeof displayProductivityScore === 'function') displayProductivityScore(scoreData, label);
     } catch (scoreError) {
       console.error(`[Options Main] Error calculating focus score for label "${label}":`, scoreError);
-      displayProductivityScore(null, label, true);
+      if (typeof displayProductivityScore === 'function') displayProductivityScore(null, label, true);
     }
 
-    // START: Total Time for Range Logic - MODIFIED
     if (
       UIElements.totalTimeForRangeContainer &&
       UIElements.totalTimeForRangeLabel &&
       UIElements.totalTimeForRangeValue
     ) {
       if (isRangeView) {
-        // Only show for ranges
         let totalSecondsForRange = 0;
         for (const domain in currentDomainData) {
           totalSecondsForRange += currentDomainData[domain];
         }
-        UIElements.totalTimeForRangeValue.textContent = formatTime(totalSecondsForRange, true); // from options-utils.js
+        UIElements.totalTimeForRangeValue.textContent =
+          typeof formatTime === 'function' ? formatTime(totalSecondsForRange, true) : totalSecondsForRange + 's';
 
-        // Update the label for the total time container
         const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period');
         if (periodSpanInTotalLabel) {
-          periodSpanInTotalLabel.textContent = label; // Update only the span if it exists
+          periodSpanInTotalLabel.textContent = label;
         } else {
-          // Fallback if the span isn't there for some reason (should be)
           UIElements.totalTimeForRangeLabel.textContent = `Total Time Online (${label})`;
         }
-        UIElements.totalTimeForRangeContainer.style.display = 'block'; // Show the container
+        UIElements.totalTimeForRangeContainer.style.display = 'block';
       } else {
-        UIElements.totalTimeForRangeContainer.style.display = 'none'; // Hide for single day views
+        UIElements.totalTimeForRangeContainer.style.display = 'none';
       }
     }
-    // END: Total Time for Range Logic - MODIFIED
 
     const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData;
     const chartLabelForRender = label;
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
     if (hasSignificantData) {
-      renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode); // from options-ui.js
+      if (typeof renderChart === 'function')
+        renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode);
     } else {
-      clearChartOnError(`No significant data for ${chartLabelForRender}`); // from options-ui.js
+      if (typeof clearChartOnError === 'function') clearChartOnError(`No significant data for ${chartLabelForRender}`);
     }
 
     if (UIElements.chartTitleElement) {
@@ -365,19 +454,17 @@ function updateStatsDisplay(
     }
   } catch (error) {
     console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
-    displayCategoryTime({});
+    if (typeof displayCategoryTime === 'function') displayCategoryTime({});
     AppState.fullDomainDataSorted = [];
     updateDomainDisplayAndPagination();
-    displayProductivityScore(null, label, true);
-    clearChartOnError(`Error loading data for ${label}`);
+    if (typeof displayProductivityScore === 'function') displayProductivityScore(null, label, true);
+    if (typeof clearChartOnError === 'function') clearChartOnError(`Error loading data for ${label}`);
     if (UIElements.chartTitleElement) {
       UIElements.chartTitleElement.textContent = `Usage Chart (Error)`;
     }
-    // START: MODIFIED to ensure total time container is hidden on error too
     if (UIElements.totalTimeForRangeContainer) {
       UIElements.totalTimeForRangeContainer.style.display = 'none';
     }
-    // END: MODIFIED
   }
 }
 
@@ -389,20 +476,10 @@ function displayNoDataForDate(displayDateLabel) {
     UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   }
   if (UIElements.categoryTimeList) {
-    UIElements.categoryTimeList.replaceChildren();
-    const li = document.createElement('li');
-    li.textContent = noDataMessage;
-    li.style.textAlign = 'center';
-    li.style.color = 'var(--text-color-muted)';
-    UIElements.categoryTimeList.appendChild(li);
+    UIElements.categoryTimeList.innerHTML = `<li style="text-align: center; color: var(--text-color-muted);">${noDataMessage}</li>`;
   }
   if (UIElements.detailedTimeList) {
-    UIElements.detailedTimeList.replaceChildren();
-    const li = document.createElement('li');
-    li.textContent = noDataMessage;
-    li.style.textAlign = 'center';
-    li.style.color = 'var(--text-color-muted)';
-    UIElements.detailedTimeList.appendChild(li);
+    UIElements.detailedTimeList.innerHTML = `<li style="text-align: center; color: var(--text-color-muted);">${noDataMessage}</li>`;
   }
   if (UIElements.domainPaginationDiv) {
     UIElements.domainPaginationDiv.style.display = 'none';
@@ -416,21 +493,18 @@ function displayNoDataForDate(displayDateLabel) {
     UIElements.productivityScoreValue.textContent = 'N/A';
     UIElements.productivityScoreValue.className = 'score-value';
   }
-  clearChartOnError(noDataMessage); // from options-ui.js
+  if (typeof clearChartOnError === 'function') clearChartOnError(noDataMessage);
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
   }
-
-  // START: MODIFIED to hide Total Time for Range when no data for a specific date
   if (UIElements.totalTimeForRangeContainer) {
     UIElements.totalTimeForRangeContainer.style.display = 'none';
   }
-  // END: MODIFIED
 }
 
 function renderChartForSelectedDateUI() {
   if (!AppState.selectedDateStr) {
-    clearChartOnError('Select a date from the calendar.'); // from options-ui.js
+    if (typeof clearChartOnError === 'function') clearChartOnError('Select a date from the calendar.');
     return;
   }
   const data =
@@ -438,8 +512,9 @@ function renderChartForSelectedDateUI() {
       ? AppState.dailyDomainData[AppState.selectedDateStr] || {}
       : AppState.dailyCategoryData[AppState.selectedDateStr] || {};
 
-  const displayDate = formatDisplayDate(AppState.selectedDateStr); // from options-utils.js
-  renderChart(data, displayDate, AppState.currentChartViewMode); // from options-ui.js
+  const displayDate =
+    typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+  if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode);
 
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
@@ -447,6 +522,8 @@ function renderChartForSelectedDateUI() {
 }
 
 // --- Get Filtered Data ---
+// (getFilteredDataForRange)
+// ... this function should remain as it is ...
 function getFilteredDataForRange(range, isSpecificDate = false) {
   let initialDomainData = {};
   let initialCategoryData = {};
@@ -458,9 +535,9 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
     if (isSpecificDate && /^\d{4}-\d{2}-\d{2}$/.test(range)) {
       initialDomainData = AppState.dailyDomainData[range] || {};
       initialCategoryData = AppState.dailyCategoryData[range] || {};
-      periodLabel = formatDisplayDate(range); // from options-utils.js
+      periodLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(range) : range;
     } else if (range === 'today') {
-      const todayStr = formatDate(today); // from options-utils.js
+      const todayStr = typeof formatDate === 'function' ? formatDate(today) : new Date().toISOString().split('T')[0];
       initialDomainData = AppState.dailyDomainData[todayStr] || {};
       initialCategoryData = AppState.dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
@@ -469,7 +546,7 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
-        const dateStr = formatDate(date);
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -483,10 +560,10 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       periodLabel = 'This Month';
       const y = today.getFullYear();
       const m = today.getMonth();
-      const dIM = today.getDate(); // days in current month up to today
-      for (let day = 1; day <= dIM; day++) {
+      const daysInCurrentMonthSoFar = today.getDate();
+      for (let day = 1; day <= daysInCurrentMonthSoFar; day++) {
         const date = new Date(y, m, day);
-        const dateStr = formatDate(date);
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
         const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
@@ -531,7 +608,7 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       }
     }
   } catch (filterError) {
-    console.error(`Error filtering/merging for range "${range}":`, filterError);
+    console.error(`Error filtering/merging data for range "${range}":`, filterError);
     periodLabel = `Error (${range})`;
     return { domainData: {}, categoryData: {}, label: periodLabel };
   }
@@ -539,6 +616,8 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
 }
 
 // --- Data Saving Functions ---
+// (saveCategoriesAndAssignments, saveRules)
+// ... these functions should remain as they are ...
 function saveCategoriesAndAssignments() {
   return browser.storage.local
     .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments })
@@ -571,10 +650,12 @@ function saveRules() {
 }
 
 // --- CSV Generation/Download ---
+// (convertDataToCsv, triggerCsvDownload)
+// ... these functions should remain as they are ...
 function convertDataToCsv(dataObject) {
   if (!dataObject) return '';
   const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
-  let csvString = headers.map(escapeCsvValue).join(',') + '\n'; // escapeCsvValue from options-utils.js
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
 
   const sortedData = Object.entries(dataObject)
     .map(([d, s]) => ({ domain: d, seconds: s }))
@@ -596,7 +677,7 @@ function convertDataToCsv(dataObject) {
 
   sortedData.forEach((item) => {
     const category = getCategory(item.domain);
-    const timeHMS = formatTime(item.seconds, true, true); // from options-utils.js
+    const timeHMS = typeof formatTime === 'function' ? formatTime(item.seconds, true, true) : item.seconds + 's';
     const row = [item.domain, category, timeHMS, item.seconds];
     csvString += row.map(escapeCsvValue).join(',') + '\n';
   });
@@ -617,7 +698,9 @@ function triggerCsvDownload(csvString, filename) {
       URL.revokeObjectURL(url);
       console.log('CSV download triggered:', filename);
     } else {
-      alert('CSV export might not be fully supported by your browser.');
+      alert(
+        'CSV export might not be fully supported by your browser. Please try a different browser or copy the data manually.'
+      );
     }
   } catch (e) {
     console.error('Error triggering CSV download:', e);
@@ -626,24 +709,32 @@ function triggerCsvDownload(csvString, filename) {
 }
 
 // --- Recalculation Logic ---
+// (recalculateAndUpdateCategoryTotals)
+// ... this function should remain as it is ...
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
-  console.log('[Options Main] REBUILDING category totals STARTING', changeDetails);
+  console.log('[Options Main] RECALCULATING category totals. Change Details:', changeDetails);
   try {
-    const result = await browser.storage.local.get(['trackedData', 'dailyDomainData', 'categoryAssignments']);
+    const result = await browser.storage.local.get([
+      'trackedData',
+      'dailyDomainData',
+      'categoryAssignments',
+      'categories',
+    ]);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    const currentAssignments = AppState.categoryAssignments || {}; // Use AppState for current assignments
+    const currentAssignments = AppState.categoryAssignments || {};
+    const currentCategories = AppState.categories || ['Other'];
 
-    const getCategoryForDomain = (domain, assignments) => {
+    const getCategoryForDomain = (domain, assignments, categoriesList) => {
       if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
-        return assignments[domain];
+        return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other';
       }
       const parts = domain.split('.');
       for (let i = 1; i < parts.length; i++) {
         const wildcardPattern = '*.' + parts.slice(i).join('.');
         if (assignments.hasOwnProperty(wildcardPattern)) {
-          return assignments[wildcardPattern];
+          return categoriesList.includes(assignments[wildcardPattern]) ? assignments[wildcardPattern] : 'Other';
         }
       }
       return 'Other';
@@ -653,7 +744,7 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
       if (time > 0) {
-        const category = getCategoryForDomain(domain, currentAssignments);
+        const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
         rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
       }
     }
@@ -665,7 +756,7 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       for (const domain in domainsForDate) {
         const time = domainsForDate[domain];
         if (time > 0) {
-          const category = getCategoryForDomain(domain, currentAssignments);
+          const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
       }
@@ -681,15 +772,18 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
 
     AppState.categoryTimeData = rebuiltCategoryTimeData;
     AppState.dailyCategoryData = rebuiltDailyCategoryData;
-    console.log('[Recalc] Category totals rebuilt and saved.');
+
+    console.log('[Options Main] Category totals rebuilt and saved successfully.');
   } catch (error) {
-    console.error('[Options Main] Error during category recalculation (rebuild):', error);
-    alert('An error occurred while recalculating category totals.');
+    console.error('[Options Main] Error during category recalculation:', error);
+    alert('An error occurred while recalculating category totals. Please check the console.');
   } finally {
-    console.log('[Options Main] REBUILDING category totals FINISHED');
+    console.log('[Options Main] RECALCULATING category totals FINISHED.');
   }
 }
 
+// (displayProductivityScore)
+// ... this function should remain as it is ...
 function displayProductivityScore(scoreData, periodLabel = 'Selected Period', isError = false) {
   if (!UIElements.productivityScoreValue || !UIElements.productivityScoreLabel) {
     console.warn('Productivity score UI elements not found in Options.');
@@ -716,83 +810,76 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-// --- Handlers for Block Page Customization (assumed to be here as per user's original file structure) ---
-function handleBlockPageSettingChange(storageKey, value) {
-  browser.storage.local
-    .set({ [storageKey]: value })
-    .then(() => console.log(`[Options] Saved ${storageKey}:`, value))
-    .catch((err) => console.error(`[Options] Error saving ${storageKey}:`, err));
-}
-
-function handleBlockPageShowQuoteChange() {
-  const isChecked = UIElements.blockPageShowQuoteCheckbox.checked;
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, isChecked);
-  if (UIElements.blockPageUserQuotesContainer) {
-    UIElements.blockPageUserQuotesContainer.style.display = isChecked ? 'block' : 'none';
-  }
-}
-
-function handleBlockPageUserQuotesChange() {
-  const quotesText = UIElements.blockPageUserQuotesTextarea.value;
-  const quotesArray = quotesText
-    .split('\n')
-    .map((q) => q.trim())
-    .filter((q) => q.length > 0);
-  handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
-}
-
 // --- Event Listener Setup ---
-// This function now correctly assumes that specific event handler functions
-// (like handleAddCategory, handleDeleteRule, etc.) are defined in options-handlers.js
-// or are otherwise globally available if they were part of the original options-main.js.
 function setupEventListeners() {
   console.log('[Options Main] Setting up event listeners...');
   try {
     // Category Management
-    if (UIElements.addCategoryBtn) UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
+    if (UIElements.addCategoryBtn && typeof handleAddCategory === 'function')
+      UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
     if (UIElements.categoryList) {
       UIElements.categoryList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('category-delete-btn')) handleDeleteCategory(event);
-        else if (event.target.classList.contains('category-edit-btn')) handleEditCategoryClick(event);
-        else if (event.target.classList.contains('category-save-btn')) handleSaveCategoryClick(event);
-        else if (event.target.classList.contains('category-cancel-btn')) handleCancelCategoryEditClick(event);
+        if (event.target.classList.contains('category-delete-btn') && typeof handleDeleteCategory === 'function')
+          handleDeleteCategory(event);
+        else if (event.target.classList.contains('category-edit-btn') && typeof handleEditCategoryClick === 'function')
+          handleEditCategoryClick(event);
+        else if (event.target.classList.contains('category-save-btn') && typeof handleSaveCategoryClick === 'function')
+          handleSaveCategoryClick(event);
+        else if (
+          event.target.classList.contains('category-cancel-btn') &&
+          typeof handleCancelCategoryEditClick === 'function'
+        )
+          handleCancelCategoryEditClick(event);
       });
     }
 
     // Assignment Management
-    if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.assignDomainBtn && typeof handleAssignDomain === 'function')
+      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
     if (UIElements.assignmentList) {
       UIElements.assignmentList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('assignment-delete-btn')) handleDeleteAssignment(event);
-        else if (event.target.classList.contains('assignment-edit-btn')) handleEditAssignmentClick(event);
+        if (event.target.classList.contains('assignment-delete-btn') && typeof handleDeleteAssignment === 'function')
+          handleDeleteAssignment(event);
+        else if (
+          event.target.classList.contains('assignment-edit-btn') &&
+          typeof handleEditAssignmentClick === 'function'
+        )
+          handleEditAssignmentClick(event);
       });
     }
     // Assignment Modal
-    if (UIElements.closeEditAssignmentModalBtn)
+    if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
       UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.cancelEditAssignmentBtn)
+    if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
       UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.saveAssignmentChangesBtn)
+    if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
       UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
-    if (UIElements.editAssignmentModal)
+    if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
       UIElements.editAssignmentModal.addEventListener('click', (event) => {
         if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
       });
 
     // Rule Management
-    if (UIElements.ruleTypeSelect) UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
-    if (UIElements.addRuleBtn) UIElements.addRuleBtn.addEventListener('click', handleAddRule);
+    if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
+      UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
+    if (UIElements.addRuleBtn && typeof handleAddRule === 'function')
+      UIElements.addRuleBtn.addEventListener('click', handleAddRule);
     if (UIElements.ruleList) {
       UIElements.ruleList.addEventListener('click', (event) => {
-        if (event.target.classList.contains('delete-btn')) handleDeleteRule(event);
-        else if (event.target.classList.contains('edit-btn')) handleEditRuleClick(event);
+        if (event.target.classList.contains('delete-btn') && typeof handleDeleteRule === 'function')
+          handleDeleteRule(event);
+        else if (event.target.classList.contains('edit-btn') && typeof handleEditRuleClick === 'function')
+          handleEditRuleClick(event);
       });
     }
     // Rule Modal
-    if (UIElements.closeEditModalBtn) UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.cancelEditRuleBtn) UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
-    if (UIElements.saveRuleChangesBtn) UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
-    if (UIElements.editRuleModal)
+    if (UIElements.closeEditModalBtn && typeof handleCancelEditClick === 'function')
+      UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.cancelEditRuleBtn && typeof handleCancelEditClick === 'function')
+      UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
+    if (UIElements.saveRuleChangesBtn && typeof handleSaveChangesClick === 'function')
+      UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
+    if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
       UIElements.editRuleModal.addEventListener('click', (event) => {
         if (event.target === UIElements.editRuleModal) handleCancelEditClick();
       });
@@ -800,88 +887,103 @@ function setupEventListeners() {
     // Stats Display
     if (UIElements.dateRangeSelect)
       UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
-    if (UIElements.domainPrevBtn) UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
-    if (UIElements.domainNextBtn) UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
-    if (UIElements.prevMonthBtn) UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
-    if (UIElements.nextMonthBtn) UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
+    if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
+      UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
+    if (UIElements.domainNextBtn && typeof handleDomainNext === 'function')
+      UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
+    if (UIElements.prevMonthBtn && typeof handlePrevMonth === 'function')
+      UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
+    if (UIElements.nextMonthBtn && typeof handleNextMonth === 'function')
+      UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
     if (UIElements.chartViewRadios) {
-      UIElements.chartViewRadios.forEach((radio) => radio.addEventListener('change', handleChartViewChange));
+      UIElements.chartViewRadios.forEach((radio) => {
+        if (typeof handleChartViewChange === 'function') radio.addEventListener('change', handleChartViewChange);
+      });
     }
-    if (UIElements.exportCsvBtn) UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+    if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
 
     // General Settings
-    if (UIElements.idleThresholdSelect)
+    if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
       UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
-    if (UIElements.dataRetentionSelect)
+    if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
       UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
 
     // Data Management
-    if (UIElements.exportDataBtn) UIElements.exportDataBtn.addEventListener('click', handleExportData);
-    if (UIElements.importDataBtn) UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
-    if (UIElements.importFileInput) UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+    if (UIElements.exportDataBtn && typeof handleExportData === 'function')
+      UIElements.exportDataBtn.addEventListener('click', handleExportData);
+    if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
+      UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
+    if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
     // Productivity Settings
-    if (UIElements.productivitySettingsList) {
+    if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
     }
 
-    // Block Page Customization (using handlers defined in this file as per original structure)
-    if (UIElements.blockPageCustomHeadingInput)
+    // Pomodoro Notification Settings Listener
+    if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
+      UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
+    }
+
+    // Block Page Customization
+    if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
         handleBlockPageSettingChange(
           STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
           UIElements.blockPageCustomHeadingInput.value.trim()
         )
       );
-    if (UIElements.blockPageCustomMessageTextarea)
+    if (UIElements.blockPageCustomMessageTextarea && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
         handleBlockPageSettingChange(
           STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
           UIElements.blockPageCustomMessageTextarea.value.trim()
         )
       );
-    if (UIElements.blockPageCustomButtonTextInput)
+    if (UIElements.blockPageCustomButtonTextInput && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
         handleBlockPageSettingChange(
           STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
           UIElements.blockPageCustomButtonTextInput.value.trim()
         )
       );
-    if (UIElements.blockPageShowUrlCheckbox)
+    if (UIElements.blockPageShowUrlCheckbox && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
         handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
       );
-    if (UIElements.blockPageShowReasonCheckbox)
+    if (UIElements.blockPageShowReasonCheckbox && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
         handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
       );
-    if (UIElements.blockPageShowRuleCheckbox)
+    if (UIElements.blockPageShowRuleCheckbox && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
         handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
       );
-    if (UIElements.blockPageShowLimitInfoCheckbox)
+    if (UIElements.blockPageShowLimitInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
         handleBlockPageSettingChange(
           STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
           UIElements.blockPageShowLimitInfoCheckbox.checked
         )
       );
-    if (UIElements.blockPageShowScheduleInfoCheckbox)
+    if (UIElements.blockPageShowScheduleInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
         handleBlockPageSettingChange(
           STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
           UIElements.blockPageShowScheduleInfoCheckbox.checked
         )
       );
-    if (UIElements.blockPageShowQuoteCheckbox)
+    if (UIElements.blockPageShowQuoteCheckbox && typeof handleBlockPageShowQuoteChange === 'function')
       UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
-    if (UIElements.blockPageUserQuotesTextarea)
+    if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
       UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
 
-    handleRuleTypeChange(); // Initialize rule input display based on current selection
+    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
     console.log('[Options Main] Event listeners setup complete.');
   } catch (e) {
     console.error('[Options Main] Error setting up event listeners:', e);
   }
 }
-console.log('[System] options-main.js loaded (v0.8.4.2 - Conditional Total Time Stat - Complete and Verified)');
+console.log('[System] options-main.js loaded (v0.8.6 - Listen for Storage Changes for Pomodoro Sync)');

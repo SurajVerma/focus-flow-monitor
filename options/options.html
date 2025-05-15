@@ -154,8 +154,8 @@
           </ul>
         </div>
       </section>
-
       <hr />
+
       <section id="productivity-settings-section">
         <h2>Focus Score Settings</h2>
         <p>
@@ -168,6 +168,42 @@
       </section>
       <hr />
 
+      <!-- <section id="pomodoro-settings-section">
+        <h2>Tomato Clock Settings</h2>
+        <div class="form-group">
+          <label for="pomodoroEnableNotificationsCheckbox">Enable Notifications:</label>
+          <div class="checkbox-group-inline">
+            <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
+            <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
+          </div>
+          <p class="setting-description">
+            Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need to
+            grant notification permission to the extension.
+          </p>
+        </div>
+      </section> -->
+      <section id="pomodoro-settings-section">
+        <h2>Tomato Clock Settings</h2>
+        <div class="form-group">
+          <label for="pomodoroEnableNotificationsCheckbox" class="checkbox-label-clickable"
+            >Enable Notifications:</label
+          >
+
+          <div class="checkbox-group-inline">
+            <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
+            <label for="pomodoroEnableNotificationsCheckbox" class="permission-status-label">
+              <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
+            </label>
+          </div>
+
+          <p class="setting-description">
+            Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need to
+            grant notification permission to the extension.
+          </p>
+        </div>
+      </section>
+
+      <hr />
       <section id="blocking-section">
         <h2>Site Blocking & Time Limiting</h2>
         <p>Permanently block access, set daily time limits, or schedule blocks for specific websites or categories.</p>
