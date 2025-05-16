@@ -93,6 +93,13 @@ Get the latest version from the official Firefox Add-ons page:
 -   **Accessing Options Page:** You can access detailed statistics, manage categories, set site rules (including schedules and block page customization), and configure all settings via the extension's options page.
     -   Right-click the extension icon in the Firefox toolbar → "Manage Extension" → "Preferences/Options" (⚙️ icon).
     -   Alternatively, click the gear (⚙️) icon in the extension popup.
+-   **How to use 🍅 Tomato Clock:**
+    -    Click on the Focus Flow Monitor icon in your browser toolbar.
+    -    You'll find the "Tomato Clock" section right in the popup.
+    -    Click "Start" to begin your first work session!
+    -    A Pomodoro cycle consists of 4 work sessions, with a short break after each of the first 3 sessions, followed by a long break at the end. The timer will automatically guide you to the next stage—for example, after completing a work session, it will prompt you to start the short break. However, you're free to manually switch between timers if you prefer.
+    -    The remaining time will appear in the toolbar if the extension is pinned: ![image](https://github.com/user-attachments/assets/64ac383c-0406-4b57-b7ed-da80108d9b83). If you want **Focus Flow Monitor** to notify you when the timer ends, the extension will need notification permissions. You can grant this by clicking the bell icon in the popup which will take you to Tomato Clock settings on the Options page.
+
 -   **Active Development:** Focus Flow Monitor is actively maintained and improved. Feedback and suggestions are always welcome!
 
 ---
