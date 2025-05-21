@@ -9,407 +9,409 @@
     <div class="container">
       <h1>FocusFlow Monitor Settings & Stats</h1>
 
-      <section id="tracking-settings-section">
-        <h2>Tracking Settings</h2>
-        <div class="form-group">
-          <label for="idleThresholdSelect">Consider inactive after:</label>
-          <select id="idleThresholdSelect">
-            <option value="60">1 Minute</option>
-            <option value="300">5 Minutes</option>
-            <option value="900">15 Minutes</option>
-            <option value="1800">30 Minutes (Default)</option>
-            <option value="3600">1 Hour</option>
-            <option value="-1">Never (Track all focused time)</option>
-          </select>
-          <p class="setting-description">
-            Choose how long without mouse or keyboard activity before tracking pauses. Longer times help track passive
-            viewing (like videos) but may inflate totals if you walk away. "Never" disables idle checking. I chose 30
-            minutes as default as I believe that is a sweet spot, as even when I (and few of my friend I asked to)
-            are/am watching videos, They/I tend to do an interaction mostly in about 30 minutes.
-          </p>
-        </div>
-        <div class="form-group">
-          <label for="dataRetentionSelect">Keep tracking history for:</label>
-          <select id="dataRetentionSelect">
-            <option value="30">1 Month</option>
-            <option value="90" selected>3 Months (Default)</option>
-            <option value="180">6 Months</option>
-            <option value="365">1 Year</option>
-            <option value="-1">Forever</option>
-          </select>
-          <p class="setting-description">
-            Automatically delete daily tracking data older than the selected period. Setting a shorter duration can help
-            maintain performance over time. "Forever" keeps all data. (Pruning happens approximately once per day).
-          </p>
-        </div>
-      </section>
-
-      <section id="stats-display-section">
-        <h2>Statistics Overview</h2>
-        <div class="stats-controls">
-          <div>
-            <label for="dateRangeSelect">Select Period:</label>
-            <select id="dateRangeSelect">
-              <option value="" disabled selected hidden>Select Date or Range</option>
-              <option value="today" selected>Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="all">All Time</option>
-            </select>
-          </div>
-          <div><button id="exportCsvBtn" class="export-button">Export to CSV</button></div>
+      <div class="tabs-container">
+        <div class="tab-nav">
+          <button class="tab-link active" data-tab="dashboardTab">📊 Dashboard</button>
+          <button class="tab-link" data-tab="contentControlTab">🚦 Content Control</button>
+          <button class="tab-link" data-tab="productivityTab">💪 Productivity</button>
+          <button class="tab-link" data-tab="generalSettingsTab">⚙️ Settings</button>
         </div>
 
-        <div class="stats-dashboard">
-          <div class="calendar-column">
-            <div class="calendar-container">
-              <div class="calendar-header-controls">
-                <button id="prevMonthBtn">&laquo; Prev</button>
-                <span id="currentMonthYear">Month Year</span>
-                <button id="nextMonthBtn">Next &raquo;</button>
+        <div id="dashboardTab" class="tab-content active">
+          <section id="stats-display-section">
+            <h2>Statistics Overview</h2>
+            <div class="stats-controls">
+              <div>
+                <label for="dateRangeSelect">Select Period:</label>
+                <select id="dateRangeSelect">
+                  <option value="" disabled selected hidden>Select Date or Range</option>
+                  <option value="today" selected>Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="all">All Time</option>
+                </select>
               </div>
-              <div id="calendarGrid" class="calendar-grid">
-                <div class="calendar-day-header">Sun</div>
-                <div class="calendar-day-header">Mon</div>
-                <div class="calendar-day-header">Tue</div>
-                <div class="calendar-day-header">Wed</div>
-                <div class="calendar-day-header">Thu</div>
-                <div class="calendar-day-header">Fri</div>
-                <div class="calendar-day-header">Sat</div>
-              </div>
-              <div id="calendarDetailPopup" class="calendar-detail-popup"></div>
+              <div><button id="exportCsvBtn" class="export-button">Export to CSV</button></div>
             </div>
 
-            <div class="stats-list-container">
-              <h3>Time per Category (<span class="stats-period">All Time</span>)</h3>
-              <ul id="categoryTimeList">
+            <div class="top-summary-area">
+              <div class="summary-metric-box productivity-score-container">
+                <h3 id="productivityScoreLabel">Focus Score (Loading...)</h3>
+                <div id="productivityScoreValue" class="score-value">--%</div>
+                <p class="focus-score-description">Percentage of time spent on categories marked as 'Productive'.</p>
+              </div>
+              <div
+                id="totalTimeForRangeContainer"
+                class="summary-metric-box total-time-range-container"
+                style="display: none">
+                <h3 id="totalTimeForRangeLabel">
+                  Total Time Online (<span class="stats-period">Selected Period</span>)
+                </h3>
+                <div id="totalTimeForRangeValue" class="total-time-value">--h --m --s</div>
+                <p class="focus-score-description">Total active time recorded for selected period.</p>
+              </div>
+            </div>
+            <div class="stats-dashboard">
+              <div class="calendar-column">
+                <div class="calendar-container">
+                  <div class="calendar-header-controls">
+                    <button id="prevMonthBtn">&laquo; Prev</button>
+                    <span id="currentMonthYear">Month Year</span>
+                    <button id="nextMonthBtn">Next &raquo;</button>
+                  </div>
+                  <div id="calendarGrid" class="calendar-grid">
+                    <div class="calendar-day-header">Sun</div>
+                    <div class="calendar-day-header">Mon</div>
+                    <div class="calendar-day-header">Tue</div>
+                    <div class="calendar-day-header">Wed</div>
+                    <div class="calendar-day-header">Thu</div>
+                    <div class="calendar-day-header">Fri</div>
+                    <div class="calendar-day-header">Sat</div>
+                  </div>
+                  <div id="calendarDetailPopup" class="calendar-detail-popup"></div>
+                </div>
+
+                <div class="stats-list-container">
+                  <h3>Time per Category (<span class="stats-period">All Time</span>)</h3>
+                  <ul id="categoryTimeList">
+                    <li>Loading...</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="chart-column">
+                <h3 id="chartTitle">Usage Chart (<span class="stats-period">All Time</span>)</h3>
+                <div class="chart-view-controls">
+                  <label><input type="radio" name="chartView" value="domain" checked /> By Website</label>
+                  <label><input type="radio" name="chartView" value="category" /> By Category</label>
+                </div>
+                <div class="chart-wrapper"><canvas id="timeChartCanvas"></canvas></div>
+
+                <div class="stats-list-container">
+                  <h3>Detailed Time per Website (<span class="stats-period">All Time</span>)</h3>
+                  <ul id="detailedTimeList">
+                    <li>Loading...</li>
+                  </ul>
+                  <div class="pagination-controls" id="domainPagination">
+                    <button id="domainPrevBtn" disabled>&laquo; Prev</button>
+                    <span id="domainPageInfo">Page 1 of 1</span>
+                    <button id="domainNextBtn" disabled>Next &raquo;</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="contentControlTab" class="tab-content">
+          <section id="categories-section">
+            <h2>Website Categories</h2>
+            <div class="category-manage">
+              <h3>Manage Categories</h3>
+              <div class="form-inline">
+                <input type="text" id="newCategoryName" placeholder="New category name" />
+                <button id="addCategoryBtn">Add Category</button>
+              </div>
+              <h4>Existing Categories:</h4>
+              <ul id="categoryList">
                 <li>Loading...</li>
               </ul>
             </div>
-            <div class="stats-list-container productivity-score-container">
-              <h3 id="productivityScoreLabel">Focus Score (Loading...)</h3>
-              <div id="productivityScoreValue" class="score-value">--%</div>
-              <p class="focus-score-description">
-                Percentage of time spent on categories marked as 'Productive'. Rate categories in the Focus Score
-                Settings below.
+            <div class="assignment-manage">
+              <h3>Assign Domains to Categories</h3>
+              <div class="form-inline">
+                <input type="text" id="domainPattern" placeholder="e.g., google.com or *.example.com" />
+                <select id="categorySelect">
+                  <option value="">Select Category</option>
+                </select>
+                <button id="assignDomainBtn">Assign Domain</button>
+              </div>
+              <h4>Current Assignments:</h4>
+              <ul id="assignmentList">
+                <li>Loading...</li>
+              </ul>
+            </div>
+          </section>
+          <hr class="tab-section-divider" />
+          <section id="blocking-section">
+            <h2>Site Blocking & Time Limiting</h2>
+            <p>
+              Permanently block access, set daily time limits, or schedule blocks for specific websites or categories.
+            </p>
+            <div class="form-inline add-rule-form">
+              <select id="ruleTypeSelect">
+                <option value="block-url">Block URL Pattern</option>
+                <option value="limit-url">Limit URL Pattern</option>
+                <option value="block-category">Block Category</option>
+                <option value="limit-category">Limit Category</option>
+              </select>
+              <input type="text" id="rulePatternInput" placeholder="e.g., *.social.com" />
+              <select id="ruleCategorySelect">
+                <option value="">Select Category</option>
+              </select>
+              <div class="time-limit-input">
+                <input type="number" id="ruleLimitInput" min="1" step="1" placeholder="Time" />
+                <select id="ruleUnitSelect">
+                  <option value="minutes" selected>Minutes</option>
+                  <option value="hours">Hours</option>
+                </select>
+                <span> per day</span>
+              </div>
+
+              <div class="schedule-inputs">
+                <div class="time-inputs-container">
+                  <label for="ruleStartTime">Start:</label>
+                  <input type="time" id="ruleStartTime" class="time-input-schedule" />
+                  <label for="ruleEndTime">End:</label>
+                  <input type="time" id="ruleEndTime" class="time-input-schedule" />
+                </div>
+                <div class="days-selector">
+                  <span>Days:</span>
+                  <label><input type="checkbox" name="ruleDay" value="Mon" />Mon</label>
+                  <label><input type="checkbox" name="ruleDay" value="Tue" />Tue</label>
+                  <label><input type="checkbox" name="ruleDay" value="Wed" />Wed</label>
+                  <label><input type="checkbox" name="ruleDay" value="Thu" />Thu</label>
+                  <label><input type="checkbox" name="ruleDay" value="Fri" />Fri</label>
+                  <label><input type="checkbox" name="ruleDay" value="Sat" />Sat</label>
+                  <label><input type="checkbox" name="ruleDay" value="Sun" />Sun</label>
+                </div>
+                <small class="schedule-notes">Leave blank for all-day/all-week blocking.</small>
+              </div>
+              <button id="addRuleBtn">Add Rule</button>
+            </div>
+            <h4>Current Rules:</h4>
+            <ul id="ruleList">
+              <li>Loading...</li>
+            </ul>
+          </section>
+          <hr class="tab-section-divider" />
+          <section id="block-page-customization-section">
+            <h2>Block Page Customization</h2>
+            <p>Personalize the page shown when a site is blocked.</p>
+
+            <div class="form-group">
+              <label for="blockPageCustomHeading">Custom Heading:</label>
+              <input type="text" id="blockPageCustomHeading" placeholder="e.g., Access Denied, Stay Focused!" />
+              <p class="setting-description">Set a custom main heading for the block page. Leave blank for default.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="blockPageCustomMessage">Custom Message:</label>
+              <textarea
+                id="blockPageCustomMessage"
+                rows="3"
+                placeholder="e.g., This site is blocked to help you focus."></textarea>
+              <p class="setting-description">Set a custom message below the heading. Leave blank for default.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="blockPageCustomButtonText">Custom "Go Back" Button Text:</label>
+              <input type="text" id="blockPageCustomButtonText" placeholder="e.g., Go Back, Return to Safety" />
+              <p class="setting-description">Customize the text for the 'Go Back' button. Leave blank for default.</p>
+            </div>
+
+            <h3>Display Details on Block Page:</h3>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowUrl" checked />
+              <label for="blockPageShowUrl">Show Blocked URL</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowReason" checked />
+              <label for="blockPageShowReason">Show Block Reason</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowRule" checked />
+              <label for="blockPageShowRule">Show Matching Rule Details</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowLimitInfo" checked />
+              <label for="blockPageShowLimitInfo">Show Limit Information (if applicable)</label>
+            </div>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowScheduleInfo" checked />
+              <label for="blockPageShowScheduleInfo">Show Schedule Information (if applicable)</label>
+            </div>
+
+            <h3>Motivational Quotes:</h3>
+            <div class="form-group checkbox-group">
+              <input type="checkbox" id="blockPageShowQuote" />
+              <label for="blockPageShowQuote">Show a Motivational Quote</label>
+            </div>
+            <div class="form-group" id="blockPageUserQuotesContainer" style="display: none">
+              <label for="blockPageUserQuotes">Your Custom Quotes (one per line):</label>
+              <textarea
+                id="blockPageUserQuotes"
+                rows="5"
+                placeholder="e.g., The secret of getting ahead is getting started."></textarea>
+              <p class="setting-description">
+                If "Show Motivational Quote" is checked, one of these quotes (or a default one if this is empty) will be
+                displayed.
               </p>
             </div>
-          </div>
-          <div class="chart-column">
-            <h3 id="chartTitle">Usage Chart (<span class="stats-period">All Time</span>)</h3>
-            <div class="chart-view-controls">
-              <label><input type="radio" name="chartView" value="domain" checked /> By Website</label>
-              <label><input type="radio" name="chartView" value="category" /> By Category</label>
-            </div>
-            <div class="chart-wrapper"><canvas id="timeChartCanvas"></canvas></div>
+          </section>
+        </div>
 
-            <div class="stats-list-container">
-              <h3>Detailed Time per Website (<span class="stats-period">All Time</span>)</h3>
-              <ul id="detailedTimeList">
-                <li>Loading...</li>
-              </ul>
-              <div class="pagination-controls" id="domainPagination">
-                <button id="domainPrevBtn" disabled>&laquo; Prev</button>
-                <span id="domainPageInfo">Page 1 of 1</span>
-                <button id="domainNextBtn" disabled>Next &raquo;</button>
+        <div id="productivityTab" class="tab-content">
+          <section id="productivity-settings-section">
+            <h2>Focus Score Settings</h2>
+            <p>
+              Rate your categories to calculate your Focus Score (% of time spent on 'Productive' activities). Changes
+              are saved automatically.
+            </p>
+            <ul id="productivitySettingsList" class="settings-list">
+              <li>Loading categories...</li>
+            </ul>
+          </section>
+          <hr class="tab-section-divider" />
+          <section id="pomodoro-settings-section">
+            <h2>Tomato Clock Settings</h2>
+            <div class="form-group">
+              <label for="pomodoroEnableNotificationsCheckbox" class="checkbox-label-clickable"
+                >Enable Notifications:</label
+              >
+
+              <div class="checkbox-group-inline">
+                <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
+                <label for="pomodoroEnableNotificationsCheckbox" class="permission-status-label">
+                  <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
+                </label>
               </div>
+
+              <p class="setting-description">
+                Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need
+                to grant notification permission to the extension.
+              </p>
             </div>
-            <div
-              id="totalTimeForRangeContainer"
-              class="stats-list-container total-time-range-container"
-              style="display: none">
-              <h3 id="totalTimeForRangeLabel">Total Time Online (<span class="stats-period">Selected Period</span>)</h3>
-              <div id="totalTimeForRangeValue" class="total-time-value">--h --m --s</div>
-            </div>
-          </div>
-        </div>
-      </section>
-      <hr />
-
-      <section id="categories-section">
-        <h2>Website Categories</h2>
-        <div class="category-manage">
-          <h3>Manage Categories</h3>
-          <div class="form-inline">
-            <input type="text" id="newCategoryName" placeholder="New category name" />
-            <button id="addCategoryBtn">Add Category</button>
-          </div>
-          <h4>Existing Categories:</h4>
-          <ul id="categoryList">
-            <li>Loading...</li>
-          </ul>
-        </div>
-        <div class="assignment-manage">
-          <h3>Assign Domains to Categories</h3>
-          <div class="form-inline">
-            <input type="text" id="domainPattern" placeholder="e.g., google.com or *.example.com" />
-            <select id="categorySelect">
-              <option value="">Select Category</option>
-            </select>
-            <button id="assignDomainBtn">Assign Domain</button>
-          </div>
-          <h4>Current Assignments:</h4>
-          <ul id="assignmentList">
-            <li>Loading...</li>
-          </ul>
-        </div>
-      </section>
-      <hr />
-
-      <section id="productivity-settings-section">
-        <h2>Focus Score Settings</h2>
-        <p>
-          Rate your categories to calculate your Focus Score (% of time spent on 'Productive' activities). Changes are
-          saved automatically.
-        </p>
-        <ul id="productivitySettingsList" class="settings-list">
-          <li>Loading categories...</li>
-        </ul>
-      </section>
-      <hr />
-
-      <!-- <section id="pomodoro-settings-section">
-        <h2>Tomato Clock Settings</h2>
-        <div class="form-group">
-          <label for="pomodoroEnableNotificationsCheckbox">Enable Notifications:</label>
-          <div class="checkbox-group-inline">
-            <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
-            <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
-          </div>
-          <p class="setting-description">
-            Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need to
-            grant notification permission to the extension.
-          </p>
-        </div>
-      </section> -->
-      <section id="pomodoro-settings-section">
-        <h2>Tomato Clock Settings</h2>
-        <div class="form-group">
-          <label for="pomodoroEnableNotificationsCheckbox" class="checkbox-label-clickable"
-            >Enable Notifications:</label
-          >
-
-          <div class="checkbox-group-inline">
-            <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
-            <label for="pomodoroEnableNotificationsCheckbox" class="permission-status-label">
-              <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
-            </label>
-          </div>
-
-          <p class="setting-description">
-            Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need to
-            grant notification permission to the extension.
-          </p>
-        </div>
-      </section>
-
-      <hr />
-      <section id="blocking-section">
-        <h2>Site Blocking & Time Limiting</h2>
-        <p>Permanently block access, set daily time limits, or schedule blocks for specific websites or categories.</p>
-        <div class="form-inline add-rule-form">
-          <select id="ruleTypeSelect">
-            <option value="block-url">Block URL Pattern</option>
-            <option value="limit-url">Limit URL Pattern</option>
-            <option value="block-category">Block Category</option>
-            <option value="limit-category">Limit Category</option>
-          </select>
-          <input type="text" id="rulePatternInput" placeholder="e.g., *.social.com" />
-          <select id="ruleCategorySelect">
-            <option value="">Select Category</option>
-          </select>
-          <div class="time-limit-input">
-            <input type="number" id="ruleLimitInput" min="1" step="1" placeholder="Time" />
-            <select id="ruleUnitSelect">
-              <option value="minutes" selected>Minutes</option>
-              <option value="hours">Hours</option>
-            </select>
-            <span> per day</span>
-          </div>
-
-          <div class="schedule-inputs">
-            <div class="time-inputs-container">
-              <label for="ruleStartTime">Start:</label>
-              <input type="time" id="ruleStartTime" class="time-input-schedule" />
-              <label for="ruleEndTime">End:</label>
-              <input type="time" id="ruleEndTime" class="time-input-schedule" />
-            </div>
-            <div class="days-selector">
-              <span>Days:</span>
-              <label><input type="checkbox" name="ruleDay" value="Mon" />Mon</label>
-              <label><input type="checkbox" name="ruleDay" value="Tue" />Tue</label>
-              <label><input type="checkbox" name="ruleDay" value="Wed" />Wed</label>
-              <label><input type="checkbox" name="ruleDay" value="Thu" />Thu</label>
-              <label><input type="checkbox" name="ruleDay" value="Fri" />Fri</label>
-              <label><input type="checkbox" name="ruleDay" value="Sat" />Sat</label>
-              <label><input type="checkbox" name="ruleDay" value="Sun" />Sun</label>
-            </div>
-            <small class="schedule-notes">Leave blank for all-day/all-week blocking.</small>
-          </div>
-          <button id="addRuleBtn">Add Rule</button>
-        </div>
-        <h4>Current Rules:</h4>
-        <ul id="ruleList">
-          <li>Loading...</li>
-        </ul>
-      </section>
-      <hr />
-
-      <section id="block-page-customization-section">
-        <h2>Block Page Customization</h2>
-        <p>Personalize the page shown when a site is blocked.</p>
-
-        <div class="form-group">
-          <label for="blockPageCustomHeading">Custom Heading:</label>
-          <input type="text" id="blockPageCustomHeading" placeholder="e.g., Access Denied, Stay Focused!" />
-          <p class="setting-description">Set a custom main heading for the block page. Leave blank for default.</p>
+          </section>
         </div>
 
-        <div class="form-group">
-          <label for="blockPageCustomMessage">Custom Message:</label>
-          <textarea
-            id="blockPageCustomMessage"
-            rows="3"
-            placeholder="e.g., This site is blocked to help you focus."></textarea>
-          <p class="setting-description">Set a custom message below the heading. Leave blank for default.</p>
-        </div>
-
-        <div class="form-group">
-          <label for="blockPageCustomButtonText">Custom "Go Back" Button Text:</label>
-          <input type="text" id="blockPageCustomButtonText" placeholder="e.g., Go Back, Return to Safety" />
-          <p class="setting-description">Customize the text for the 'Go Back' button. Leave blank for default.</p>
-        </div>
-
-        <h3>Display Details on Block Page:</h3>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowUrl" checked />
-          <label for="blockPageShowUrl">Show Blocked URL</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowReason" checked />
-          <label for="blockPageShowReason">Show Block Reason</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowRule" checked />
-          <label for="blockPageShowRule">Show Matching Rule Details</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowLimitInfo" checked />
-          <label for="blockPageShowLimitInfo">Show Limit Information (if applicable)</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowScheduleInfo" checked />
-          <label for="blockPageShowScheduleInfo">Show Schedule Information (if applicable)</label>
-        </div>
-
-        <h3>Motivational Quotes:</h3>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="blockPageShowQuote" />
-          <label for="blockPageShowQuote">Show a Motivational Quote</label>
-        </div>
-        <div class="form-group" id="blockPageUserQuotesContainer" style="display: none">
-          <label for="blockPageUserQuotes">Your Custom Quotes (one per line):</label>
-          <textarea
-            id="blockPageUserQuotes"
-            rows="5"
-            placeholder="e.g., The secret of getting ahead is getting started."></textarea>
-          <p class="setting-description">
-            If "Show Motivational Quote" is checked, one of these quotes (or a default one if this is empty) will be
-            displayed.
-          </p>
-        </div>
-      </section>
-      <hr />
-      <section id="data-management-section">
-        <h2>Data Management</h2>
-        <p>
-          Export your tracking history and settings, or import a previously exported backup file. Importing will
-          overwrite current data.
-        </p>
-        <div class="form-group data-buttons">
-          <button id="exportDataBtn" class="action-button">Export All Data</button>
-          <button id="importDataBtn" class="action-button">Import Data from File</button>
-          <input type="file" id="importFileInput" accept=".ffm" />
-        </div>
-        <p id="importStatus" class="status-message"></p>
-      </section>
-    </div>
-
-    <div id="editRuleModal" class="modal">
-      <div class="modal-content">
-        <span class="close-button" id="closeEditModalBtn">&times;</span>
-        <h3>Edit Rule</h3>
-        <div id="editRuleFormContent">
-          <input type="hidden" id="editRuleIndex" />
-          <div class="form-group">
-            <label>Type:</label>
-            <span id="editRuleTypeDisplay"></span>
-          </div>
-          <div class="form-group" id="editRulePatternGroup">
-            <label for="editRulePatternInput">Pattern/URL:</label>
-            <input type="text" id="editRulePatternInput" />
-          </div>
-          <div class="form-group" id="editRuleCategoryGroup">
-            <label for="editRuleCategorySelect">Category:</label>
-            <select id="editRuleCategorySelect"></select>
-          </div>
-          <div class="form-group" id="editRuleLimitGroup">
-            <label>Limit (per day):</label>
-            <div class="time-limit-input">
-              <input type="number" id="editRuleLimitInput" min="1" step="1" />
-              <select id="editRuleUnitSelect">
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
+        <div id="generalSettingsTab" class="tab-content">
+          <section id="tracking-settings-section">
+            <h2>Tracking Settings</h2>
+            <div class="form-group">
+              <label for="idleThresholdSelect">Consider inactive after:</label>
+              <select id="idleThresholdSelect">
+                <option value="60">1 Minute</option>
+                <option value="300">5 Minutes</option>
+                <option value="900">15 Minutes</option>
+                <option value="1800">30 Minutes (Default)</option>
+                <option value="3600">1 Hour</option>
+                <option value="-1">Never (Track all focused time)</option>
               </select>
+              <p class="setting-description">
+                Choose how long without mouse or keyboard activity before tracking pauses. Longer times help track
+                passive viewing (like videos) but may inflate totals if you walk away. "Never" disables idle checking. I
+                chose 30 minutes as default as I believe that is a sweet spot, as even when I (and few of my friend I
+                asked to) are/am watching videos, They/I tend to do an interaction mostly in about 30 minutes.
+              </p>
             </div>
-          </div>
-
-          <div class="form-group schedule-inputs" id="editRuleScheduleGroup">
-            <label>Schedule (Optional):</label>
-            <div class="time-inputs-container modal-time-inputs">
-              <label for="editRuleStartTime" class="label-schedule-start">Start:</label>
-              <input type="time" id="editRuleStartTime" class="time-input-schedule" />
-              <label for="editRuleEndTime" class="label-schedule-end">End:</label>
-              <input type="time" id="editRuleEndTime" class="time-input-schedule" />
+            <div class="form-group">
+              <label for="dataRetentionSelect">Keep tracking history for:</label>
+              <select id="dataRetentionSelect">
+                <option value="30">1 Month</option>
+                <option value="90" selected>3 Months (Default)</option>
+                <option value="180">6 Months</option>
+                <option value="365">1 Year</option>
+                <option value="-1">Forever</option>
+              </select>
+              <p class="setting-description">
+                Automatically delete daily tracking data older than the selected period. Setting a shorter duration can
+                help maintain performance over time. "Forever" keeps all data. (Pruning happens approximately once per
+                day).
+              </p>
             </div>
-            <div class="days-selector modal-days-selector">
-              <span>Days:</span>
-              <label><input type="checkbox" name="editRuleDay" value="Mon" />Mon</label>
-              <label><input type="checkbox" name="editRuleDay" value="Tue" />Tue</label>
-              <label><input type="checkbox" name="editRuleDay" value="Wed" />Wed</label>
-              <label><input type="checkbox" name="editRuleDay" value="Thu" />Thu</label>
-              <label><input type="checkbox" name="editRuleDay" value="Fri" />Fri</label>
-              <label><input type="checkbox" name="editRuleDay" value="Sat" />Sat</label>
-              <label><input type="checkbox" name="editRuleDay" value="Sun" />Sun</label>
+          </section>
+          <hr class="tab-section-divider" />
+          <section id="data-management-section">
+            <h2>Data Management</h2>
+            <p>
+              Export your tracking history and settings, or import a previously exported backup file. Importing will
+              overwrite current data.
+            </p>
+            <div class="form-group data-buttons">
+              <button id="exportDataBtn" class="action-button">Export All Data</button>
+              <button id="importDataBtn" class="action-button">Import Data from File</button>
+              <input type="file" id="importFileInput" accept=".ffm" />
             </div>
-            <small class="schedule-notes-modal">Leave blank for all-day/all-week blocking.</small>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button id="saveRuleChangesBtn">Save Changes</button>
-          <button id="cancelEditRuleBtn" class="cancel-btn">Cancel</button>
+            <p id="importStatus" class="status-message"></p>
+          </section>
         </div>
       </div>
-    </div>
+      <div id="editRuleModal" class="modal">
+        <div class="modal-content">
+          <span class="close-button" id="closeEditModalBtn">&times;</span>
+          <h3>Edit Rule</h3>
+          <div id="editRuleFormContent">
+            <input type="hidden" id="editRuleIndex" />
+            <div class="form-group">
+              <label>Type:</label>
+              <span id="editRuleTypeDisplay"></span>
+            </div>
+            <div class="form-group" id="editRulePatternGroup">
+              <label for="editRulePatternInput">Pattern/URL:</label>
+              <input type="text" id="editRulePatternInput" />
+            </div>
+            <div class="form-group" id="editRuleCategoryGroup">
+              <label for="editRuleCategorySelect">Category:</label>
+              <select id="editRuleCategorySelect"></select>
+            </div>
+            <div class="form-group" id="editRuleLimitGroup">
+              <label>Limit (per day):</label>
+              <div class="time-limit-input">
+                <input type="number" id="editRuleLimitInput" min="1" step="1" />
+                <select id="editRuleUnitSelect">
+                  <option value="minutes">Minutes</option>
+                  <option value="hours">Hours</option>
+                </select>
+              </div>
+            </div>
 
-    <div id="editAssignmentModal" class="modal">
-      <div class="modal-content">
-        <span class="close-button" id="closeEditAssignmentModalBtn">&times;</span>
-        <h3>Edit Assignment</h3>
-        <div id="editAssignmentFormContent">
-          <input type="hidden" id="editAssignmentOriginalDomain" />
-          <div class="form-group">
-            <label for="editAssignmentDomainInput">Domain Pattern:</label>
-            <input type="text" id="editAssignmentDomainInput" placeholder="e.g., google.com or *.example.com" />
+            <div class="form-group schedule-inputs" id="editRuleScheduleGroup">
+              <label>Schedule (Optional):</label>
+              <div class="time-inputs-container modal-time-inputs">
+                <label for="editRuleStartTime" class="label-schedule-start">Start:</label>
+                <input type="time" id="editRuleStartTime" class="time-input-schedule" />
+                <label for="editRuleEndTime" class="label-schedule-end">End:</label>
+                <input type="time" id="editRuleEndTime" class="time-input-schedule" />
+              </div>
+              <div class="days-selector modal-days-selector">
+                <span>Days:</span>
+                <label><input type="checkbox" name="editRuleDay" value="Mon" />Mon</label>
+                <label><input type="checkbox" name="editRuleDay" value="Tue" />Tue</label>
+                <label><input type="checkbox" name="editRuleDay" value="Wed" />Wed</label>
+                <label><input type="checkbox" name="editRuleDay" value="Thu" />Thu</label>
+                <label><input type="checkbox" name="editRuleDay" value="Fri" />Fri</label>
+                <label><input type="checkbox" name="editRuleDay" value="Sat" />Sat</label>
+                <label><input type="checkbox" name="editRuleDay" value="Sun" />Sun</label>
+              </div>
+              <small class="schedule-notes-modal">Leave blank for all-day/all-week blocking.</small>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="editAssignmentCategorySelect">Assign to Category:</label>
-            <select id="editAssignmentCategorySelect"></select>
+          <div class="modal-actions">
+            <button id="saveRuleChangesBtn">Save Changes</button>
+            <button id="cancelEditRuleBtn" class="cancel-btn">Cancel</button>
           </div>
         </div>
-        <div class="modal-actions">
-          <button id="saveAssignmentChangesBtn">Save Changes</button>
-          <button id="cancelEditAssignmentBtn" class="cancel-btn">Cancel</button>
+      </div>
+
+      <div id="editAssignmentModal" class="modal">
+        <div class="modal-content">
+          <span class="close-button" id="closeEditAssignmentModalBtn">&times;</span>
+          <h3>Edit Assignment</h3>
+          <div id="editAssignmentFormContent">
+            <input type="hidden" id="editAssignmentOriginalDomain" />
+            <div class="form-group">
+              <label for="editAssignmentDomainInput">Domain Pattern:</label>
+              <input type="text" id="editAssignmentDomainInput" placeholder="e.g., google.com or *.example.com" />
+            </div>
+            <div class="form-group">
+              <label for="editAssignmentCategorySelect">Assign to Category:</label>
+              <select id="editAssignmentCategorySelect"></select>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="saveAssignmentChangesBtn">Save Changes</button>
+            <button id="cancelEditAssignmentBtn" class="cancel-btn">Cancel</button>
+          </div>
         </div>
       </div>
     </div>

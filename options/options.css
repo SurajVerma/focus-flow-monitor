@@ -794,7 +794,9 @@ button.export-button:hover {
   max-height: 100%;
 }
 .chart-view-controls {
-  margin-bottom: var(--spacing-lg);
+  /* margin-bottom: var(--spacing-lg); */
+  display: flex;
+  justify-content: center;
   text-align: center;
   padding: var(--spacing-sm);
   background-color: var(--bg-alternate-row);
@@ -1113,7 +1115,7 @@ button.export-button:hover {
 
 .total-time-range-container {
   text-align: center;
-  margin-top: var(--spacing-lg);
+  /* margin-top: var(--spacing-lg); */
   padding: var(--spacing-lg);
   min-height: auto;
   display: flex;
@@ -1395,5 +1397,216 @@ button.export-button:hover {
   }
   .total-time-range-container h3 {
     color: var(--text-color-secondary);
+  }
+}
+
+/*
+ ADDITIONS FOR TABS - Add at the end of options.css
+*/
+
+.tabs-container {
+  margin-top: var(--spacing-lg); /* Space above the tab navigation */
+  margin-bottom: var(--spacing-xl); /* Space below the entire tabbed area */
+}
+
+.tab-nav {
+  display: flex;
+  border-bottom: 2px solid var(--border-color-medium);
+  margin-bottom: var(--spacing-lg); /* Space between nav and content */
+}
+
+.tab-link {
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  color: var(--text-color-secondary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  position: relative;
+  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+  border-bottom: 2px solid transparent; /* For the active indicator */
+  margin-bottom: -2px; /* To align with the container's border-bottom */
+  flex-grow: 1; /* Make tabs share space equally */
+  text-align: center; /* Center text within the button */
+}
+
+.tab-link:hover {
+  color: var(--text-color-primary);
+}
+
+.tab-link.active {
+  color: var(--bg-button-primary);
+  border-bottom-color: var(--bg-button-primary);
+  font-weight: 600;
+}
+
+.tab-link:focus-visible {
+  outline: 2px solid var(--bg-button-primary);
+  outline-offset: -2px; /* Adjust to be inside the button */
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.tab-content {
+  display: none; /* Hide tab content by default */
+  animation: fadeIn 0.3s ease-in-out; /* Simple fade-in animation */
+}
+
+.tab-content.active {
+  display: block; /* Show active tab content */
+}
+
+/* HR within tabs, if you used them to separate sections */
+.tab-section-divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color-light);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure sections within tabs still have appropriate styling */
+.tab-content section {
+  margin-bottom: 0; /* Remove bottom margin from sections if they are the last element in a tab */
+  border-top: none; /* Optional: if you want to remove the top border inherited from general section styles */
+  box-shadow: none; /* Optional: if you want a flatter look within tabs */
+  padding-top: 0; /* Optional: remove top padding if tab nav provides enough space */
+}
+
+/* Add some spacing if multiple sections are in one tab */
+.tab-content section + section {
+  margin-top: var(--spacing-xl);
+  /* border-top: 1px solid var(--border-color-light);  Consider if .tab-section-divider is not used */
+  /* padding-top: var(--spacing-lg); */
+}
+
+/* Dark mode specific adjustments for tabs if needed */
+@media (prefers-color-scheme: dark) {
+  .tab-nav {
+    border-bottom-color: var(--border-color-medium);
+  }
+  .tab-link {
+    color: var(--text-color-secondary);
+  }
+  .tab-link:hover {
+    color: var(--text-color-primary);
+  }
+  .tab-link.active {
+    color: var(--bg-button-primary); /* Uses the dark mode primary button color */
+    border-bottom-color: var(--bg-button-primary);
+  }
+  .tab-link:focus-visible {
+    outline-color: var(--bg-button-primary);
+  }
+  .tab-section-divider {
+    background-color: var(--border-color-medium);
+  }
+}
+/*
+ ADDITIONS FOR TOP SUMMARY AREA - Add after Tab CSS or at the end
+*/
+
+.top-summary-area {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
+  gap: var(--spacing-xl); /* Space between the summary boxes */
+  margin-bottom: var(--spacing-xl); /* Space below the summary area */
+  padding: var(--spacing-lg);
+  background-color: var(--bg-alternate-row); /* Light background to group them */
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color-light);
+}
+
+.summary-metric-box {
+  flex: 1 1 300px; /* Allow boxes to grow and shrink, with a base size */
+  padding: var(--spacing-lg);
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  border: 1px solid var(--border-color-light);
+}
+
+.summary-metric-box h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: 1.1rem; /* Slightly smaller than section h2 */
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: var(--spacing-sm);
+}
+
+/* Specific adjustments for items moved into the summary area */
+.top-summary-area .productivity-score-container {
+  /* Reset some specific styles if they were previously for a full-width list container */
+  min-height: auto;
+  /* text-align is already center from .summary-metric-box */
+}
+
+.top-summary-area .focus-score-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--spacing-xs);
+  line-height: 1.3;
+  max-width: 100%; /* Allow it to take full width of its box */
+}
+
+.top-summary-area .total-time-range-container {
+  min-height: auto;
+  /* text-align is already center from .summary-metric-box */
+}
+
+.top-summary-area .total-time-value {
+  font-size: 1.8em; /* Make it prominent like the focus score */
+  font-weight: 700;
+  color: var(--text-color-primary);
+  padding: var(--spacing-xs) 0;
+}
+
+/* Responsive adjustments for the summary area if needed */
+@media (max-width: 768px) {
+  .top-summary-area {
+    flex-direction: column; /* Stack summary boxes on smaller screens */
+    gap: var(--spacing-lg);
+  }
+  .summary-metric-box {
+    flex-basis: auto; /* Allow them to take full width when stacked */
+  }
+}
+
+/* Dark mode adjustments for summary area */
+@media (prefers-color-scheme: dark) {
+  .top-summary-area {
+    background-color: var(--bg-page); /* Use page background for less contrast */
+    border-color: var(--border-color-medium);
+  }
+
+  .summary-metric-box {
+    background-color: var(--bg-card);
+    border-color: var(--border-color-medium);
+  }
+  .summary-metric-box h3 {
+    color: var(--text-color-secondary);
+    border-bottom-color: var(--border-color-medium);
+  }
+
+  .top-summary-area .focus-score-description {
+    color: var(--text-color-muted);
+  }
+
+  .top-summary-area .total-time-value {
+    color: var(--text-color-primary);
   }
 }
