@@ -5,6 +5,33 @@ let hourlyChartInstance = null;
 // --- Interval ID for live popup updates ---
 let popupUpdateIntervalId = null;
 
+// COMMENT BLOCK: Added for 12h/24h toggle
+// --- START: 12h/24h Toggle Functionality ---
+const STORAGE_KEY_TIME_FORMAT = 'hourlyChartTimeFormat'; // true for 24-hour, false for 12-hour
+let use24HourFormat = false; // Default to 12-hour format
+let todaysHourlyDataForToggle = {}; // Store data for re-rendering on toggle
+
+async function loadTimeFormatPreference() {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEY_TIME_FORMAT);
+    if (result[STORAGE_KEY_TIME_FORMAT] !== undefined) {
+      use24HourFormat = result[STORAGE_KEY_TIME_FORMAT];
+    }
+  } catch (e) {
+    console.warn('Error loading time format preference:', e);
+  }
+}
+
+async function saveTimeFormatPreference() {
+  try {
+    await browser.storage.local.set({ [STORAGE_KEY_TIME_FORMAT]: use24HourFormat });
+  } catch (e) {
+    console.warn('Error saving time format preference:', e);
+  }
+}
+// --- END: 12h/24h Toggle Functionality ---
+// END OF COMMENT BLOCK
+
 // --- Chart Rendering Function ---
 function renderHourlyChart(canvasCtx, hourlyDataToday) {
   // Ensure Chart.js is loaded
@@ -25,23 +52,30 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     hourlyChartInstance = null;
   }
 
-  const labels = [];
+  // COMMENT BLOCK: Modified for 12h/24h toggle
+  // const labels = [];
+  const xAxisLabels = []; // Renamed for clarity
+  // END OF COMMENT BLOCK
   const data = [];
-  let maxTime = 0;
 
   for (let i = 0; i < 24; i++) {
-    const hour = i % 12 === 0 ? 12 : i % 12;
-    const ampm = i < 12 ? 'AM' : 'PM';
-    labels.push(`${hour}${ampm}`);
+    // COMMENT BLOCK: Added for 12h/24h toggle
+    if (use24HourFormat) {
+      xAxisLabels.push(String(i).padStart(2, '0'));
+    } else {
+      const hour = i % 12 === 0 ? 12 : i % 12;
+      const ampm = i < 12 ? 'AM' : 'PM';
+      xAxisLabels.push(`${hour}${ampm}`);
+    }
+    // END OF COMMENT BLOCK
     const hourStr = i.toString().padStart(2, '0');
     const seconds = hourlyDataToday[hourStr] || 0;
     data.push(seconds);
-    if (seconds > maxTime) {
-      maxTime = seconds;
-    }
   }
 
-  if (maxTime <= 0 && canvasCtx && canvasCtx.canvas) {
+  const hasData = data.some((value) => value > 0);
+
+  if (!hasData && canvasCtx && canvasCtx.canvas) {
     canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
     canvasCtx.font = '12px sans-serif';
     canvasCtx.fillStyle = '#aaa';
@@ -54,7 +88,9 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     hourlyChartInstance = new Chart(canvasCtx, {
       type: 'bar',
       data: {
-        labels: labels,
+        // COMMENT BLOCK: Modified for 12h/24h toggle
+        labels: xAxisLabels, // Use the new xAxisLabels
+        // END OF COMMENT BLOCK
         datasets: [
           {
             label: 'Time Spent',
@@ -90,12 +126,20 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
         scales: {
           y: {
             beginAtZero: true,
-            suggestedMax: maxTime * 1.1,
+            max: 3600,
             ticks: {
-              callback: function (value) {
-                return typeof formatTime === 'function' ? formatTime(value, false) : value;
+              stepSize: 900,
+              callback: function (value, index, values) {
+                if (value === 0) {
+                  return null;
+                }
+                if (value === 900) return '15m';
+                if (value === 1800) return '30m';
+                if (value === 2700) return '45m';
+                if (value === 3600) return '1h';
+                return null;
               },
-              maxTicksLimit: 4,
+              maxTicksLimit: 5,
               font: { size: 10 },
             },
             grid: { drawTicks: false, border: { display: false } },
@@ -105,7 +149,35 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
               font: { size: 9 },
               maxRotation: 0,
               autoSkip: true,
-              maxTicksLimit: 12,
+              maxTicksLimit: 8,
+              callback: function (value) {
+                const originalLabel = this.getLabelForValue(value);
+                if (use24HourFormat) {
+                  if (/^\d\d$/.test(originalLabel)) {
+                    return `${originalLabel}h`;
+                  }
+                  const ampmMatch = originalLabel.match(/(\d+)(AM|PM)/);
+                  if (ampmMatch) {
+                    let hour = parseInt(ampmMatch[1], 10);
+                    const period = ampmMatch[2];
+                    if (period === 'PM' && hour !== 12) hour += 12;
+                    if (period === 'AM' && hour === 12) hour = 0; // Midnight
+                    return `${String(hour).padStart(2, '0')}h`;
+                  }
+                  return originalLabel;
+                } else {
+                  if (originalLabel.endsWith('h')) {
+                    const numericHour = parseInt(originalLabel.substring(0, originalLabel.length - 1), 10);
+                    if (!isNaN(numericHour)) {
+                      if (numericHour === 0 || numericHour === 24) return '12AM'; // Midnight
+                      const hour12 = numericHour % 12 === 0 ? 12 : numericHour % 12;
+                      const ampm = numericHour < 12 ? 'AM' : 'PM';
+                      return `${hour12}${ampm}`;
+                    }
+                  }
+                  return originalLabel;
+                }
+              },
             },
             grid: { display: false, drawTicks: false, border: { display: false } },
           },
@@ -125,7 +197,11 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
 }
 
 // --- Main Logic ---
-document.addEventListener('DOMContentLoaded', () => {
+// COMMENT BLOCK: Added for 12h/24h toggle
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadTimeFormatPreference(); // Load preference first
+  // END OF COMMENT BLOCK
+
   const totalTimeEl = document.getElementById('totalTimeToday');
   const dateEl = document.getElementById('currentDate');
   const summaryEl = document.getElementById('todaySummary');
@@ -156,6 +232,23 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       hourlyChartCtx = hourlyChartCanvas.getContext('2d');
       if (!hourlyChartCtx) throw new Error('Canvas 2D context not supported or missing.');
+      // COMMENT BLOCK: Added for 12h/24h toggle
+      // Add click listener to the canvas for toggling time format
+      hourlyChartCanvas.addEventListener('click', () => {
+        use24HourFormat = !use24HourFormat; // Toggle preference
+        saveTimeFormatPreference(); // Save to storage
+        if (hourlyChartCtx && Object.keys(todaysHourlyDataForToggle).length > 0) {
+          // Check if data is available
+          renderHourlyChart(hourlyChartCtx, todaysHourlyDataForToggle); // Re-render with new format
+        } else {
+          // If data isn't loaded yet (e.g., very first click before storage fetch completes),
+          // re-fetch and render, or simply wait for the normal data load process.
+          // For simplicity, we'll rely on the main data load to eventually call renderHourlyChart.
+          // The preference is saved, so the next full render will use it.
+          console.log('Hourly data not yet loaded for toggle, preference saved.');
+        }
+      });
+      // END OF COMMENT BLOCK
     } catch (e) {
       console.error('Failed to get canvas context:', e);
       const chartWrapper = document.querySelector('.chart-wrapper');
@@ -190,7 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
     .then((result) => {
       const todaysCategoryData = result.dailyCategoryData?.[todayStr] || {};
       const todaysDomainData = result.dailyDomainData?.[todayStr] || {};
-      const todaysHourlyData = result.hourlyData?.[todayStr] || {};
+      // COMMENT BLOCK: Added for 12h/24h toggle
+      todaysHourlyDataForToggle = result.hourlyData?.[todayStr] || {}; // Store for toggle
+      // END OF COMMENT BLOCK
       const userRatings = result.categoryProductivityRatings || {};
       let totalSecondsToday = 0;
 
@@ -305,8 +400,9 @@ document.addEventListener('DOMContentLoaded', () => {
           progressBarEl.style.display = 'none';
         }
       }
-
-      if (hourlyChartCtx) renderHourlyChart(hourlyChartCtx, todaysHourlyData);
+      // COMMENT BLOCK: Modified for 12h/24h toggle
+      if (hourlyChartCtx) renderHourlyChart(hourlyChartCtx, todaysHourlyDataForToggle); // Use stored data
+      // END OF COMMENT BLOCK
       if (focusScoreEl) {
         try {
           const scoreData =
@@ -390,11 +486,15 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (state.currentPhase === POMODORO_PHASES.LONG_BREAK) pomodoroPhaseEl.classList.add('long-break');
 
     pomodoroTimeEl.textContent = formatTimeForDisplay(state.remainingTime);
-    pomodoroStartPauseBtn.textContent = state.timerState === 'running' ? 'Pause' : 'Start';
+    // pomodoroStartPauseBtn.textContent = state.timerState === 'running' ? 'Pause' : 'Start';
+    if (state.timerState === 'running') {
+      pomodoroStartPauseBtn.textContent = 'Pause';
+    } else if (state.timerState === 'paused') {
+      pomodoroStartPauseBtn.textContent = 'Resume';
+    } else {
+      pomodoroStartPauseBtn.textContent = 'Start';
+    }
 
-    // The 'state.notifyEnabled' comes directly from the background script,
-    // which has already reconciled it with actual browser permissions.
-    // So, we can trust this value to reflect whether notifications *can* and *will* be shown.
     const isNotifyEffectivelyEnabled = state.notifyEnabled === true;
 
     if (isNotifyEffectivelyEnabled) {
@@ -403,22 +503,18 @@ document.addEventListener('DOMContentLoaded', () => {
       pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Disable Notifications');
     } else {
       pomodoroNotifyIcon.textContent = '🔕';
-      // If notifications are not effectively enabled, check if it's due to missing permission
-      // to guide the user appropriately.
       try {
         const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
         if (hasPermission) {
-          // Permission exists, but notifyEnabled is false (user turned them off)
           pomodoroNotifyToggleBtn.title = 'Notifications: Off (Click to enable)';
           pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Enable Notifications');
         } else {
-          // Permission does NOT exist, and notifyEnabled is false (likely because of missing permission)
           pomodoroNotifyToggleBtn.title = 'Notifications: Setup Required (Click to open settings)';
           pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
         }
       } catch (err) {
         console.warn('[Popup] Error checking notification permission for title (updatePomodoroDisplay):', err);
-        pomodoroNotifyToggleBtn.title = 'Notifications: Check Settings'; // Fallback title
+        pomodoroNotifyToggleBtn.title = 'Notifications: Check Settings';
         pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Check Notification Settings');
       }
     }
@@ -429,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (
         state.timerState === 'stopped' &&
         state.currentPhase !== POMODORO_PHASES.WORK &&
-        state.durations && // Ensure durations is present
+        state.durations &&
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `${state.currentPhase} complete. Start next?`;
@@ -437,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.timerState === 'stopped' &&
         state.currentPhase === POMODORO_PHASES.WORK &&
         state.workSessionsCompleted > 0 &&
-        state.durations && // Ensure durations is present
+        state.durations &&
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `Work session complete.`;
@@ -488,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentButtonText === 'Start' || currentButtonText === 'Resume' ? 'startPomodoro' : 'pausePomodoro';
       browser.runtime
         .sendMessage({ action: action })
-        .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI after action
+        .then(fetchAndUpdatePomodoroStatus)
         .catch((err) => console.error(`Error sending ${action}:`, err));
     });
   }
@@ -510,14 +606,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (isAtVeryStartOfCycle) {
             if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Timer is already at the start.';
-            setTimeout(() => updatePomodoroDisplay(state), 1500); // Revert message after a delay
+            setTimeout(() => updatePomodoroDisplay(state), 1500);
             return;
           }
           const message = `Reset current ${state.currentPhase} timer?`;
           showCustomConfirm(message, () => {
             browser.runtime
               .sendMessage({ action: 'resetPomodoro', resetCycle: false })
-              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+              .then(fetchAndUpdatePomodoroStatus)
               .catch((err) => console.error('Error sending resetPomodoro:', err));
           });
         })
@@ -538,13 +634,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showCustomConfirm('Switching the timer will stop the current session. Continue?', () => {
               browser.runtime
                 .sendMessage({ action: 'changePomodoroPhase' })
-                .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+                .then(fetchAndUpdatePomodoroStatus)
                 .catch((err) => console.error('Error sending changePomodoroPhase:', err));
             });
           } else {
             browser.runtime
               .sendMessage({ action: 'changePomodoroPhase' })
-              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+              .then(fetchAndUpdatePomodoroStatus)
               .catch((err) => console.error('Error sending changePomodoroPhase:', err));
           }
         })
@@ -566,46 +662,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (hasPermission) {
         console.log('[Popup] Permission granted. Getting current Pomodoro status to determine toggle direction...');
-        // Fetch the current state from the background, which includes the *reconciled* notifyEnabled.
         const currentState = await browser.runtime.sendMessage({ action: 'getPomodoroStatus' });
 
         if (currentState) {
-          const currentNotifySettingEnabled = currentState.notifyEnabled; // This is the authoritative state
-          const newDesiredState = !currentNotifySettingEnabled; // User's intent is to toggle
+          const currentNotifySettingEnabled = currentState.notifyEnabled;
+          const newDesiredState = !currentNotifySettingEnabled;
           console.log(
             `[Popup] Current notifyEnabled from background: ${currentNotifySettingEnabled}. Requesting change to: ${newDesiredState}`
           );
-
-          // Send the user's *intent* to the background.
-          // The background will handle saving this intent, reconciling with permissions if needed,
-          // and then broadcasting the final state via 'pomodoroStatusUpdate'.
           browser.runtime
             .sendMessage({
               action: 'updatePomodoroNotificationSetting',
               enabled: newDesiredState,
             })
-            // No explicit call to fetchAndUpdatePomodoroStatus() here.
-            // The UI will be updated reactively by the 'pomodoroStatusUpdate' message
-            // listener when the background broadcasts the new state.
             .catch((err) => {
               console.error('[Popup] Error sending notification toggle message to background:', err);
-              fetchAndUpdatePomodoroStatus(); // Fallback UI refresh on error
+              fetchAndUpdatePomodoroStatus();
             });
         } else {
           console.error('[Popup] Could not get current Pomodoro status to determine toggle direction.');
-          fetchAndUpdatePomodoroStatus(); // Attempt to refresh UI as a fallback
+          fetchAndUpdatePomodoroStatus();
         }
       } else {
-        // Permission not granted, open options page with hash for scrolling
         console.log('[Popup] Notification permission not granted. Opening options page to #pomodoro-settings-section.');
         const optionsUrl = browser.runtime.getURL('options/options.html#pomodoro-settings-section');
         browser.tabs.create({ url: optionsUrl });
-        window.close(); // Close the popup after opening the options page
+        window.close();
       }
     } catch (err) {
       console.error('[Popup] Error in handleNotifyToggleClick:', err);
       try {
-        // Fallback: try to open options page without hash on error
         browser.runtime.openOptionsPage();
         window.close();
       } catch (openErr) {
@@ -624,22 +710,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function fetchAndUpdatePomodoroStatus() {
     if (!browser.runtime || !browser.runtime.sendMessage) {
       console.warn('[Pomodoro Popup] Browser runtime or sendMessage not available. Cannot fetch status.');
-      updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+      updatePomodoroDisplay(null);
       return Promise.resolve();
     }
     return browser.runtime
       .sendMessage({ action: 'getPomodoroStatus' })
       .then((response) => {
         if (response) {
-          updatePomodoroDisplay(response); // Update UI with fresh status
+          updatePomodoroDisplay(response);
         } else {
           console.warn('[Pomodoro Popup] No response or error from getPomodoroStatus.');
-          updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+          updatePomodoroDisplay(null);
         }
       })
       .catch((err) => {
         console.error('Error fetching Pomodoro status:', err);
-        updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+        updatePomodoroDisplay(null);
       });
   }
 
@@ -652,12 +738,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.visibilityState === 'visible') {
       fetchAndUpdatePomodoroStatus();
     }
-  }, 1000); // Refresh every second
+  }, 1000);
 
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'pomodoroStatusUpdate' && request.status) {
       console.log('[Popup] Received direct pomodoroStatusUpdate from background:', request.status);
-      updatePomodoroDisplay(request.status); // Update UI with the broadcasted status
+      updatePomodoroDisplay(request.status);
     }
 
     return false;
