@@ -150,6 +150,64 @@ body {
   text-align: center;
 }
 
+/* NEW: Styles for the summary toggle area */
+.summary-toggle-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px; /* Add some space above the title/toggle */
+  margin-bottom: 6px; /* Space below before the list starts */
+  padding: 2px 0; /* Optional: Small padding for breathing room */
+  cursor: pointer; /* Indicate the area is clickable */
+}
+
+.summary-view-title {
+  font-size: 0.9em;
+  color: var(--popup-text-secondary);
+  font-weight: 600;
+  text-align: left;
+  margin: 0; /* Remove default h4 margin */
+  flex-grow: 1; /* Allow title to take available space */
+}
+
+/* Generic styling for icon buttons in the popup if you plan to have more */
+.popup-icon-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px; /* Small padding for easier clicking */
+  margin-left: 6px; /* Space from the title */
+  cursor: pointer;
+  color: var(--popup-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-radius: 4px; /* Slight rounding for the button focus */
+}
+
+.popup-icon-btn:hover {
+  color: var(--popup-text-primary);
+  background-color: var(--popup-options-btn-bg); /* Use a subtle hover like options button */
+}
+.popup-icon-btn:focus-visible {
+  /* Modern focus indicator */
+  outline: 2px solid var(--pomodoro-btn-primary-bg);
+  outline-offset: 1px;
+}
+
+#summaryToggleIcon {
+  font-size: 1.2em;
+  display: inline-block;
+}
+
+/* Ensure todaySummary list still looks good after adding the title */
+.today-summary {
+  text-align: left;
+  /* margin-top: 8px; */ /* Original margin-top might not be needed if summary-toggle-area provides spacing */
+  font-size: 0.9em;
+  padding: 0 2px;
+}
+
 .date-display {
   font-size: 0.85em;
   color: var(--popup-text-secondary);
@@ -317,7 +375,6 @@ body {
 .pomodoro-icon-btn.title-align-icon {
   background: none;
   border: none;
-  /* Added symmetrical padding to make the button's clickable area more robust */
   padding: 4px 6px;
   margin-left: 8px; /* Space from the title, was padding-left before */
   cursor: pointer;
@@ -339,6 +396,7 @@ body {
 
 .pomodoro-icon-btn.title-align-icon:hover {
   color: var(--popup-text-primary);
+  background-color: var(--popup-options-btn-bg);
 }
 /* End of MODIFIED Styles */
 

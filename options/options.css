@@ -315,8 +315,7 @@ button.export-button:hover {
 
 #categoryList,
 #assignmentList,
-#ruleList,
-.stats-list-container ul {
+#ruleList {
   list-style: none;
   padding: 0;
   margin: var(--spacing-sm) 0 0 0;
@@ -630,7 +629,7 @@ button.export-button:hover {
   margin: 0;
   overflow-y: auto;
   flex-grow: 1;
-  max-height: 250px;
+  max-height: 425px; /*250px;*/
   border: 1px solid var(--border-color-light);
 }
 
