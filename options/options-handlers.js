@@ -31,42 +31,91 @@ function resetCategoryItemUI(listItem) {
   if (listItem.dataset.originalName) delete listItem.dataset.originalName;
 }
 
+// --- START: NEW - Helper for displaying/clearing error messages ---
+/**
+ * Displays a message in a specified error element.
+ * @param {string} elementId - The ID of the HTML element to display the error in.
+ * @param {string} message - The message to display.
+ * @param {boolean} isError - True if it's an error message (styled red), false for success/info.
+ */
+function displayMessage(elementId, message, isError = true) {
+  const errorElement = document.getElementById(elementId);
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = message ? 'block' : 'none';
+    errorElement.style.color = isError ? 'var(--accent-color-red, #dc3545)' : 'var(--accent-color-green, #28a745)';
+    // Clear message after a delay if it's not an error that requires user action
+    if (!isError || message.includes('successful')) {
+      // Simple check for success
+      setTimeout(() => {
+        if (errorElement.textContent === message) {
+          // Only clear if message hasn't changed
+          errorElement.textContent = '';
+          errorElement.style.display = 'none';
+        }
+      }, 3000); // Hide after 3 seconds
+    }
+  }
+}
+
+/**
+ * Clears a message from a specified error element.
+ * @param {string} elementId - The ID of the HTML element.
+ */
+function clearMessage(elementId) {
+  const errorElement = document.getElementById(elementId);
+  if (errorElement) {
+    errorElement.textContent = '';
+    errorElement.style.display = 'none';
+  }
+}
+// --- END: NEW - Helper for displaying/clearing error messages ---
 // --- Event Handlers ---
 
 // Category Management Handlers
 function handleAddCategory() {
+  const errorElementId = 'newCategoryNameError'; // ID of the new error span
   try {
+    clearMessage(errorElementId); // Clear previous messages
+
     if (!UIElements.newCategoryNameInput) {
+      //
       console.warn('UIElements.newCategoryNameInput not found in handleAddCategory');
+      displayMessage(errorElementId, 'An unexpected error occurred.', true);
       return;
     }
-    const name = UIElements.newCategoryNameInput.value.trim();
+    const name = UIElements.newCategoryNameInput.value.trim(); //
     if (!name) {
-      alert('Please enter a category name.');
+      displayMessage(errorElementId, 'Please enter a category name.', true);
       return;
     }
     if (AppState.categories.some((cat) => cat.toLowerCase() === name.toLowerCase())) {
-      alert(`Category "${name}" already exists.`);
+      //
+      displayMessage(errorElementId, `Category "${name}" already exists.`, true);
       return;
     }
-    AppState.categories.push(name);
-    AppState.categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    UIElements.newCategoryNameInput.value = '';
+    AppState.categories.push(name); //
+    AppState.categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); //
+    UIElements.newCategoryNameInput.value = ''; //
 
-    saveCategoriesAndAssignments();
+    saveCategoriesAndAssignments(); //
 
-    if (typeof populateCategoryList === 'function') populateCategoryList();
-    if (typeof populateCategorySelect === 'function') populateCategorySelect();
-    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
-    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
+    if (typeof populateCategoryList === 'function') populateCategoryList(); //
+    if (typeof populateCategorySelect === 'function') populateCategorySelect(); //
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect(); //
+    if (typeof populateProductivitySettings === 'function') populateProductivitySettings(); //
+
+    displayMessage(errorElementId, `Category "${name}" added successfully.`, false);
   } catch (e) {
     console.error('Error adding category:', e);
-    alert('Failed to add category.');
+    displayMessage(errorElementId, 'Failed to add category. See console for details.', true);
   }
 }
 
 function handleDeleteCategory(event) {
+  const errorElementId = 'newCategoryNameError'; // Can reuse or have a more general one
   try {
+    clearMessage(errorElementId);
     if (!event.target.classList.contains('category-delete-btn') || !event.target.closest('#categoryList')) return;
     const categoryToDelete = event.target.dataset.category;
 
@@ -77,31 +126,36 @@ function handleDeleteCategory(event) {
         )
       ) {
         const oldCategoryName = categoryToDelete;
-        AppState.categories = AppState.categories.filter((cat) => cat !== oldCategoryName);
+        AppState.categories = AppState.categories.filter((cat) => cat !== oldCategoryName); //
 
         let assignmentsChanged = false,
           rulesChanged = false;
 
         for (const domain in AppState.categoryAssignments) {
+          //
           if (AppState.categoryAssignments[domain] === oldCategoryName) {
-            delete AppState.categoryAssignments[domain];
+            //
+            delete AppState.categoryAssignments[domain]; //
             assignmentsChanged = true;
           }
         }
 
-        const originalRulesLength = AppState.rules.length;
+        const originalRulesLength = AppState.rules.length; //
         AppState.rules = AppState.rules.filter(
+          //
           (rule) => !(rule.type.includes('-category') && rule.value === oldCategoryName)
         );
-        rulesChanged = AppState.rules.length !== originalRulesLength;
+        rulesChanged = AppState.rules.length !== originalRulesLength; //
 
-        const savePromises = [saveCategoriesAndAssignments()];
-        if (rulesChanged && typeof saveRules === 'function') savePromises.push(saveRules());
+        const savePromises = [saveCategoriesAndAssignments()]; //
+        if (rulesChanged && typeof saveRules === 'function') savePromises.push(saveRules()); //
 
         Promise.all(savePromises)
           .then(() => {
             if (typeof recalculateAndUpdateCategoryTotals === 'function') {
+              //
               return recalculateAndUpdateCategoryTotals({
+                //
                 type: 'categoryDelete',
                 oldCategory: oldCategoryName,
                 newCategory: 'Other',
@@ -109,28 +163,32 @@ function handleDeleteCategory(event) {
             }
           })
           .then(() => {
-            if (typeof populateCategoryList === 'function') populateCategoryList();
-            if (typeof populateCategorySelect === 'function') populateCategorySelect();
-            if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
-            if (typeof populateAssignmentList === 'function') populateAssignmentList();
-            if (typeof populateRuleList === 'function') populateRuleList();
-            if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
-            if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+            if (typeof populateCategoryList === 'function') populateCategoryList(); //
+            if (typeof populateCategorySelect === 'function') populateCategorySelect(); //
+            if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect(); //
+            if (typeof populateAssignmentList === 'function') populateAssignmentList(); //
+            if (typeof populateRuleList === 'function') populateRuleList(); //
+            if (typeof populateProductivitySettings === 'function') populateProductivitySettings(); //
+            if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI(); //
+            displayMessage(errorElementId, `Category "${oldCategoryName}" deleted.`, false);
           })
           .catch((error) => {
             console.error('Error saving or recalculating after category deletion:', error);
-            alert('Failed to save changes after deleting category. Please refresh.');
-            if (typeof loadAllData === 'function') loadAllData();
+            displayMessage(errorElementId, 'Failed to save changes after deleting category. Please refresh.', true);
+            if (typeof loadAllData === 'function') loadAllData(); //
           });
       }
     }
   } catch (e) {
     console.error('Error deleting category:', e);
-    alert('An error occurred while trying to delete the category.');
+    displayMessage(errorElementId, 'An error occurred while trying to delete the category.', true);
   }
 }
 
 function handleEditCategoryClick(event) {
+  const errorElementId = 'newCategoryNameError';
+  clearMessage(errorElementId);
+
   if (!event.target.classList.contains('category-edit-btn')) return;
   const listItem = event.target.closest('.category-list-item');
   if (!listItem) return;
@@ -144,13 +202,14 @@ function handleEditCategoryClick(event) {
     return;
   }
 
-  const currentlyEditing = document.querySelector(
-    '.category-list-item .category-edit-input:not([style*="display: none"])'
-  );
-  if (currentlyEditing && currentlyEditing.closest('.category-list-item') !== listItem) {
-    const otherCancelBtn = currentlyEditing.closest('.category-list-item').querySelector('.category-cancel-btn');
-    if (otherCancelBtn) otherCancelBtn.click();
+  // Reset any other item that might be in edit mode
+  const currentlyEditingItem = document.querySelector('.category-list-item.editing');
+  if (currentlyEditingItem && currentlyEditingItem !== listItem) {
+    resetCategoryItemUI(currentlyEditingItem);
+    currentlyEditingItem.classList.remove('editing');
   }
+
+  listItem.classList.add('editing'); // Add class for styling edit mode
 
   const currentName = categoryNameSpan.textContent;
   listItem.dataset.originalName = currentName;
@@ -175,10 +234,14 @@ function handleCancelCategoryEditClick(event) {
   if (!event.target.classList.contains('category-cancel-btn')) return;
   const listItem = event.target.closest('.category-list-item');
   resetCategoryItemUI(listItem);
+  listItem.classList.remove('editing'); // Remove editing class
+  clearMessage('newCategoryNameError');
 }
 
 async function handleSaveCategoryClick(event) {
   if (!event.target.classList.contains('category-save-btn')) return;
+  const errorElementId = 'newCategoryNameError';
+  clearMessage(errorElementId);
 
   const saveButton = event.target;
   const listItem = saveButton.closest('.category-list-item');
@@ -191,22 +254,28 @@ async function handleSaveCategoryClick(event) {
   const newName = inputField.value.trim();
 
   if (!newName) {
-    alert('Category name cannot be empty.');
+    displayMessage(errorElementId, 'Category name cannot be empty.', true);
     inputField.focus();
     return;
   }
   if (newName === oldName) {
     resetCategoryItemUI(listItem);
+    listItem.classList.remove('editing');
     return;
   }
   if (newName === 'Other') {
-    alert('Cannot rename a category to "Other". "Other" is a default fallback category.');
+    displayMessage(
+      errorElementId,
+      'Cannot rename a category to "Other". "Other" is a default fallback category.',
+      true
+    );
     inputField.value = oldName;
     inputField.focus();
     return;
   }
   if (AppState.categories.some((cat) => cat.toLowerCase() === newName.toLowerCase() && cat !== oldName)) {
-    alert(`Category "${newName}" already exists.`);
+    //
+    displayMessage(errorElementId, `Category "${newName}" already exists.`, true);
     inputField.focus();
     return;
   }
@@ -221,71 +290,100 @@ async function handleSaveCategoryClick(event) {
     let assignmentsChanged = false;
     let rulesChanged = false;
 
-    const categoryIndex = AppState.categories.indexOf(oldName);
+    const categoryIndex = AppState.categories.indexOf(oldName); //
     if (categoryIndex > -1) {
-      AppState.categories[categoryIndex] = newName;
-      AppState.categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+      AppState.categories[categoryIndex] = newName; //
+      AppState.categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); //
     } else {
       throw new Error(`Could not find old category name in state: ${oldName}`);
     }
 
     for (const domain in AppState.categoryAssignments) {
+      //
       if (AppState.categoryAssignments[domain] === oldName) {
-        AppState.categoryAssignments[domain] = newName;
+        //
+        AppState.categoryAssignments[domain] = newName; //
         assignmentsChanged = true;
       }
     }
     AppState.rules.forEach((rule) => {
+      //
       if (rule.type.includes('-category') && rule.value === oldName) {
         rule.value = newName;
         rulesChanged = true;
       }
     });
     if (AppState.categoryProductivityRatings.hasOwnProperty(oldName)) {
-      AppState.categoryProductivityRatings[newName] = AppState.categoryProductivityRatings[oldName];
-      delete AppState.categoryProductivityRatings[oldName];
-      await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: AppState.categoryProductivityRatings });
+      //
+      AppState.categoryProductivityRatings[newName] = AppState.categoryProductivityRatings[oldName]; //
+      delete AppState.categoryProductivityRatings[oldName]; //
+      await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: AppState.categoryProductivityRatings }); //
     }
 
-    const savePromises = [saveCategoriesAndAssignments()];
-    if (rulesChanged && typeof saveRules === 'function') savePromises.push(saveRules());
+    const savePromises = [saveCategoriesAndAssignments()]; //
+    if (rulesChanged && typeof saveRules === 'function') savePromises.push(saveRules()); //
     await Promise.all(savePromises);
 
     if (typeof recalculateAndUpdateCategoryTotals === 'function') {
-      await recalculateAndUpdateCategoryTotals({ type: 'categoryRename', oldCategory: oldName, newCategory: newName });
+      //
+      await recalculateAndUpdateCategoryTotals({ type: 'categoryRename', oldCategory: oldName, newCategory: newName }); //
     }
 
-    if (typeof populateCategoryList === 'function') populateCategoryList();
-    if (typeof populateCategorySelect === 'function') populateCategorySelect();
-    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
-    if (assignmentsChanged && typeof populateAssignmentList === 'function') populateAssignmentList();
-    if (rulesChanged && typeof populateRuleList === 'function') populateRuleList();
-    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
-    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+    // Repopulate lists which might depend on the changed category name
+    if (typeof populateCategoryList === 'function') populateCategoryList(); //
+    if (typeof populateCategorySelect === 'function') populateCategorySelect(); //
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect(); //
+    if (assignmentsChanged && typeof populateAssignmentList === 'function') populateAssignmentList(); //
+    if (rulesChanged && typeof populateRuleList === 'function') populateRuleList(); //
+    if (typeof populateProductivitySettings === 'function') populateProductivitySettings(); //
+    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI(); //
+
+    listItem.classList.remove('editing'); // Ensure editing class is removed on successful save
+    // Note: populateCategoryList will redraw the item, effectively resetting its UI.
+    // If populateCategoryList was NOT called, we would need resetCategoryItemUI(listItem) here.
 
     console.log(`Category "${oldName}" renamed to "${newName}" and changes saved.`);
+    displayMessage(errorElementId, `Category "${oldName}" successfully renamed to "${newName}".`, false);
   } catch (error) {
     console.error('Error saving category rename:', error);
-    alert(`Failed to save category rename: ${error.message || 'Unknown error'}`);
+    displayMessage(errorElementId, `Failed to save category rename: ${error.message || 'Unknown error'}`, true);
+    // Optionally, reset UI to pre-edit state on error if input field is still visible
+    // inputField.value = oldName; // Or call resetCategoryItemUI more carefully
   } finally {
     saveButton.textContent = originalButtonText;
     saveButton.disabled = false;
     if (cancelButton) cancelButton.disabled = false;
+    // If an error occurred and we are not repopulating the list, ensure edit mode is exited
+    if (!listItem.classList.contains('editing') && inputField.style.display !== 'none') {
+      // This case shouldn't happen if populateCategoryList is called, but as a fallback:
+      resetCategoryItemUI(listItem);
+    }
   }
 }
 
 // Assignment Management Handlers
 function handleAssignDomain() {
+  const errorElementId = 'assignDomainError'; // Assuming you add a span with this ID in options.html
+  // It would be good to have a dedicated error span for this section too.
+  // For now, this function will still use alert if 'assignDomainError' is not found.
+  let errorSpan = document.getElementById(errorElementId);
+
   try {
-    if (!UIElements.domainPatternInput || !UIElements.categorySelect) return;
-    const domainPattern = UIElements.domainPatternInput.value.trim();
-    const category = UIElements.categorySelect.value;
+    if (errorSpan) clearMessage(errorElementId);
+    else console.warn("Error span 'assignDomainError' not found for domain assignment feedback.");
+
+    if (!UIElements.domainPatternInput || !UIElements.categorySelect) return; //
+    const domainPattern = UIElements.domainPatternInput.value.trim(); //
+    const category = UIElements.categorySelect.value; //
     if (!domainPattern) {
-      alert('Please enter a domain pattern (e.g., google.com or *.example.com).');
+      if (errorSpan)
+        displayMessage(errorElementId, 'Please enter a domain pattern (e.g., google.com or *.example.com).', true);
+      else alert('Please enter a domain pattern (e.g., google.com or *.example.com).');
       return;
     }
     if (!category) {
-      alert('Please select a category.');
+      if (errorSpan) displayMessage(errorElementId, 'Please select a category.', true);
+      else alert('Please select a category.');
       return;
     }
     const domainRegex = /^(?:([\w\-*]+)\.)?([\w\-]+)\.([a-z\.]{2,})$/i;
@@ -295,24 +393,35 @@ function handleAssignDomain() {
     const isValidHostname = hostnameRegex.test(domainPattern);
     const allowPattern = isValidDomain || isValidWildcard || isValidHostname;
     if (!allowPattern) {
-      alert(
-        'Invalid domain/pattern format.\nPlease use format like "example.com", "*.example.com", or "subdomain.example.com".'
-      );
+      if (errorSpan)
+        displayMessage(
+          errorElementId,
+          'Invalid domain/pattern format.\nPlease use format like "example.com", "*.example.com", or "subdomain.example.com".',
+          true
+        );
+      else
+        alert(
+          'Invalid domain/pattern format.\nPlease use format like "example.com", "*.example.com", or "subdomain.example.com".'
+        );
       return;
     }
 
     const existingPatternKey = Object.keys(AppState.categoryAssignments).find(
+      //
       (key) => key.toLowerCase() === domainPattern.toLowerCase()
     );
 
     if (existingPatternKey && AppState.categoryAssignments[existingPatternKey] === category) {
-      alert(`"${domainPattern}" is already assigned to the "${category}" category.`);
+      //
+      if (errorSpan)
+        displayMessage(errorElementId, `"${domainPattern}" is already assigned to the "${category}" category.`, true);
+      else alert(`"${domainPattern}" is already assigned to the "${category}" category.`);
       return;
     }
 
     let oldCategoryForRecalc = 'Other';
     if (existingPatternKey) {
-      oldCategoryForRecalc = AppState.categoryAssignments[existingPatternKey];
+      oldCategoryForRecalc = AppState.categoryAssignments[existingPatternKey]; //
       if (
         !confirm(
           `"${domainPattern}" is already assigned to "${oldCategoryForRecalc}".\nDo you want to reassign it to "${category}"?`
@@ -321,19 +430,22 @@ function handleAssignDomain() {
         return;
       }
       if (existingPatternKey !== domainPattern) {
-        delete AppState.categoryAssignments[existingPatternKey];
+        // Case-insensitivity fix
+        delete AppState.categoryAssignments[existingPatternKey]; //
       }
     }
 
-    AppState.categoryAssignments[domainPattern] = category;
-    UIElements.domainPatternInput.value = '';
-    UIElements.categorySelect.value = '';
+    AppState.categoryAssignments[domainPattern] = category; //
+    UIElements.domainPatternInput.value = ''; //
+    UIElements.categorySelect.value = ''; //
 
-    saveCategoriesAndAssignments()
+    saveCategoriesAndAssignments() //
       .then(() => {
-        if (typeof populateAssignmentList === 'function') populateAssignmentList();
+        if (typeof populateAssignmentList === 'function') populateAssignmentList(); //
         if (typeof recalculateAndUpdateCategoryTotals === 'function') {
+          //
           return recalculateAndUpdateCategoryTotals({
+            //
             type: 'assignmentChange',
             domain: domainPattern,
             oldCategory: oldCategoryForRecalc,
@@ -342,15 +454,18 @@ function handleAssignDomain() {
         }
       })
       .then(() => {
-        if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+        if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI(); //
+        if (errorSpan) displayMessage(errorElementId, `Domain "${domainPattern}" assigned to "${category}".`, false);
       })
       .catch((error) => {
         console.error('Error assigning domain or recalculating:', error);
-        alert('Failed to assign domain. Check console for errors.');
+        if (errorSpan) displayMessage(errorElementId, 'Failed to assign domain. Check console.', true);
+        else alert('Failed to assign domain. Check console for errors.');
       });
   } catch (e) {
     console.error('Error assigning domain:', e);
-    alert('Failed to assign domain.');
+    if (errorSpan) displayMessage(errorElementId, 'Failed to assign domain.', true);
+    else alert('Failed to assign domain.');
   }
 }
 
