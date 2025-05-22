@@ -646,7 +646,7 @@ button.export-button:hover {
   margin: 0;
   overflow-y: auto;
   flex-grow: 1;
-  max-height: 425px;
+  max-height: 430px;
   border: 1px solid var(--border-color-light);
   list-style: none; /* ensure no bullets */
   padding: 0; /* ensure no default padding */
