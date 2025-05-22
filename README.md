@@ -3,14 +3,15 @@
 **Track your time online, gain insights, control distractions, and stay productive with this privacy-focused Firefox extension.**
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Mozilla Add-on](https://img.shields.io/amo/v/focusflow-monitor?label=Firefox%20Add-on&color=007bff)](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
+[![Mozilla Add-on (Stable)](https://img.shields.io/amo/v/focusflow-monitor?label=Stable&color=007bff)](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
+[![Latest Beta Release](https://img.shields.io/github/v/release/SurajVerma/focus-flow-monitor?include_prereleases&label=Beta&color=orange)](https://github.com/SurajVerma/focus-flow-monitor/releases)
 [![GitHub last commit](https://img.shields.io/github/last-commit/SurajVerma/focus-flow-monitor)](https://github.com/SurajVerma/focus-flow-monitor/commits/main)
 [![GitHub issues](https://img.shields.io/github/issues/SurajVerma/focus-flow-monitor)](https://github.com/SurajVerma/focus-flow-monitor/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/SurajVerma/focus-flow-monitor?style=social)](https://github.com/SurajVerma/focus-flow-monitor/stargazers)
 
 Focus Flow Monitor helps you understand your online habits by tracking the time you spend on different websites. Gain insights through categorized statistics, visual charts, and a daily focus score. Set limits, schedule blocks, or permanently block distracting sites to stay productive. All your data stays local, prioritizing your privacy.
 
-![Quick View Popup](https://github.com/user-attachments/assets/0d307deb-52a1-4766-8ed2-fbde297cb331)
+![Quick View Popup](https://github.com/user-attachments/assets/5b8d9bdc-af18-4fd0-ad0b-c738edf66169)
 
 ---
 
@@ -34,12 +35,13 @@ For more details on this and previous updates, check out the [Releases Page](htt
 - **Site Blocking & Limiting:**
   - Set daily time limits for specific websites or entire categories.
   - Permanently block access to distracting websites.
-  - **NEW: Scheduled Blocking** – Define specific days and times for your block rules to be active.
+  - **Scheduled Blocking** – Define specific days and times for your block rules to be active.
 - **Customizable Block Page:** Personalize the experience when a site is blocked with custom messages, motivational quotes, and control over displayed information.
 - **Data Management:**
   - Export your complete tracking history and settings for backup.
   - Import previously exported data to restore your setup.
   - **Data Retention Settings:** Set a custom duration for how long tracking data is stored.
+- **Tomato Clock** : Boost your productivity even further with Tomato Clock in Quick View Panel!
 - **Theme Support:** Automatically matches your browser or operating system's light or dark theme.
 - **Privacy Focused:** All your tracking data is stored locally within your browser. No data is ever sent to external servers.
 
@@ -101,13 +103,20 @@ Starting with version 0.9.0.x, the version available on GitHub Releases will be 
 
 ## Screenshots
 
-**Options & Statistics Page:**
-![Options Page](https://github.com/user-attachments/assets/387e0515-d242-44f5-9e64-03c74b12a2ca)
+**Dashboard**
+![dashboard](https://github.com/user-attachments/assets/23bbf8cc-1b5e-43bd-a315-6b0ce83b03ca)
+
+**Content Control**
+![content-control](https://github.com/user-attachments/assets/29e15382-e0b5-4d7c-9919-637ad4e03f62)
+
+**Productivity**
+![productivity](https://github.com/user-attachments/assets/442e2b88-2e57-46cb-aab9-ed7b999b8b67)
+
+**Settings**
+![settings](https://github.com/user-attachments/assets/35f87464-7ce4-4c37-a03f-0cdade941f6f)
 
 **Blocked Page Example:**
 ![Blocked Page](https://github.com/user-attachments/assets/01c6ba2b-595c-41a1-943b-15ed34228b61)
-
-_(Consider adding new screenshots for Scheduled Blocking setup and the Customized Block Page features!)_
 
 ---
 
