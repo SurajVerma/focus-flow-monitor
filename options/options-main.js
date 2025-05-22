@@ -1,4 +1,4 @@
-// options/options-main.js (v0.8.8 - Tab Interface Logic)
+// options/options-main.js (v0.8.9 - Update event listeners for new assign domain flow)
 
 // --- Helper function to safely set list item content ---
 /**
@@ -15,11 +15,11 @@ function setListMessage(element, message, options = {}) {
   const li = document.createElement('li');
   li.textContent = message;
   li.style.textAlign = options.textAlign || 'center';
-  li.style.color = options.color || 'var(--text-color-muted)'; // Ensure this CSS variable is defined
+  li.style.color = options.color || 'var(--text-color-muted)';
   element.appendChild(li);
 }
 
-// --- START: NEW TAB HANDLING LOGIC ---
+// --- START: TAB HANDLING LOGIC ---
 let isChartRenderPending = false;
 let pendingChartData = null;
 let pendingChartLabel = '';
@@ -39,7 +39,6 @@ function setupTabs() {
       tabContents.forEach((content) => {
         if (content.id === targetTab) {
           content.classList.add('active');
-          // If the dashboard tab is now active and a chart render was pending
           if (targetTab === 'dashboardTab' && isChartRenderPending) {
             console.log('[Tabs] Dashboard tab activated, rendering pending chart.');
             if (typeof renderChart === 'function' && pendingChartData) {
@@ -56,7 +55,6 @@ function setupTabs() {
           content.classList.remove('active');
         }
       });
-      // Persist active tab
       if (browser && browser.storage && browser.storage.local) {
         browser.storage.local.set({ optionsActiveTab: targetTab }).catch((err) => {
           console.warn('Error saving active tab state:', err);
@@ -83,20 +81,16 @@ async function restoreActiveTab() {
     }
   }
 }
-// --- END: NEW TAB HANDLING LOGIC ---
+// --- END: TAB HANDLING LOGIC ---
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
-  // Make DOMContentLoaded async
   console.log('[Options Main] DOMContentLoaded');
-  // Ensure UI elements are queried and available before proceeding
   if (!queryUIElements()) {
-    // From options-state.js
     console.error('Failed to initialize UI elements. Aborting setup.');
     const container = document.querySelector('.container');
     if (container) {
-      // Safely set error message
-      container.innerHTML = ''; // Clear existing content first
+      container.innerHTML = '';
       const p = document.createElement('p');
       p.textContent = 'Error: Could not load page elements. Please try refreshing.';
       p.style.color = 'red';
@@ -107,35 +101,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  setupTabs(); // Initialize tab functionality
+  setupTabs();
 
   try {
-    // Set the initial state of the chart view radio button
     const defaultChartView = AppState.currentChartViewMode || 'domain';
     const radioToCheck = document.querySelector(`input[name="chartView"][value="${defaultChartView}"]`);
     if (radioToCheck) {
       radioToCheck.checked = true;
     } else {
       const fallback = document.querySelector('input[name="chartView"][value="domain"]');
-      if (fallback) fallback.checked = true; // Default to 'domain' if currentChartViewMode is somehow invalid
+      if (fallback) fallback.checked = true;
     }
   } catch (e) {
     console.error('Error setting initial chart view radio button:', e);
   }
 
-  await loadAllData(); // loadAllData is already async
-  setupEventListeners(); // Setup all event listeners for the options page
+  await loadAllData();
+  setupEventListeners();
 
-  // Register storage change listener for Pomodoro settings
   if (browser.storage && browser.storage.onChanged) {
     browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
     console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
   }
 
-  await restoreActiveTab(); // Restore last active tab AFTER data is loaded and UI potentially updated
+  await restoreActiveTab();
 
-  // Handle scrolling to a specific section if a hash is present in the URL
-  // This should run after tabs might have been restored to ensure the correct tab is visible
   if (window.location.hash) {
     const sectionId = window.location.hash.substring(1);
     const sectionElement = document.getElementById(sectionId);
@@ -145,51 +135,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (parentTabContent && !parentTabContent.classList.contains('active')) {
         const tabLink = document.querySelector(`.tab-nav .tab-link[data-tab="${parentTabContent.id}"]`);
         if (tabLink) {
-          tabLink.click(); // Activate the tab containing the section
+          tabLink.click();
         }
       }
 
-      // Delay scrollIntoView slightly to allow tab switching animation/display to complete
       setTimeout(() => {
         console.log(`[Options Main] Scrolling to section: ${sectionId}`);
         sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Optional: Highlighting effect
         const originalBg = sectionElement.style.backgroundColor;
         sectionElement.style.transition = 'background-color 0.9s ease-in-out';
-        sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)'; // Light yellow highlight
+        sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
         setTimeout(() => {
           sectionElement.style.backgroundColor = originalBg;
-          sectionElement.style.transition = ''; // Reset transition
+          sectionElement.style.transition = '';
         }, 2000);
-      }, 100); // Small delay for tab switch
+      }, 100);
     } else {
       console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
     }
   }
 
-  console.log('Options Main script initialized (v0.8.8 - Tab Interface Logic).');
+  console.log('Options Main script initialized (v0.8.9 - Update event listeners for new assign domain flow).');
 });
 
 // --- Function to handle storage changes for Pomodoro notification settings ---
 function handlePomodoroSettingsStorageChange(changes, area) {
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
-    //
-    const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue; //
+    const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
 
     if (newStorageValue && newStorageValue.notifyEnabled !== undefined) {
       const newNotifyState = newStorageValue.notifyEnabled;
       console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
 
       if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
-        //
-        AppState.pomodoroNotifyEnabled = newNotifyState; //
+        AppState.pomodoroNotifyEnabled = newNotifyState;
       }
 
       if (
-        UIElements.pomodoroEnableNotificationsCheckbox && //
-        UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState //
+        UIElements.pomodoroEnableNotificationsCheckbox &&
+        UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
       ) {
-        UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState; //
+        UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState;
         console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
       }
 
@@ -212,176 +198,156 @@ async function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD, //
-    STORAGE_KEY_DATA_RETENTION_DAYS, //
-    STORAGE_KEY_PRODUCTIVITY_RATINGS, //
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, //
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE, //
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_URL, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO, //
-    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE, //
-    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, //
-    STORAGE_KEY_POMODORO_SETTINGS, //
+    STORAGE_KEY_IDLE_THRESHOLD,
+    STORAGE_KEY_DATA_RETENTION_DAYS,
+    STORAGE_KEY_PRODUCTIVITY_RATINGS,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_RULE,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+    STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
+    STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
+    STORAGE_KEY_POMODORO_SETTINGS,
   ];
 
   try {
     const result = await browser.storage.local.get(keysToLoad);
     console.log('[Options Main] Data loaded from storage:', result);
 
-    AppState.trackedData = result.trackedData || {}; //
-    AppState.categoryTimeData = result.categoryTimeData || {}; //
-    AppState.dailyDomainData = result.dailyDomainData || {}; //
-    AppState.dailyCategoryData = result.dailyCategoryData || {}; //
-    AppState.hourlyData = result.hourlyData || {}; //
-    AppState.categories = result.categories || ['Other']; //
-    AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {}; //
+    AppState.trackedData = result.trackedData || {};
+    AppState.categoryTimeData = result.categoryTimeData || {};
+    AppState.dailyDomainData = result.dailyDomainData || {};
+    AppState.dailyCategoryData = result.dailyCategoryData || {};
+    AppState.hourlyData = result.hourlyData || {};
+    AppState.categories = result.categories || ['Other'];
+    AppState.categoryProductivityRatings = result[STORAGE_KEY_PRODUCTIVITY_RATINGS] || {};
 
     if (!AppState.categories.includes('Other')) {
-      //
-      AppState.categories.push('Other'); //
+      AppState.categories.push('Other');
     }
 
-    AppState.categoryAssignments = result.categoryAssignments || {}; //
-    AppState.rules = result.rules || []; //
+    AppState.categoryAssignments = result.categoryAssignments || {};
+    AppState.rules = result.rules || [];
 
-    const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD]; //
+    const savedIdleThreshold = result[STORAGE_KEY_IDLE_THRESHOLD];
     if (UIElements.idleThresholdSelect) {
-      //
-      UIElements.idleThresholdSelect.value = //
-        savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS; //
+      UIElements.idleThresholdSelect.value =
+        savedIdleThreshold !== undefined && savedIdleThreshold !== null ? savedIdleThreshold : DEFAULT_IDLE_SECONDS;
     }
 
-    const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS]; //
+    const savedRetentionDays = result[STORAGE_KEY_DATA_RETENTION_DAYS];
     if (UIElements.dataRetentionSelect) {
-      //
-      UIElements.dataRetentionSelect.value = //
+      UIElements.dataRetentionSelect.value =
         savedRetentionDays !== undefined && savedRetentionDays !== null
           ? savedRetentionDays
-          : DEFAULT_DATA_RETENTION_DAYS; //
+          : DEFAULT_DATA_RETENTION_DAYS;
     }
 
-    AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || ''; //
-    AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || ''; //
-    AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || ''; //
-    AppState.blockPageShowUrl = //
-      result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true; //
-    AppState.blockPageShowReason = //
-      result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true; //
-    AppState.blockPageShowRule = //
-      result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true; //
-    AppState.blockPageShowLimitInfo = //
-      result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined //
-        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] //
+    AppState.blockPageCustomHeading = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING] || '';
+    AppState.blockPageCustomMessage = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE] || '';
+    AppState.blockPageCustomButtonText = result[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT] || '';
+    AppState.blockPageShowUrl =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] : true;
+    AppState.blockPageShowReason =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_REASON] : true;
+    AppState.blockPageShowRule =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== undefined ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] : true;
+    AppState.blockPageShowLimitInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO]
         : true;
-    AppState.blockPageShowScheduleInfo = //
-      result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined //
-        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] //
+    AppState.blockPageShowScheduleInfo =
+      result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== undefined
+        ? result[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO]
         : true;
-    AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false; //
-    AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]) //
-      ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES] //
+    AppState.blockPageShowQuote = result[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] || false;
+    AppState.blockPageUserQuotes = Array.isArray(result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES])
+      ? result[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES]
       : [];
 
     if (UIElements.blockPageCustomHeadingInput)
-      //
-      UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading; //
+      UIElements.blockPageCustomHeadingInput.value = AppState.blockPageCustomHeading;
     if (UIElements.blockPageCustomMessageTextarea)
-      //
-      UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage; //
+      UIElements.blockPageCustomMessageTextarea.value = AppState.blockPageCustomMessage;
     if (UIElements.blockPageCustomButtonTextInput)
-      //
-      UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText; //
-    if (UIElements.blockPageShowUrlCheckbox) UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl; //
+      UIElements.blockPageCustomButtonTextInput.value = AppState.blockPageCustomButtonText;
+    if (UIElements.blockPageShowUrlCheckbox) UIElements.blockPageShowUrlCheckbox.checked = AppState.blockPageShowUrl;
     if (UIElements.blockPageShowReasonCheckbox)
-      //
-      UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason; //
-    if (UIElements.blockPageShowRuleCheckbox) UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule; //
+      UIElements.blockPageShowReasonCheckbox.checked = AppState.blockPageShowReason;
+    if (UIElements.blockPageShowRuleCheckbox) UIElements.blockPageShowRuleCheckbox.checked = AppState.blockPageShowRule;
     if (UIElements.blockPageShowLimitInfoCheckbox)
-      //
-      UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo; //
+      UIElements.blockPageShowLimitInfoCheckbox.checked = AppState.blockPageShowLimitInfo;
     if (UIElements.blockPageShowScheduleInfoCheckbox)
-      //
-      UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo; //
+      UIElements.blockPageShowScheduleInfoCheckbox.checked = AppState.blockPageShowScheduleInfo;
     if (UIElements.blockPageShowQuoteCheckbox) {
-      //
-      UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote; //
+      UIElements.blockPageShowQuoteCheckbox.checked = AppState.blockPageShowQuote;
       if (UIElements.blockPageUserQuotesContainer) {
-        //
-        UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none'; //
+        UIElements.blockPageUserQuotesContainer.style.display = AppState.blockPageShowQuote ? 'block' : 'none';
       }
     }
     if (UIElements.blockPageUserQuotesTextarea)
-      //
-      UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n'); //
+      UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
 
-    const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {}; //
-    AppState.pomodoroNotifyEnabled = //
+    const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
+    AppState.pomodoroNotifyEnabled =
       pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true;
-    console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`); //
+    console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`);
 
     if (UIElements.pomodoroEnableNotificationsCheckbox) {
-      //
-      UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled; //
+      UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
     await updatePomodoroPermissionStatusDisplay();
 
-    if (typeof populateCategoryList === 'function') populateCategoryList(); //
-    if (typeof populateCategorySelect === 'function') populateCategorySelect(); //
-    if (typeof populateAssignmentList === 'function') populateAssignmentList(); //
-    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect(); //
-    if (typeof populateRuleList === 'function') populateRuleList(); //
-    if (typeof populateProductivitySettings === 'function') populateProductivitySettings(); //
+    if (typeof populateCategoryList === 'function') populateCategoryList();
+    if (typeof populateCategorySelect === 'function') populateCategorySelect();
+    if (typeof populateAssignmentList === 'function') populateAssignmentList();
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
+    if (typeof populateRuleList === 'function') populateRuleList();
+    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
     if (typeof renderCalendar === 'function')
-      //
-      renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth()); //
+      renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
     if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
-    if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr); //
+    if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
   } catch (error) {
     console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
     const errorMessage = 'Error loading data. Please try refreshing.';
-
-    setListMessage(UIElements.categoryTimeList, errorMessage); //
-    setListMessage(UIElements.detailedTimeList, errorMessage); //
-
-    if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data'); //
+    setListMessage(UIElements.categoryTimeList, errorMessage);
+    setListMessage(UIElements.detailedTimeList, errorMessage);
+    if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
   }
 }
 
-// --- Function to update the permission status display ---
 async function updatePomodoroPermissionStatusDisplay() {
   if (!UIElements.pomodoroNotificationPermissionStatus) {
-    //
     console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
     return;
   }
   try {
     const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
     if (hasPermission) {
-      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Granted)'; //
-      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text granted'; //
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text granted';
     } else {
-      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Not Granted)'; //
-      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text denied'; //
+      UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Not Granted)';
+      UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text denied';
     }
   } catch (err) {
     console.error('Error checking notification permissions:', err);
-    UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Status Unknown)'; //
-    UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text'; //
+    UIElements.pomodoroNotificationPermissionStatus.textContent = '(Permission: Status Unknown)';
+    UIElements.pomodoroNotificationPermissionStatus.className = 'permission-status-text';
   }
 }
 
-// --- UI Update Wrappers ---
 function updateDisplayForSelectedRangeUI() {
   if (!UIElements.dateRangeSelect) {
-    //
     console.warn('Date range select element not found for UI update.');
     return;
   }
-  let selectedRangeValue = UIElements.dateRangeSelect.value; //
+  let selectedRangeValue = UIElements.dateRangeSelect.value;
   const loader = document.getElementById('statsLoader');
   const dashboard = document.querySelector('.stats-dashboard');
 
@@ -390,15 +356,14 @@ function updateDisplayForSelectedRangeUI() {
   let isRangeView = ['week', 'month', 'all'].includes(selectedRangeValue);
 
   if (selectedRangeValue === '' && AppState.selectedDateStr) {
-    //
-    dataFetchKey = AppState.selectedDateStr; //
+    dataFetchKey = AppState.selectedDateStr;
     displayLabelKey =
-      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr; //
+      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
     isRangeView = false;
   } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
-    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today'; //
+    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
     isRangeView = false;
   }
 
@@ -423,14 +388,14 @@ function updateDisplayForSelectedRangeUI() {
       label = isSpecificDateFetch ? displayLabelKey : rangeData.label;
 
       if (dataFetchKey === 'today' && !isSpecificDateFetch) {
-        AppState.selectedDateStr = //
-          typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0]; //
-        if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr); //
+        AppState.selectedDateStr =
+          typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0];
+        if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
       }
-      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView); //
+      updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
-      updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView); //
+      updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -440,36 +405,36 @@ function updateDisplayForSelectedRangeUI() {
 
 function updateDomainDisplayAndPagination() {
   if (
-    !UIElements.detailedTimeList || //
-    !UIElements.domainPaginationDiv || //
-    !UIElements.domainPrevBtn || //
-    !UIElements.domainNextBtn || //
-    !UIElements.domainPageInfo //
+    !UIElements.detailedTimeList ||
+    !UIElements.domainPaginationDiv ||
+    !UIElements.domainPrevBtn ||
+    !UIElements.domainNextBtn ||
+    !UIElements.domainPageInfo
   ) {
     console.warn('Pagination or detailed list elements not found for domain display.');
     return;
   }
-  const totalItems = AppState.fullDomainDataSorted.length; //
-  const totalPages = Math.max(1, Math.ceil(totalItems / AppState.domainItemsPerPage)); //
-  AppState.domainCurrentPage = Math.max(1, Math.min(AppState.domainCurrentPage, totalPages)); //
+  const totalItems = AppState.fullDomainDataSorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / AppState.domainItemsPerPage));
+  AppState.domainCurrentPage = Math.max(1, Math.min(AppState.domainCurrentPage, totalPages));
 
-  const startIndex = (AppState.domainCurrentPage - 1) * AppState.domainItemsPerPage; //
-  const endIndex = startIndex + AppState.domainItemsPerPage; //
-  const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex); //
+  const startIndex = (AppState.domainCurrentPage - 1) * AppState.domainItemsPerPage;
+  const endIndex = startIndex + AppState.domainItemsPerPage;
+  const itemsToShow = AppState.fullDomainDataSorted.slice(startIndex, endIndex);
 
-  if (typeof displayDomainTime === 'function') displayDomainTime(itemsToShow); //
+  if (typeof displayDomainTime === 'function') displayDomainTime(itemsToShow);
 
-  UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`; //
-  UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1; //
-  UIElements.domainNextBtn.disabled = AppState.domainCurrentPage >= totalPages; //
-  UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none'; //
+  UIElements.domainPageInfo.textContent = `Page ${AppState.domainCurrentPage} of ${totalPages}`;
+  UIElements.domainPrevBtn.disabled = AppState.domainCurrentPage <= 1;
+  UIElements.domainNextBtn.disabled = AppState.domainCurrentPage >= totalPages;
+  UIElements.domainPaginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
 }
 
 function updateStatsDisplay(
   domainData,
   categoryData,
   label,
-  chartDateStr = AppState.selectedDateStr, //
+  chartDateStr = AppState.selectedDateStr,
   isRangeView = false
 ) {
   try {
@@ -481,22 +446,21 @@ function updateStatsDisplay(
     const currentCategoryData = categoryData || {};
 
     if (UIElements.statsPeriodSpans) {
-      //
-      UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label)); //
+      UIElements.statsPeriodSpans.forEach((span) => (span.textContent = label));
     }
 
-    AppState.fullDomainDataSorted = Object.entries(currentDomainData) //
+    AppState.fullDomainDataSorted = Object.entries(currentDomainData)
       .map(([d, t]) => ({ domain: d, time: t }))
       .sort((a, b) => b.time - a.time);
-    AppState.domainCurrentPage = 1; //
+    AppState.domainCurrentPage = 1;
     updateDomainDisplayAndPagination();
 
-    if (typeof displayCategoryTime === 'function') displayCategoryTime(currentCategoryData); //
+    if (typeof displayCategoryTime === 'function') displayCategoryTime(currentCategoryData);
 
     try {
       const scoreData =
-        typeof calculateFocusScore === 'function' //
-          ? calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings) //
+        typeof calculateFocusScore === 'function'
+          ? calculateFocusScore(currentCategoryData, AppState.categoryProductivityRatings)
           : { score: 0 };
       if (typeof displayProductivityScore === 'function') displayProductivityScore(scoreData, label);
     } catch (scoreError) {
@@ -505,78 +469,71 @@ function updateStatsDisplay(
     }
 
     if (
-      UIElements.totalTimeForRangeContainer && //
-      UIElements.totalTimeForRangeLabel && //
-      UIElements.totalTimeForRangeValue //
+      UIElements.totalTimeForRangeContainer &&
+      UIElements.totalTimeForRangeLabel &&
+      UIElements.totalTimeForRangeValue
     ) {
       if (isRangeView) {
         let totalSecondsForRange = 0;
         for (const domain in currentDomainData) {
           totalSecondsForRange += currentDomainData[domain];
         }
-        UIElements.totalTimeForRangeValue.textContent = //
-          typeof formatTime === 'function' ? formatTime(totalSecondsForRange, true) : totalSecondsForRange + 's'; //
+        UIElements.totalTimeForRangeValue.textContent =
+          typeof formatTime === 'function' ? formatTime(totalSecondsForRange, true) : totalSecondsForRange + 's';
 
-        const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period'); //
+        const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period');
         if (periodSpanInTotalLabel) {
           periodSpanInTotalLabel.textContent = label;
         } else {
-          UIElements.totalTimeForRangeLabel.textContent = `Total Time Online (${label})`; //
+          UIElements.totalTimeForRangeLabel.textContent = `Total Time Online (${label})`;
         }
-        UIElements.totalTimeForRangeContainer.style.display = 'block'; //
+        UIElements.totalTimeForRangeContainer.style.display = 'block';
       } else {
-        UIElements.totalTimeForRangeContainer.style.display = 'none'; //
+        UIElements.totalTimeForRangeContainer.style.display = 'none';
       }
     }
 
-    const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData; //
+    const chartDataView = AppState.currentChartViewMode === 'domain' ? currentDomainData : currentCategoryData;
     const chartLabelForRender = label;
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
-    // --- START: MODIFIED FOR TABBED INTERFACE ---
     const dashboardTab = document.getElementById('dashboardTab');
     if (dashboardTab && dashboardTab.classList.contains('active')) {
       if (hasSignificantData) {
         if (typeof renderChart === 'function')
-          renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode); //
+          renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode);
       } else {
         if (typeof clearChartOnError === 'function')
-          clearChartOnError(`No significant data for ${chartLabelForRender}`); //
+          clearChartOnError(`No significant data for ${chartLabelForRender}`);
       }
       isChartRenderPending = false;
     } else if (hasSignificantData || Object.keys(chartDataView).length > 0) {
-      // Store even if no significant, to clear if needed
       console.log('[Tabs] Dashboard tab inactive, chart render is pending.');
       isChartRenderPending = true;
       pendingChartData = chartDataView;
       pendingChartLabel = chartLabelForRender;
-      pendingChartViewMode = AppState.currentChartViewMode; //
-      if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...'); // Show a loading message
+      pendingChartViewMode = AppState.currentChartViewMode;
+      if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...');
     } else {
-      // No data at all
-      if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${chartLabelForRender}`); //
-      isChartRenderPending = false; // No data, nothing to pend
+      if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${chartLabelForRender}`);
+      isChartRenderPending = false;
     }
-    // --- END: MODIFIED FOR TABBED INTERFACE ---
 
     if (UIElements.chartTitleElement) {
-      //
-      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabelForRender})`; //
+      UIElements.chartTitleElement.textContent = `Usage Chart (${chartLabelForRender})`;
     }
   } catch (error) {
     console.error(`[Options Main] Error during updateStatsDisplay for label "${label}":`, error);
-    if (typeof displayCategoryTime === 'function') displayCategoryTime({}); //
-    AppState.fullDomainDataSorted = []; //
+    if (typeof displayCategoryTime === 'function') displayCategoryTime({});
+    AppState.fullDomainDataSorted = [];
     updateDomainDisplayAndPagination();
     if (typeof displayProductivityScore === 'function') displayProductivityScore(null, label, true);
-    if (typeof clearChartOnError === 'function') clearChartOnError(`Error loading data for ${label}`); //
+    if (typeof clearChartOnError === 'function') clearChartOnError(`Error loading data for ${label}`);
     if (UIElements.chartTitleElement) {
-      //
-      UIElements.chartTitleElement.textContent = `Usage Chart (Error)`; //
+      UIElements.chartTitleElement.textContent = `Usage Chart (Error)`;
     }
     if (UIElements.totalTimeForRangeContainer) {
-      //
-      UIElements.totalTimeForRangeContainer.style.display = 'none'; //
+      UIElements.totalTimeForRangeContainer.style.display = 'none';
     }
   }
 }
@@ -586,78 +543,67 @@ function displayNoDataForDate(displayDateLabel) {
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
 
   if (UIElements.statsPeriodSpans) {
-    //
-    UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel)); //
+    UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   }
 
-  setListMessage(UIElements.categoryTimeList, noDataMessage); //
-  setListMessage(UIElements.detailedTimeList, noDataMessage); //
+  setListMessage(UIElements.categoryTimeList, noDataMessage);
+  setListMessage(UIElements.detailedTimeList, noDataMessage);
 
   if (UIElements.domainPaginationDiv) {
-    //
-    UIElements.domainPaginationDiv.style.display = 'none'; //
+    UIElements.domainPaginationDiv.style.display = 'none';
   }
-  AppState.fullDomainDataSorted = []; //
+  AppState.fullDomainDataSorted = [];
 
   if (UIElements.productivityScoreLabel) {
-    //
-    UIElements.productivityScoreLabel.textContent = `Focus Score (${displayDateLabel})`; //
+    UIElements.productivityScoreLabel.textContent = `Focus Score (${displayDateLabel})`;
   }
   if (UIElements.productivityScoreValue) {
-    //
-    UIElements.productivityScoreValue.textContent = 'N/A'; //
-    UIElements.productivityScoreValue.className = 'score-value'; //
+    UIElements.productivityScoreValue.textContent = 'N/A';
+    UIElements.productivityScoreValue.className = 'score-value';
   }
-  if (typeof clearChartOnError === 'function') clearChartOnError(noDataMessage); //
+  if (typeof clearChartOnError === 'function') clearChartOnError(noDataMessage);
   if (UIElements.chartTitleElement) {
-    //
-    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`; //
+    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
   }
   if (UIElements.totalTimeForRangeContainer) {
-    //
-    UIElements.totalTimeForRangeContainer.style.display = 'none'; //
+    UIElements.totalTimeForRangeContainer.style.display = 'none';
   }
 }
 
 function renderChartForSelectedDateUI() {
   if (!AppState.selectedDateStr) {
-    //
-    if (typeof clearChartOnError === 'function') clearChartOnError('Select a date from the calendar.'); //
+    if (typeof clearChartOnError === 'function') clearChartOnError('Select a date from the calendar.');
     return;
   }
   const data =
-    AppState.currentChartViewMode === 'domain' //
-      ? AppState.dailyDomainData[AppState.selectedDateStr] || {} //
-      : AppState.dailyCategoryData[AppState.selectedDateStr] || {}; //
+    AppState.currentChartViewMode === 'domain'
+      ? AppState.dailyDomainData[AppState.selectedDateStr] || {}
+      : AppState.dailyCategoryData[AppState.selectedDateStr] || {};
 
   const displayDate =
-    typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr; //
+    typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
 
-  // --- START: MODIFIED FOR TABBED INTERFACE (defer rendering if tab is hidden) ---
   const dashboardTab = document.getElementById('dashboardTab');
   if (dashboardTab && dashboardTab.classList.contains('active')) {
-    if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode); //
+    if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode);
     isChartRenderPending = false;
   } else if (Object.keys(data).length > 0) {
     console.log('[Tabs] Dashboard tab inactive during renderChartForSelectedDateUI, chart render is pending.');
     isChartRenderPending = true;
     pendingChartData = data;
     pendingChartLabel = displayDate;
-    pendingChartViewMode = AppState.currentChartViewMode; //
-    if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...'); // Show a loading message
+    pendingChartViewMode = AppState.currentChartViewMode;
+    if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...');
   } else {
-    if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${displayDate}`); //
+    if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${displayDate}`);
     isChartRenderPending = false;
   }
-  // --- END: MODIFIED FOR TABBED INTERFACE ---
 
   if (UIElements.chartTitleElement) {
-    //
-    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`; //
+    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
   }
 }
 
-// --- Get Filtered Data ---
 function getFilteredDataForRange(range, isSpecificDate = false) {
   let initialDomainData = {};
   let initialCategoryData = {};
@@ -667,25 +613,25 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
 
   try {
     if (isSpecificDate && /^\d{4}-\d{2}-\d{2}$/.test(range)) {
-      initialDomainData = AppState.dailyDomainData[range] || {}; //
-      initialCategoryData = AppState.dailyCategoryData[range] || {}; //
-      periodLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(range) : range; //
+      initialDomainData = AppState.dailyDomainData[range] || {};
+      initialCategoryData = AppState.dailyCategoryData[range] || {};
+      periodLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(range) : range;
     } else if (range === 'today') {
-      const todayStr = typeof formatDate === 'function' ? formatDate(today) : new Date().toISOString().split('T')[0]; //
-      initialDomainData = AppState.dailyDomainData[todayStr] || {}; //
-      initialCategoryData = AppState.dailyCategoryData[todayStr] || {}; //
+      const todayStr = typeof formatDate === 'function' ? formatDate(today) : new Date().toISOString().split('T')[0];
+      initialDomainData = AppState.dailyDomainData[todayStr] || {};
+      initialCategoryData = AppState.dailyCategoryData[todayStr] || {};
       periodLabel = 'Today';
     } else if (range === 'week') {
       periodLabel = 'This Week';
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
-        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0]; //
-        const dF = AppState.dailyDomainData[dateStr]; //
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
+        const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
         }
-        const cF = AppState.dailyCategoryData[dateStr]; //
+        const cF = AppState.dailyCategoryData[dateStr];
         if (cF) {
           for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
         }
@@ -697,49 +643,42 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
       const daysInCurrentMonthSoFar = today.getDate();
       for (let day = 1; day <= daysInCurrentMonthSoFar; day++) {
         const date = new Date(y, m, day);
-        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0]; //
-        const dF = AppState.dailyDomainData[dateStr]; //
+        const dateStr = typeof formatDate === 'function' ? formatDate(date) : new Date().toISOString().split('T')[0];
+        const dF = AppState.dailyDomainData[dateStr];
         if (dF) {
           for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
         }
-        const cF = AppState.dailyCategoryData[dateStr]; //
+        const cF = AppState.dailyCategoryData[dateStr];
         if (cF) {
           for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
         }
       }
     } else {
-      // 'all'
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
-        //
         initialDomainData = {};
         initialCategoryData = {};
         for (const dateStr in AppState.dailyDomainData) {
-          //
-          const dF = AppState.dailyDomainData[dateStr]; //
+          const dF = AppState.dailyDomainData[dateStr];
           if (dF) {
             for (const d in dF) initialDomainData[d] = (initialDomainData[d] || 0) + dF[d];
           }
         }
         for (const dateStr in AppState.dailyCategoryData) {
-          //
-          const cF = AppState.dailyCategoryData[dateStr]; //
+          const cF = AppState.dailyCategoryData[dateStr];
           if (cF) {
             for (const c in cF) initialCategoryData[c] = (initialCategoryData[c] || 0) + cF[c];
           }
         }
       } else {
-        // Fallback to overall non-daily data if daily is empty (legacy or initial state)
-        initialDomainData = AppState.trackedData || {}; //
-        initialCategoryData = AppState.categoryTimeData || {}; //
+        initialDomainData = AppState.trackedData || {};
+        initialCategoryData = AppState.categoryTimeData || {};
       }
     }
 
-    // Normalize domains (e.g., remove www.)
     for (const domain in initialDomainData) {
       const time = initialDomainData[domain];
       if (time > 0) {
-        // Only process if time is significant
         let normalizedDomain = domain;
         if (domain.startsWith('www.')) {
           normalizedDomain = domain.substring(4);
@@ -749,16 +688,15 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
     }
   } catch (filterError) {
     console.error(`Error filtering/merging data for range "${range}":`, filterError);
-    periodLabel = `Error (${range})`; // Update label to show error context
-    return { domainData: {}, categoryData: {}, label: periodLabel }; // Return empty data on error
+    periodLabel = `Error (${range})`;
+    return { domainData: {}, categoryData: {}, label: periodLabel };
   }
   return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
 }
 
-// --- Data Saving Functions ---
 function saveCategoriesAndAssignments() {
   return browser.storage.local
-    .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments }) //
+    .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments })
     .then(() => {
       console.log('[Options Main] Categories/Assignments saved to storage.');
       return browser.runtime.sendMessage({ action: 'categoriesUpdated' });
@@ -773,7 +711,7 @@ function saveCategoriesAndAssignments() {
 }
 function saveRules() {
   return browser.storage.local
-    .set({ rules: AppState.rules }) //
+    .set({ rules: AppState.rules })
     .then(() => {
       console.log('[Options Main] Rules saved to storage.');
       return browser.runtime.sendMessage({ action: 'rulesUpdated' });
@@ -787,42 +725,36 @@ function saveRules() {
     });
 }
 
-// --- CSV Generation/Download ---
 function convertDataToCsv(dataObject) {
-  //
   if (!dataObject) return '';
-  const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)']; //
-  let csvString = headers.map(escapeCsvValue).join(',') + '\n'; //
+  const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
+  let csvString = headers.map(escapeCsvValue).join(',') + '\n';
 
   const sortedData = Object.entries(dataObject)
     .map(([d, s]) => ({ domain: d, seconds: s }))
-    .sort((a, b) => b.seconds - a.seconds);
+    .sort((a, b) => b.time - a.time);
 
   const getCategory = (domain) => {
-    //
     if (AppState.categoryAssignments.hasOwnProperty(domain)) {
-      //
-      return AppState.categoryAssignments[domain]; //
+      return AppState.categoryAssignments[domain];
     }
-    const parts = domain.split('.'); //
+    const parts = domain.split('.');
     for (let i = 1; i < parts.length; i++) {
-      //
-      const wildcardPattern = '*.' + parts.slice(i).join('.'); //
+      const wildcardPattern = '*.' + parts.slice(i).join('.');
       if (AppState.categoryAssignments.hasOwnProperty(wildcardPattern)) {
-        //
-        return AppState.categoryAssignments[wildcardPattern]; //
+        return AppState.categoryAssignments[wildcardPattern];
       }
     }
-    return 'Other'; //
+    return 'Other';
   };
 
   sortedData.forEach((item) => {
-    const category = getCategory(item.domain); //
-    const timeHMS = typeof formatTime === 'function' ? formatTime(item.seconds, true, true) : item.seconds + 's'; //
-    const row = [item.domain, category, timeHMS, item.seconds]; //
-    csvString += row.map(escapeCsvValue).join(',') + '\n'; //
+    const category = getCategory(item.domain);
+    const timeHMS = typeof formatTime === 'function' ? formatTime(item.seconds, true, true) : item.seconds + 's';
+    const row = [item.domain, category, timeHMS, item.seconds];
+    csvString += row.map(escapeCsvValue).join(',') + '\n';
   });
-  return csvString; //
+  return csvString;
 }
 function triggerCsvDownload(csvString, filename) {
   try {
@@ -849,7 +781,6 @@ function triggerCsvDownload(csvString, filename) {
   }
 }
 
-// --- Recalculation Logic ---
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
   console.log('[Options Main] RECALCULATING category totals. Change Details:', changeDetails);
   try {
@@ -861,33 +792,29 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     ]);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    const currentAssignments = AppState.categoryAssignments || {}; //
-    const currentCategories = AppState.categories || ['Other']; //
+    const currentAssignments = AppState.categoryAssignments || {};
+    const currentCategories = AppState.categories || ['Other'];
 
     const getCategoryForDomain = (domain, assignments, categoriesList) => {
-      //
-      if (!domain) return 'Other'; //
+      if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
-        //
-        return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other'; //
+        return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other';
       }
-      const parts = domain.split('.'); //
+      const parts = domain.split('.');
       for (let i = 1; i < parts.length; i++) {
-        //
-        const wildcardPattern = '*.' + parts.slice(i).join('.'); //
+        const wildcardPattern = '*.' + parts.slice(i).join('.');
         if (assignments.hasOwnProperty(wildcardPattern)) {
-          //
-          return categoriesList.includes(assignments[wildcardPattern]) ? assignments[wildcardPattern] : 'Other'; //
+          return categoriesList.includes(assignments[wildcardPattern]) ? assignments[wildcardPattern] : 'Other';
         }
       }
-      return 'Other'; //
+      return 'Other';
     };
 
     const rebuiltCategoryTimeData = {};
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
       if (time > 0) {
-        const category = getCategoryForDomain(domain, currentAssignments, currentCategories); //
+        const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
         rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
       }
     }
@@ -899,12 +826,12 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       for (const domain in domainsForDate) {
         const time = domainsForDate[domain];
         if (time > 0) {
-          const category = getCategoryForDomain(domain, currentAssignments, currentCategories); //
+          const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
       }
       if (Object.keys(rebuiltDailyCategoryData[date]).length === 0) {
-        delete rebuiltDailyCategoryData[date]; // Remove empty date entries
+        delete rebuiltDailyCategoryData[date];
       }
     }
 
@@ -913,8 +840,8 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       dailyCategoryData: rebuiltDailyCategoryData,
     });
 
-    AppState.categoryTimeData = rebuiltCategoryTimeData; //
-    AppState.dailyCategoryData = rebuiltDailyCategoryData; //
+    AppState.categoryTimeData = rebuiltCategoryTimeData;
+    AppState.dailyCategoryData = rebuiltDailyCategoryData;
 
     console.log('[Options Main] Category totals rebuilt and saved successfully.');
   } catch (error) {
@@ -927,28 +854,27 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
 
 function displayProductivityScore(scoreData, periodLabel = 'Selected Period', isError = false) {
   if (!UIElements.productivityScoreValue || !UIElements.productivityScoreLabel) {
-    //
     console.warn('Productivity score UI elements not found in Options.');
     return;
   }
 
   if (isError || !scoreData) {
-    UIElements.productivityScoreValue.textContent = 'Error'; //
-    UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`; //
-    UIElements.productivityScoreValue.className = 'score-value'; //
+    UIElements.productivityScoreValue.textContent = 'Error';
+    UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`;
+    UIElements.productivityScoreValue.className = 'score-value';
     return;
   }
 
-  UIElements.productivityScoreValue.textContent = `${scoreData.score}%`; //
-  UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`; //
+  UIElements.productivityScoreValue.textContent = `${scoreData.score}%`;
+  UIElements.productivityScoreLabel.textContent = `Focus Score (${periodLabel})`;
 
-  UIElements.productivityScoreValue.classList.remove('score-low', 'score-medium', 'score-high'); //
+  UIElements.productivityScoreValue.classList.remove('score-low', 'score-medium', 'score-high');
   if (scoreData.score < 40) {
-    UIElements.productivityScoreValue.classList.add('score-low'); //
+    UIElements.productivityScoreValue.classList.add('score-low');
   } else if (scoreData.score < 70) {
-    UIElements.productivityScoreValue.classList.add('score-medium'); //
+    UIElements.productivityScoreValue.classList.add('score-medium');
   } else {
-    UIElements.productivityScoreValue.classList.add('score-high'); //
+    UIElements.productivityScoreValue.classList.add('score-high');
   }
 }
 
@@ -958,245 +884,179 @@ function setupEventListeners() {
   try {
     // Category Management
     if (UIElements.addCategoryBtn && typeof handleAddCategory === 'function')
-      //
-      UIElements.addCategoryBtn.addEventListener('click', handleAddCategory); //
+      UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
     if (UIElements.categoryList) {
-      //
       UIElements.categoryList.addEventListener('click', (event) => {
-        //
         if (event.target.classList.contains('category-delete-btn') && typeof handleDeleteCategory === 'function')
-          //
-          handleDeleteCategory(event); //
+          handleDeleteCategory(event);
         else if (event.target.classList.contains('category-edit-btn') && typeof handleEditCategoryClick === 'function')
-          //
-          handleEditCategoryClick(event); //
+          handleEditCategoryClick(event);
         else if (event.target.classList.contains('category-save-btn') && typeof handleSaveCategoryClick === 'function')
-          //
-          handleSaveCategoryClick(event); //
+          handleSaveCategoryClick(event);
         else if (
-          event.target.classList.contains('category-cancel-btn') && //
-          typeof handleCancelCategoryEditClick === 'function' //
+          event.target.classList.contains('category-cancel-btn') &&
+          typeof handleCancelCategoryEditClick === 'function'
         )
-          handleCancelCategoryEditClick(event); //
+          handleCancelCategoryEditClick(event);
       });
     }
 
-    // Assignment Management
-    if (UIElements.assignDomainBtn && typeof handleAssignDomain === 'function')
-      //
-      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain); //
+    // --- MODIFIED: Assignment Management Event Listeners ---
+    if (UIElements.assignDomainBtn && typeof handleAssignDomainOrSaveChanges === 'function')
+      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomainOrSaveChanges); // Changed handler
+
+    if (UIElements.cancelAssignDomainBtn && typeof handleCancelAssignDomainEdit === 'function')
+      // New listener for Cancel
+      UIElements.cancelAssignDomainBtn.addEventListener('click', handleCancelAssignDomainEdit);
+
     if (UIElements.assignmentList) {
-      //
       UIElements.assignmentList.addEventListener('click', (event) => {
-        //
         if (event.target.classList.contains('assignment-delete-btn') && typeof handleDeleteAssignment === 'function')
-          //
-          handleDeleteAssignment(event); //
+          handleDeleteAssignment(event);
         else if (
-          event.target.classList.contains('assignment-edit-btn') && //
-          typeof handleEditAssignmentClick === 'function' //
+          event.target.classList.contains('assignment-edit-btn') &&
+          typeof handleEditAssignmentClick === 'function' // This now prepares the top form
         )
-          handleEditAssignmentClick(event); //
+          handleEditAssignmentClick(event);
       });
     }
-    if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
-      //
-      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick); //
-    if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
-      //
-      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick); //
-    if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
-      //
-      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick); //
-    if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
-      //
-      UIElements.editAssignmentModal.addEventListener('click', (event) => {
-        //
-        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick(); //
-      });
+    // --- REMOVED: Old modal listeners for assignment edit ---
+    // if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
+    //   UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    // if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
+    //   UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
+    // if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
+    //   UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
+    // if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
+    //   UIElements.editAssignmentModal.addEventListener('click', (event) => {
+    //     if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
+    //   });
+    // --- END MODIFIED/REMOVED Assignment Listeners ---
 
     // Rule Management
     if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
-      //
-      UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange); //
+      UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
     if (UIElements.addRuleBtn && typeof handleAddRule === 'function')
-      //
-      UIElements.addRuleBtn.addEventListener('click', handleAddRule); //
+      UIElements.addRuleBtn.addEventListener('click', handleAddRule);
     if (UIElements.ruleList) {
-      //
       UIElements.ruleList.addEventListener('click', (event) => {
-        //
         if (event.target.classList.contains('delete-btn') && typeof handleDeleteRule === 'function')
-          //
-          handleDeleteRule(event); //
+          handleDeleteRule(event);
         else if (event.target.classList.contains('edit-btn') && typeof handleEditRuleClick === 'function')
-          //
-          handleEditRuleClick(event); //
+          handleEditRuleClick(event);
       });
     }
     if (UIElements.closeEditModalBtn && typeof handleCancelEditClick === 'function')
-      //
-      UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick); //
+      UIElements.closeEditModalBtn.addEventListener('click', handleCancelEditClick);
     if (UIElements.cancelEditRuleBtn && typeof handleCancelEditClick === 'function')
-      //
-      UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick); //
+      UIElements.cancelEditRuleBtn.addEventListener('click', handleCancelEditClick);
     if (UIElements.saveRuleChangesBtn && typeof handleSaveChangesClick === 'function')
-      //
-      UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick); //
+      UIElements.saveRuleChangesBtn.addEventListener('click', handleSaveChangesClick);
     if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
-      //
       UIElements.editRuleModal.addEventListener('click', (event) => {
-        //
-        if (event.target === UIElements.editRuleModal) handleCancelEditClick(); //
+        if (event.target === UIElements.editRuleModal) handleCancelEditClick();
       });
 
     // Stats Display
     if (UIElements.dateRangeSelect)
-      //
-      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI); //
+      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
     if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
-      //
-      UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev); //
+      UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
     if (UIElements.domainNextBtn && typeof handleDomainNext === 'function')
-      //
-      UIElements.domainNextBtn.addEventListener('click', handleDomainNext); //
+      UIElements.domainNextBtn.addEventListener('click', handleDomainNext);
     if (UIElements.prevMonthBtn && typeof handlePrevMonth === 'function')
-      //
-      UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth); //
+      UIElements.prevMonthBtn.addEventListener('click', handlePrevMonth);
     if (UIElements.nextMonthBtn && typeof handleNextMonth === 'function')
-      //
-      UIElements.nextMonthBtn.addEventListener('click', handleNextMonth); //
+      UIElements.nextMonthBtn.addEventListener('click', handleNextMonth);
     if (UIElements.chartViewRadios) {
-      //
       UIElements.chartViewRadios.forEach((radio) => {
-        //
-        if (typeof handleChartViewChange === 'function') radio.addEventListener('change', handleChartViewChange); //
+        if (typeof handleChartViewChange === 'function') radio.addEventListener('change', handleChartViewChange);
       });
     }
     if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
-      //
-      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv); //
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
 
     // General Settings
     if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
-      //
-      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange); //
+      UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
     if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
-      //
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange); //
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
 
     // Data Management
     if (UIElements.exportDataBtn && typeof handleExportData === 'function')
-      //
-      UIElements.exportDataBtn.addEventListener('click', handleExportData); //
+      UIElements.exportDataBtn.addEventListener('click', handleExportData);
     if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
-      //
-      UIElements.importDataBtn.addEventListener('click', handleImportDataClick); //
+      UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
-      //
-      UIElements.importFileInput.addEventListener('change', handleImportFileChange); //
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
     // Productivity Settings
     if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
-      //
-      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange); //
+      UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
     }
 
     // Pomodoro Notification Settings Listener
     if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
-      //
-      UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle); //
+      UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
     }
 
     // Block Page Customization
     if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
-      //
       UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
-        //
         handleBlockPageSettingChange(
-          //
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, //
-          UIElements.blockPageCustomHeadingInput.value.trim() //
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+          UIElements.blockPageCustomHeadingInput.value.trim()
         )
       );
     if (UIElements.blockPageCustomMessageTextarea && typeof handleBlockPageSettingChange === 'function')
-      //
       UIElements.blockPageCustomMessageTextarea.addEventListener('change', () =>
-        //
         handleBlockPageSettingChange(
-          //
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE, //
-          UIElements.blockPageCustomMessageTextarea.value.trim() //
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
+          UIElements.blockPageCustomMessageTextarea.value.trim()
         )
       );
     if (UIElements.blockPageCustomButtonTextInput && typeof handleBlockPageSettingChange === 'function')
-      //
       UIElements.blockPageCustomButtonTextInput.addEventListener('change', () =>
-        //
         handleBlockPageSettingChange(
-          //
-          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT, //
-          UIElements.blockPageCustomButtonTextInput.value.trim() //
+          STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
+          UIElements.blockPageCustomButtonTextInput.value.trim()
         )
       );
     if (UIElements.blockPageShowUrlCheckbox && typeof handleBlockPageSettingChange === 'function')
-      //
-      UIElements.blockPageShowUrlCheckbox.addEventListener(
-        'change',
-        () =>
-          //
-          handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked) //
+      UIElements.blockPageShowUrlCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_URL, UIElements.blockPageShowUrlCheckbox.checked)
       );
     if (UIElements.blockPageShowReasonCheckbox && typeof handleBlockPageSettingChange === 'function')
-      //
-      UIElements.blockPageShowReasonCheckbox.addEventListener(
-        'change',
-        () =>
-          //
-          handleBlockPageSettingChange(
-            STORAGE_KEY_BLOCK_PAGE_SHOW_REASON,
-            UIElements.blockPageShowReasonCheckbox.checked
-          ) //
+      UIElements.blockPageShowReasonCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_REASON, UIElements.blockPageShowReasonCheckbox.checked)
       );
     if (UIElements.blockPageShowRuleCheckbox && typeof handleBlockPageSettingChange === 'function')
-      //
-      UIElements.blockPageShowRuleCheckbox.addEventListener(
-        'change',
-        () =>
-          //
-          handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked) //
+      UIElements.blockPageShowRuleCheckbox.addEventListener('change', () =>
+        handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_SHOW_RULE, UIElements.blockPageShowRuleCheckbox.checked)
       );
     if (UIElements.blockPageShowLimitInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
-      //
       UIElements.blockPageShowLimitInfoCheckbox.addEventListener('change', () =>
-        //
         handleBlockPageSettingChange(
-          //
-          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO, //
-          UIElements.blockPageShowLimitInfoCheckbox.checked //
+          STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO,
+          UIElements.blockPageShowLimitInfoCheckbox.checked
         )
       );
     if (UIElements.blockPageShowScheduleInfoCheckbox && typeof handleBlockPageSettingChange === 'function')
-      //
       UIElements.blockPageShowScheduleInfoCheckbox.addEventListener('change', () =>
-        //
         handleBlockPageSettingChange(
-          //
-          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO, //
-          UIElements.blockPageShowScheduleInfoCheckbox.checked //
+          STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
+          UIElements.blockPageShowScheduleInfoCheckbox.checked
         )
       );
     if (UIElements.blockPageShowQuoteCheckbox && typeof handleBlockPageShowQuoteChange === 'function')
-      //
-      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange); //
+      UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
     if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
-      //
-      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange); //
+      UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
 
-    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange(); //
+    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange(); // Initial call to set correct visibility
     console.log('[Options Main] Event listeners setup complete.');
   } catch (e) {
     console.error('[Options Main] Error setting up event listeners:', e);
   }
 }
-console.log('[System] options-main.js loaded (v0.8.8 - Tab Interface Logic)');
+console.log('[System] options-main.js loaded (v0.8.9 - Update event listeners for new assign domain flow)');

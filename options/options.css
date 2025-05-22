@@ -1673,3 +1673,17 @@ button.export-button:hover {
     box-shadow: var(--shadow-focus, 0 0 0 0.2rem rgba(10, 132, 255, 0.35));
   }
 }
+/* Styling for assignment list item when its data is in the top form for editing */
+#assignmentList .list-item-editing {
+  background-color: var(--bg-selected-row, #e9f5ff);
+  border-left: 3px solid var(--bg-button-primary, #007bff);
+  padding-left: calc(var(--spacing-md) - 3px);
+}
+
+/* Dark mode considerations for new styles */
+@media (prefers-color-scheme: dark) {
+  #assignmentList .list-item-editing {
+    background-color: var(--bg-selected-row, #004080); /* Dark mode selected row color */
+    border-left-color: var(--bg-button-primary, #0a84ff);
+  }
+}

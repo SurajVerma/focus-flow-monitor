@@ -77,6 +77,7 @@ function queryUIElements() {
   UIElements.domainPatternInput = document.getElementById('domainPattern');
   UIElements.categorySelect = document.getElementById('categorySelect');
   UIElements.assignDomainBtn = document.getElementById('assignDomainBtn');
+  UIElements.cancelAssignDomainBtn = document.getElementById('cancelAssignDomainBtn');
   UIElements.ruleTypeSelect = document.getElementById('ruleTypeSelect');
   UIElements.rulePatternInput = document.getElementById('rulePatternInput');
   UIElements.ruleCategorySelect = document.getElementById('ruleCategorySelect');

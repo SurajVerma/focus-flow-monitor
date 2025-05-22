@@ -226,4 +226,65 @@ function calculateFocusScore(categoryData, userRatings = {}) {
   };
 }
 
+/**
+ * Validates if a given string is a valid domain name or a simple wildcard domain pattern.
+ * Allows: example.com, sub.example.co.uk, localhost, *.example.com
+ * Disallows: Paths, multiple wildcards, wildcards not at the beginning of a segment.
+ * @param {string} pattern - The pattern to validate.
+ * @returns {boolean} True if valid, false otherwise.
+ */
+function isValidDomainPattern(pattern) {
+  if (!pattern || typeof pattern !== 'string') {
+    return false;
+  }
+
+  // Simplified pattern for validation: remove http(s):// and www. if present at the start
+  // and anything from the first '/' onwards (path).
+  const simplifiedPattern = pattern
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '');
+  const domainPart = simplifiedPattern.includes('/')
+    ? simplifiedPattern.substring(0, simplifiedPattern.indexOf('/'))
+    : simplifiedPattern;
+
+  // Regex for domain validation:
+  // 1. Optional `*.` at the beginning.
+  // 2. Followed by a valid hostname structure (labels separated by dots, TLD at the end).
+  // 3. OR a simple hostname (like 'localhost') without dots (for development/intranet).
+  // This regex is a bit more forgiving for simple hostnames than a strict TLD-requiring one.
+  const domainPatternRegex =
+    /^(?:(\*\.)?([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}|([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?))$/i;
+
+  // A TLD typically doesn't have digits only or hyphens.
+  // This is a secondary check as the regex might allow some technically valid but unusual hostnames.
+  const parts = domainPart.replace(/^(\*\.)/, '').split('.');
+  if (parts.length > 1) {
+    const tld = parts[parts.length - 1];
+    if (!/^[a-zA-Z]{2,63}$/.test(tld)) {
+      // TLD should be letters
+      // console.log("TLD check failed for:", tld);
+      // return false; // You can make this stricter if desired. For now, main regex handles most.
+    }
+  }
+
+  if (!domainPatternRegex.test(domainPart)) {
+    // console.log("Domain regex failed for:", domainPart);
+    return false;
+  }
+
+  // Disallow patterns that are just "*." or contain invalid wildcard usage
+  if (domainPart === '*.' || (domainPart.includes('*') && !domainPart.startsWith('*.'))) {
+    // console.log("Invalid wildcard usage:", domainPart);
+    return false;
+  }
+  if ((domainPart.match(/\*/g) || []).length > 1) {
+    // More than one asterisk
+    // console.log("Multiple wildcards found:", domainPart);
+    return false;
+  }
+
+  return true;
+}
+
 console.log('[System] options-utils.js loaded');
