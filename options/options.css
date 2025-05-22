@@ -124,10 +124,6 @@ h4 {
   font-weight: 500;
 }
 
-hr {
-  display: none;
-}
-
 .form-group {
   margin-bottom: var(--spacing-lg);
 }
