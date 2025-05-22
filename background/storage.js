@@ -1,16 +1,9 @@
-// background/storage.js (v0.7.1 - Add Pruning Logic)
-
-// Function to load initial data and potentially trigger an initial prune
-// In background/storage.js
-
 async function loadData() {
   console.log('[Storage] loadData started.');
   try {
-    // Clear any potentially stale tracking state first
-    await browser.storage.local.remove(FocusFlowState.STORAGE_KEY_TRACKING_STATE); // Assumes FocusFlowState is available for this key
+    await browser.storage.local.remove(FocusFlowState.STORAGE_KEY_TRACKING_STATE);
     console.log('[Storage] Cleared potentially stale tracking state on startup.');
 
-    // *** MODIFIED: Use literal string key and remove the explicit check ***
     const keysToLoad = [
       'trackedData',
       'categoryTimeData',
@@ -20,13 +13,10 @@ async function loadData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
-      'dataRetentionPeriodDays', // Use the literal string key here
+      'dataRetentionPeriodDays',
     ];
 
-    // Load all persistent data using the defined keys array
     const result = await browser.storage.local.get(keysToLoad);
-    // *** END MODIFICATION ***
-
     console.log('[Storage] Config/History Data loaded from storage.');
 
     let needsSave = false;
@@ -53,7 +43,6 @@ async function loadData() {
       }
     }
 
-    // --- Update Global State ---
     FocusFlowState.categories =
       result.categories && result.categories.length > 0
         ? result.categories
@@ -92,8 +81,6 @@ async function loadData() {
       await performSave();
     }
 
-    // Trigger prune check once after loading data on startup
-    // Use the literal string key to access the loaded setting value
     await pruneOldData(result['dataRetentionPeriodDays']);
 
     console.log(
@@ -103,9 +90,7 @@ async function loadData() {
     );
     console.log('[Storage] loadData finished.');
   } catch (error) {
-    // Log the specific error that occurred during loadData
-    console.error('[Storage] CRITICAL Error during loadData:', error); // This will now catch the underlying storage.get error if one occurs
-    // Reset state on critical load error
+    console.error('[Storage] CRITICAL Error during loadData:', error);
     FocusFlowState.categories = ['Other'];
     FocusFlowState.categoryAssignments = {};
     FocusFlowState.rules = [];
@@ -122,7 +107,6 @@ async function loadData() {
   }
 }
 
-// The core save function (remains the same)
 async function performSave() {
   if (FocusFlowState.isSaving) return;
   FocusFlowState.isSaving = true;
@@ -145,7 +129,6 @@ async function performSave() {
   }
 }
 
-// Batched save function (remains the same)
 function saveDataBatched() {
   if (FocusFlowState.saveTimeoutId) {
     clearTimeout(FocusFlowState.saveTimeoutId);
@@ -156,7 +139,6 @@ function saveDataBatched() {
   }, FocusFlowState.SAVE_DATA_DEBOUNCE_MS);
 }
 
-// *** ADDED: Function to prune old data ***
 /**
  * Deletes daily and hourly tracking data older than the configured retention period.
  * @param {number|undefined} [retentionDaysSetting] - Optional pre-fetched retention setting. If not provided, it will be fetched from storage.
@@ -166,20 +148,17 @@ async function pruneOldData(retentionDaysSetting = undefined) {
   let retentionDays = retentionDaysSetting;
 
   try {
-    // Fetch setting from storage if not provided
     if (retentionDays === undefined) {
       const result = await browser.storage.local.get(FocusFlowState.STORAGE_KEY_DATA_RETENTION_DAYS);
       retentionDays = result[FocusFlowState.STORAGE_KEY_DATA_RETENTION_DAYS];
     }
 
-    // Use default if setting is missing or explicitly null
     if (retentionDays === undefined || retentionDays === null) {
       retentionDays = FocusFlowState.DEFAULT_DATA_RETENTION_DAYS;
     } else {
-      retentionDays = parseInt(retentionDays, 10); // Ensure it's a number
+      retentionDays = parseInt(retentionDays, 10);
     }
 
-    // If retention is set to "Forever" (-1) or invalid, do nothing
     if (isNaN(retentionDays) || retentionDays < 0) {
       console.log('[Pruning] Data retention set to Forever. No pruning needed.');
       return;
@@ -187,23 +166,20 @@ async function pruneOldData(retentionDaysSetting = undefined) {
 
     console.log(`[Pruning] Data retention period: ${retentionDays} days.`);
 
-    // Calculate cutoff date
     const today = new Date();
     const cutoffDate = new Date(today);
     cutoffDate.setDate(today.getDate() - retentionDays);
-    cutoffDate.setHours(0, 0, 0, 0); // Compare against the start of the day
+    cutoffDate.setHours(0, 0, 0, 0);
 
     let dataWasPruned = false;
 
-    // Function to prune a specific data object (dailyDomainData, dailyCategoryData, hourlyData)
     const pruneObject = (dataObject, objectName) => {
-      if (!dataObject) return; // Skip if object doesn't exist
+      if (!dataObject) return;
       const keysToDelete = [];
       for (const dateKey in dataObject) {
-        // Validate key format (YYYY-MM-DD) and convert to Date
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
           try {
-            const entryDate = new Date(dateKey + 'T00:00:00'); // Treat date key as local time start
+            const entryDate = new Date(dateKey + 'T00:00:00');
             if (!isNaN(entryDate) && entryDate < cutoffDate) {
               keysToDelete.push(dateKey);
             }
@@ -222,15 +198,13 @@ async function pruneOldData(retentionDaysSetting = undefined) {
       }
     };
 
-    // Prune the relevant data objects held in FocusFlowState
     pruneObject(FocusFlowState.dailyDomainData, 'dailyDomainData');
     pruneObject(FocusFlowState.dailyCategoryData, 'dailyCategoryData');
     pruneObject(FocusFlowState.hourlyData, 'hourlyData');
 
-    // If any data was deleted, save the updated state
     if (dataWasPruned) {
       console.log('[Pruning] Old data removed. Saving updated state...');
-      await performSave(); // Use performSave directly as this is a scheduled/infrequent task
+      await performSave();
       console.log('[Pruning] Updated state saved.');
     } else {
       console.log('[Pruning] No old data found to prune.');
@@ -239,6 +213,3 @@ async function pruneOldData(retentionDaysSetting = undefined) {
     console.error('[Pruning] Error during data pruning:', error);
   }
 }
-// *** END ADDED ***
-
-console.log('[System] background/storage.js v0.7.1 potentially updated'); // Adjust log if needed

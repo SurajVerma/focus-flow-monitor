@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "Focus Flow Monitor",
-  "version": "0.8.6",
+  "name": "Focus Flow Monitor Beta",
+  "version": "0.9.0.1",
   "description": "Master your online habits! Track time, visualize usage, block distractions, set limits, and enhance focus with the built-in Pomodoro (Tomato) timer.",
   "permissions": [
     "tabs",
@@ -47,7 +47,8 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "focusflow-monitor-pub@bleuflex.com"
+      "id": "focusflow-monitor@bleuflex.com",
+      "update_url": "https://www.bleuflex.com/addons-update/updates.json"
     }
   }
 }

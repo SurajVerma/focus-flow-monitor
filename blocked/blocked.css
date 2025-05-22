@@ -1,13 +1,12 @@
-/* blocked/blocked.css (v2 - Dark Mode Support) */
 :root {
   --blocked-bg: #f8f9fa;
   --blocked-card-bg: #ffffff;
   --blocked-text-primary: #343a40;
   --blocked-text-secondary: #495057;
   --blocked-text-muted: #6c757d;
-  --blocked-icon-color: #dc3545; /* Red */
-  --blocked-heading-color: #dc3545; /* Red */
-  --blocked-button-bg: #007bff; /* Blue */
+  --blocked-icon-color: #dc3545;
+  --blocked-heading-color: #dc3545;
+  --blocked-button-bg: #007bff;
   --blocked-button-hover-bg: #0056b3;
   --blocked-button-text: #ffffff;
   --blocked-strong-text: #007bff;
@@ -17,18 +16,18 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --blocked-bg: #121212; /* Very dark */
-    --blocked-card-bg: #1e1e1e; /* Dark card */
-    --blocked-text-primary: #e0e0e0; /* Light text */
+    --blocked-bg: #121212;
+    --blocked-card-bg: #1e1e1e;
+    --blocked-text-primary: #e0e0e0;
     --blocked-text-secondary: #b0b0b0;
     --blocked-text-muted: #888888;
-    --blocked-icon-color: #ff453a; /* Brighter Red */
-    --blocked-heading-color: #ff453a; /* Brighter Red */
-    --blocked-button-bg: #0a84ff; /* Brighter Blue */
+    --blocked-icon-color: #ff453a;
+    --blocked-heading-color: #ff453a;
+    --blocked-button-bg: #0a84ff;
     --blocked-button-hover-bg: #339cff;
     --blocked-button-text: #ffffff;
     --blocked-strong-text: #0a84ff;
-    --blocked-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Darker shadow */
+    --blocked-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     --blocked-focus-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4);
   }
 }
@@ -54,7 +53,7 @@ body {
   box-shadow: var(--blocked-card-shadow);
   max-width: 500px;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for dark mode */
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .icon {
@@ -79,31 +78,30 @@ p {
 }
 
 p strong {
-  color: var(--blocked-strong-text); /* Extension name highlight */
+  color: var(--blocked-strong-text);
 }
 
 .details {
   font-size: 0.9em;
   color: var(--blocked-text-muted);
-  text-align: left; /* Align details left */
+  text-align: left;
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid rgba(128, 128, 128, 0.2); /* Subtle separator */
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
 }
 .details p {
-  margin-bottom: 8px; /* Less margin for detail lines */
-  font-size: 1em; /* Match details font size */
-  color: inherit; /* Inherit muted color */
+  margin-bottom: 8px;
+  font-size: 1em;
+  color: inherit;
 }
 .details p strong {
-  color: inherit; /* Details strong use muted color too */
+  color: inherit;
   font-weight: 600;
 }
 .details span {
-  /* The actual values */
   font-weight: 500;
-  color: var(--blocked-text-primary); /* Make values stand out slightly */
-  word-break: break-all; /* Prevent long URLs/values overflowing */
+  color: var(--blocked-text-primary);
+  word-break: break-all;
 }
 
 button#goBackButton {
@@ -116,7 +114,7 @@ button#goBackButton {
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-weight: 500;
-  margin-top: 20px; /* Add some space above button */
+  margin-top: 20px;
 }
 
 button#goBackButton:hover {

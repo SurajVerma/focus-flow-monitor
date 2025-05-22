@@ -1,6 +1,4 @@
-// blocked/blocked.js (v0.7.3 - Apply Customizations)
-
-// Storage keys for block page customization (mirrored from options-state.js for clarity)
+// Storage keys for block page customization
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING = 'blockPage_customHeading';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE = 'blockPage_customMessage';
 const STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT = 'blockPage_customButtonText';
@@ -12,7 +10,6 @@ const STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO = 'blockPage_showScheduleInfo';
 const STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE = 'blockPage_showQuote';
 const STORAGE_KEY_BLOCK_PAGE_USER_QUOTES = 'blockPage_userQuotes';
 
-// Default motivational quotes
 const DEFAULT_MOTIVATIONAL_QUOTES = [
   'The secret of getting ahead is getting started. – Mark Twain',
   "Don't watch the clock; do what it does. Keep going. – Sam Levenson",
@@ -26,7 +23,6 @@ const DEFAULT_MOTIVATIONAL_QUOTES = [
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get URL parameters
   const params = new URLSearchParams(window.location.search);
   const reasonParam = params.get('reason') || 'unknown';
   const typeParam = params.get('type') || 'unknown';
@@ -38,7 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const scheduleEndParam = params.get('schedule_end');
   const scheduleDaysParam = params.get('schedule_days');
 
-  // Get references to HTML elements
   const mainHeadingEl = document.getElementById('main-heading');
   const subHeadingEl = document.getElementById('sub-heading');
   const customMessagePlaceholderEl = document.getElementById('custom-message-placeholder');
@@ -66,7 +61,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const quoteTextEl = document.getElementById('quote-text');
   const goBackButton = document.getElementById('goBackButton');
 
-  // --- Load Customization Settings ---
   let settings = {};
   try {
     settings = await browser.storage.local.get([
@@ -85,26 +79,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Could not load block page customization settings:', err);
   }
 
-  // --- Apply Customizations ---
   if (mainHeadingEl && settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING]) {
     mainHeadingEl.textContent = settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING];
   }
-  // Sub-heading is not directly customizable by user in this iteration, but could be.
-  // For now, it remains as is unless custom message replaces it.
 
   if (customMessagePlaceholderEl && settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE]) {
     customMessagePlaceholderEl.textContent = settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE];
     customMessagePlaceholderEl.style.display = 'block';
-    if (subHeadingEl) subHeadingEl.style.display = 'none'; // Hide default sub-heading if custom message exists
+    if (subHeadingEl) subHeadingEl.style.display = 'none';
   } else {
-    if (subHeadingEl) subHeadingEl.style.display = 'block'; // Show default if no custom message
+    if (subHeadingEl) subHeadingEl.style.display = 'block';
   }
 
   if (goBackButton && settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT]) {
     goBackButton.textContent = settings[STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT];
   }
 
-  // Show/hide detail elements based on settings
   if (urlContainerEl) {
     urlContainerEl.style.display = settings[STORAGE_KEY_BLOCK_PAGE_SHOW_URL] !== false ? 'block' : 'none';
   }
@@ -114,13 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (ruleContainerEl) {
     ruleContainerEl.style.display = settings[STORAGE_KEY_BLOCK_PAGE_SHOW_RULE] !== false ? 'block' : 'none';
   }
-  // Note: limitInfoEl and scheduleInfoEl visibility is also controlled by whether their data exists.
-  // The settings will provide an additional layer of control.
 
-  // --- Populate Dynamic Content (URL, Reason, Rule, etc.) ---
   if (displayUrlEl) displayUrlEl.textContent = urlParam;
 
-  let reasonText = 'Access Blocked by Rule'; // Default
+  let reasonText = 'Access Blocked by Rule';
   let ruleText = 'Unknown Rule';
 
   if (reasonParam === 'limit') {
@@ -129,9 +116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const limitSec = parseInt(limitParam, 10);
       const spentSec = parseInt(spentParam, 10);
       if (!isNaN(limitSec) && !isNaN(spentSec)) {
-        spentEl.textContent = formatTime(spentSec, false);
+        spentEl.textContent = formatTime(spentSec, false); // Assuming formatTime is available globally or imported
         limitEl.textContent = formatTime(limitSec, false);
-        // Visibility controlled by both data presence and setting
         limitInfoEl.style.display = settings[STORAGE_KEY_BLOCK_PAGE_SHOW_LIMIT_INFO] !== false ? 'block' : 'none';
       } else if (limitInfoEl) {
         limitInfoEl.style.display = 'none';
@@ -150,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       scheduleDaysEl
     ) {
       if (scheduleStartParam && scheduleStartParam !== 'N/A' && scheduleEndParam && scheduleEndParam !== 'N/A') {
-        scheduleStartEl.textContent = formatTimeToAMPM(scheduleStartParam);
+        scheduleStartEl.textContent = formatTimeToAMPM(scheduleStartParam); // Assuming formatTimeToAMPM is available
         scheduleTimeSeparatorEl.textContent = ' - ';
         scheduleEndEl.textContent = formatTimeToAMPM(scheduleEndParam);
         scheduleTimeDetailsEl.style.display = '';
@@ -161,11 +147,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       scheduleDaysEl.textContent =
         scheduleDaysParam && scheduleDaysParam !== 'All' ? scheduleDaysParam.split(',').join(', ') : 'All days';
-      // Visibility controlled by both data presence and setting
       scheduleInfoEl.style.display = settings[STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO] !== false ? 'block' : 'none';
     }
   } else {
-    // Default block or other reasons
     if (limitInfoEl) limitInfoEl.style.display = 'none';
     if (scheduleInfoEl) scheduleInfoEl.style.display = 'none';
   }
@@ -181,7 +165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (displayReasonEl) displayReasonEl.textContent = reasonText;
   if (displayRuleEl) displayRuleEl.textContent = ruleText;
 
-  // --- Motivational Quote ---
   if (settings[STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE] && motivationalQuoteContainerEl && quoteTextEl) {
     const userQuotes = settings[STORAGE_KEY_BLOCK_PAGE_USER_QUOTES] || [];
     const quotesToShow = userQuotes.length > 0 ? userQuotes : DEFAULT_MOTIVATIONAL_QUOTES;
@@ -192,17 +175,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // --- Go Back Button Logic ---
   if (goBackButton) {
     goBackButton.addEventListener('click', () => {
       if (history.length > 1) {
         history.back();
       } else {
-        // If no history, provide alternative (e.g., close tab, or disable button)
-        // For now, disable and change text
         goBackButton.textContent = 'Cannot Go Back';
         goBackButton.disabled = true;
-        // Consider: window.close(); // but this might be blocked by browser for non-script opened windows
       }
     });
   } else {

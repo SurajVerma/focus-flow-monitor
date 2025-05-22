@@ -1,5 +1,3 @@
-// options/options-state.js (v0.8.0 - Pomodoro Notification UI Refs)
-
 // --- Storage Keys ---
 const STORAGE_KEY_IDLE_THRESHOLD = 'idleThresholdSeconds';
 const DEFAULT_IDLE_SECONDS = 1800;
@@ -26,12 +24,10 @@ let AppState = {
   categoryTimeData: {},
   dailyDomainData: {},
   dailyCategoryData: {},
-  hourlyData: {},
-  // Configuration
+  hourlyData: {}, // Configuration
   categories: ['Other'],
   categoryAssignments: {},
-  rules: [],
-  // UI State
+  rules: [], // UI State
   timeChart: null,
   domainCurrentPage: 1,
   domainItemsPerPage: 10,
@@ -42,9 +38,8 @@ let AppState = {
   currentChartViewMode: 'domain',
   editingRuleIndex: -1,
   editingAssignmentOriginalDomain: null,
-  categoryProductivityRatings: {},
+  categoryProductivityRatings: {}, // Block Page Customization Settings in AppState
 
-  // Block Page Customization Settings in AppState
   blockPageCustomHeading: '',
   blockPageCustomMessage: '',
   blockPageCustomButtonText: '',
@@ -54,9 +49,8 @@ let AppState = {
   blockPageShowLimitInfo: true,
   blockPageShowScheduleInfo: true,
   blockPageShowQuote: false,
-  blockPageUserQuotes: [],
+  blockPageUserQuotes: [], // NEW: Pomodoro settings state for options page
 
-  // NEW: Pomodoro settings state for options page
   pomodoroNotifyEnabled: true, // Default, will be loaded from storage
   isRequestingPermission: false,
 };
@@ -77,6 +71,7 @@ function queryUIElements() {
   UIElements.domainPatternInput = document.getElementById('domainPattern');
   UIElements.categorySelect = document.getElementById('categorySelect');
   UIElements.assignDomainBtn = document.getElementById('assignDomainBtn');
+  UIElements.cancelAssignDomainBtn = document.getElementById('cancelAssignDomainBtn');
   UIElements.ruleTypeSelect = document.getElementById('ruleTypeSelect');
   UIElements.rulePatternInput = document.getElementById('rulePatternInput');
   UIElements.ruleCategorySelect = document.getElementById('ruleCategorySelect');
@@ -160,15 +155,10 @@ function queryUIElements() {
 
   UIElements.totalTimeForRangeContainer = document.getElementById('totalTimeForRangeContainer');
   UIElements.totalTimeForRangeLabel = document.getElementById('totalTimeForRangeLabel');
-  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
+  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue'); // NEW: UI Element References for Pomodoro Notification Settings
 
-  // NEW: UI Element References for Pomodoro Notification Settings
   UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
-  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus');
-  // Add references for other Pomodoro settings if you add them (e.g., duration inputs)
-  // UIElements.pomodoroWorkDurationInput = document.getElementById('pomodoroWorkDuration');
-
-  // Basic check to ensure critical elements were found
+  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus'); // Add references for other Pomodoro settings if you add them (e.g., duration inputs) // Basic check to ensure critical elements were found
   if (
     !UIElements.detailedTimeList ||
     !UIElements.categoryList ||
@@ -188,8 +178,7 @@ function queryUIElements() {
     !UIElements.blockPageUserQuotesTextarea ||
     !UIElements.totalTimeForRangeContainer ||
     !UIElements.totalTimeForRangeLabel ||
-    !UIElements.totalTimeForRangeValue ||
-    // NEW: Check for new Pomodoro elements
+    !UIElements.totalTimeForRangeValue || // NEW: Check for new Pomodoro elements
     !UIElements.pomodoroEnableNotificationsCheckbox ||
     !UIElements.pomodoroNotificationPermissionStatus
   ) {
@@ -218,5 +207,3 @@ if (typeof getCurrentDateString === 'undefined') {
     return `${year}-${month}-${day}`;
   }
 }
-
-console.log('[System] options-state.js v0.8.0 loaded');

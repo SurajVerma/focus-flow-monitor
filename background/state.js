@@ -1,5 +1,3 @@
-// background/state.js (v0.7.2 - Revised Pomodoro State)
-
 const FocusFlowState = {
   // Core Data
   trackedData: {},
@@ -34,31 +32,23 @@ const FocusFlowState = {
 
   // --- Pomodoro Timer State ---
   pomodoro: {
-    // Default settings (can be made configurable later if desired)
     durations: {
-      // in seconds
       work: 25 * 60,
       shortBreak: 5 * 60,
       longBreak: 15 * 60,
     },
     sessionsBeforeLongBreak: 4,
-    autoStartBreaks: false, // CHANGED: User starts breaks manually
-    autoStartWork: false, // CHANGED: User starts work manually
-
-    // Runtime state (will be persisted)
+    autoStartBreaks: false,
+    autoStartWork: false,
     currentPhase: 'Work',
     remainingTime: 25 * 60,
     workSessionsCompleted: 0,
     timerState: 'stopped',
     timerIntervalId: null,
-    notifyEnabled: true, // NEW: Default to notifications enabled
+    notifyEnabled: true,
   },
-  STORAGE_KEY_POMODORO_STATE: 'pomodoroPersistentState', // For currentPhase, remainingTime, workSessionsCompleted, timerState
-  STORAGE_KEY_POMODORO_SETTINGS: 'pomodoroUserSettings', // For durations, sessionsBeforeLongBreak, autoStart, notifyEnabled
-
-  // NEW: Pomodoro Statistics Storage (placeholders)
-  STORAGE_KEY_POMODORO_STATS_DAILY: 'pomodoroStatsDaily', // e.g., { "YYYY-MM-DD": { workSessions: N, workTime: S } }
-  STORAGE_KEY_POMODORO_STATS_ALL_TIME: 'pomodoroStatsAllTime', // e.g., { totalWorkSessions: N, totalWorkTime: S }
+  STORAGE_KEY_POMODORO_STATE: 'pomodoroPersistentState',
+  STORAGE_KEY_POMODORO_SETTINGS: 'pomodoroUserSettings',
+  STORAGE_KEY_POMODORO_STATS_DAILY: 'pomodoroStatsDaily',
+  STORAGE_KEY_POMODORO_STATS_ALL_TIME: 'pomodoroStatsAllTime',
 };
-
-console.log('[System] background/state.js loaded (v0.7.2 - Revised Pomodoro State)');

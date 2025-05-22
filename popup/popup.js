@@ -1,13 +1,41 @@
-// popup.js (v9.24 - Scroll to Options & Refined Logic)
-
 // --- Global Chart Instance ---
 let hourlyChartInstance = null;
 // --- Interval ID for live popup updates ---
 let popupUpdateIntervalId = null;
 
+const STORAGE_KEY_TIME_FORMAT = 'hourlyChartTimeFormat'; // true for 24-hour, false for 12-hour
+let use24HourFormat = false; // Default to 12-hour format
+let todaysHourlyDataForToggle = {}; // Store data for re-rendering on toggle
+
+async function loadTimeFormatPreference() {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEY_TIME_FORMAT);
+    if (result[STORAGE_KEY_TIME_FORMAT] !== undefined) {
+      use24HourFormat = result[STORAGE_KEY_TIME_FORMAT];
+    }
+  } catch (e) {
+    console.warn('Error loading time format preference:', e);
+  }
+}
+
+async function saveTimeFormatPreference() {
+  try {
+    await browser.storage.local.set({ [STORAGE_KEY_TIME_FORMAT]: use24HourFormat });
+  } catch (e) {
+    console.warn('Error saving time format preference:', e);
+  }
+}
+
+const STORAGE_KEY_SUMMARY_VIEW = 'popupSummaryViewType'; // true for categories, false for websites
+let showCategoriesInSummary = true; // Default to showing categories
+
+// Store fetched data for quick toggling
+let todaysCategoryDataForSummary = {};
+let todaysDomainDataForSummary = {};
+let totalSecondsTodayForSummary = 0;
+
 // --- Chart Rendering Function ---
 function renderHourlyChart(canvasCtx, hourlyDataToday) {
-  // Ensure Chart.js is loaded
   if (typeof Chart === 'undefined') {
     console.error('Chart.js library is not loaded or available!');
     if (canvasCtx && canvasCtx.canvas) {
@@ -25,23 +53,30 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     hourlyChartInstance = null;
   }
 
-  const labels = [];
+  const xAxisLabels = [];
   const data = [];
-  let maxTime = 0;
 
   for (let i = 0; i < 24; i++) {
-    const hour = i % 12 === 0 ? 12 : i % 12;
-    const ampm = i < 12 ? 'AM' : 'PM';
-    labels.push(`${hour}${ampm}`);
+    if (use24HourFormat) {
+      xAxisLabels.push(String(i).padStart(2, '0')); // "00", "01", ... "23"
+    } else {
+      const hour = i % 12 === 0 ? 12 : i % 12;
+      const ampm = i < 12 || i === 24 ? 'AM' : 'PM';
+      if (i === 24) {
+        // Should not be hit if data is only for 0-23h
+        xAxisLabels.push(`12AM`);
+      } else {
+        xAxisLabels.push(`${hour}${ampm}`); // "12AM", "1AM", ...
+      }
+    }
     const hourStr = i.toString().padStart(2, '0');
     const seconds = hourlyDataToday[hourStr] || 0;
     data.push(seconds);
-    if (seconds > maxTime) {
-      maxTime = seconds;
-    }
   }
 
-  if (maxTime <= 0 && canvasCtx && canvasCtx.canvas) {
+  const hasData = data.some((value) => value > 0);
+
+  if (!hasData && canvasCtx && canvasCtx.canvas) {
     canvasCtx.clearRect(0, 0, canvasCtx.canvas.width, canvasCtx.canvas.height);
     canvasCtx.font = '12px sans-serif';
     canvasCtx.fillStyle = '#aaa';
@@ -54,7 +89,7 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
     hourlyChartInstance = new Chart(canvasCtx, {
       type: 'bar',
       data: {
-        labels: labels,
+        labels: xAxisLabels,
         datasets: [
           {
             label: 'Time Spent',
@@ -90,12 +125,18 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
         scales: {
           y: {
             beginAtZero: true,
-            suggestedMax: maxTime * 1.1,
+            max: 3600,
             ticks: {
+              stepSize: 900,
               callback: function (value) {
-                return typeof formatTime === 'function' ? formatTime(value, false) : value;
+                if (value === 0) return null;
+                if (value === 900) return '15m';
+                if (value === 1800) return '30m';
+                if (value === 2700) return '45m';
+                if (value === 3600) return '1h';
+                return null;
               },
-              maxTicksLimit: 4,
+              maxTicksLimit: 5,
               font: { size: 10 },
             },
             grid: { drawTicks: false, border: { display: false } },
@@ -105,7 +146,18 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
               font: { size: 9 },
               maxRotation: 0,
               autoSkip: true,
-              maxTicksLimit: 12,
+              maxTicksLimit: 8, // Approx 3-hour intervals (12AM, 3AM, ...)
+              callback: function (value) {
+                // value is the index of the tick
+                const originalLabel = this.getLabelForValue(value);
+                if (use24HourFormat) {
+                  // originalLabel is "00", "01", etc.
+                  return `${originalLabel}h`;
+                } else {
+                  // originalLabel is "12AM", "1AM", etc.
+                  return originalLabel;
+                }
+              },
             },
             grid: { display: false, drawTicks: false, border: { display: false } },
           },
@@ -124,8 +176,246 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
   }
 }
 
+async function loadSummaryViewPreference() {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEY_SUMMARY_VIEW);
+    if (result[STORAGE_KEY_SUMMARY_VIEW] !== undefined) {
+      showCategoriesInSummary = result[STORAGE_KEY_SUMMARY_VIEW];
+    }
+  } catch (e) {
+    console.warn('Error loading summary view preference:', e);
+  }
+}
+
+async function saveSummaryViewPreference() {
+  try {
+    await browser.storage.local.set({ [STORAGE_KEY_SUMMARY_VIEW]: showCategoriesInSummary });
+  } catch (e) {
+    console.warn('Error saving summary view preference:', e);
+  }
+}
+
+function renderCategorySummary(summaryEl, progressBarEl, categoryData, totalSeconds) {
+  summaryEl.innerHTML = '';
+  progressBarEl.innerHTML = '';
+
+  if (totalSeconds > 0 && categoryData && Object.keys(categoryData).length > 0) {
+    progressBarEl.style.display = 'flex';
+    const categoryArray = Object.entries(categoryData)
+      .map(([category, time]) => ({
+        name: category,
+        time: time,
+        percentage: totalSeconds > 0 ? (time / totalSeconds) * 100 : 0,
+      }))
+      .filter((cat) => cat.time > 0.1)
+      .sort((a, b) => b.time - a.time);
+
+    const maxItemsToDisplay = 5;
+    let finalDisplayItems = [];
+    if (categoryArray.length <= maxItemsToDisplay) {
+      finalDisplayItems = categoryArray;
+    } else {
+      let topSlice = categoryArray.slice(0, maxItemsToDisplay);
+      const remainingCategories = categoryArray.slice(maxItemsToDisplay);
+      const remainingTime = remainingCategories.reduce((sum, cat) => sum + cat.time, 0);
+      const realOtherIndexInTop = topSlice.findIndex((c) => c.name === 'Other');
+
+      if (realOtherIndexInTop !== -1) {
+        topSlice[realOtherIndexInTop].time += remainingTime;
+        topSlice[realOtherIndexInTop].percentage =
+          totalSeconds > 0 ? (topSlice[realOtherIndexInTop].time / totalSeconds) * 100 : 0;
+        finalDisplayItems = topSlice;
+      } else {
+        finalDisplayItems = topSlice.slice(0, maxItemsToDisplay - 1);
+        const fifthItemTime = topSlice[maxItemsToDisplay - 1]?.time || 0;
+        const aggregateTime = fifthItemTime + remainingTime;
+        if (aggregateTime >= 1) {
+          const aggregatePercentage = totalSeconds > 0 ? (aggregateTime / totalSeconds) * 100 : 0;
+          finalDisplayItems.push({ name: 'Other', time: aggregateTime, percentage: aggregatePercentage });
+        } else if (finalDisplayItems.length < maxItemsToDisplay && fifthItemTime >= 1) {
+          finalDisplayItems.push(topSlice[maxItemsToDisplay - 1]);
+        }
+      }
+      if (finalDisplayItems.length > maxItemsToDisplay)
+        finalDisplayItems = finalDisplayItems.slice(0, maxItemsToDisplay);
+    }
+
+    finalDisplayItems.forEach((cat) => {
+      const displayPercentage = cat.time > 0.1 ? Math.max(1, Math.round(cat.percentage)) : 0;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'category-item';
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'category-info';
+      const dotSpan = document.createElement('span');
+      dotSpan.className = 'category-dot';
+      dotSpan.style.backgroundColor = typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'category-name';
+      nameSpan.textContent = cat.name;
+      infoDiv.appendChild(dotSpan);
+      infoDiv.appendChild(nameSpan);
+      const timePercentSpan = document.createElement('span');
+      timePercentSpan.className = 'category-time-percent';
+      timePercentSpan.appendChild(
+        document.createTextNode((typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's') + ' ')
+      );
+      const percentSpanElement = document.createElement('span');
+      percentSpanElement.className = 'category-percent';
+      percentSpanElement.textContent = `(${displayPercentage}%)`;
+      timePercentSpan.appendChild(percentSpanElement);
+      itemDiv.appendChild(infoDiv);
+      itemDiv.appendChild(timePercentSpan);
+      summaryEl.appendChild(itemDiv);
+
+      const segmentDiv = document.createElement('div');
+      segmentDiv.className = 'progress-bar-segment';
+      const widthPercentage = Math.max(0.5, cat.percentage);
+      segmentDiv.style.width = `${widthPercentage}%`;
+      segmentDiv.style.backgroundColor = typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
+      segmentDiv.title = `${cat.name}: ${
+        typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's'
+      } (${displayPercentage}%)`;
+      progressBarEl.appendChild(segmentDiv);
+    });
+    const totalSegmentWidth = Array.from(progressBarEl.children).reduce(
+      (sum, el) => sum + parseFloat(el.style.width || 0),
+      0
+    );
+    if (
+      progressBarEl.children.length > 0 &&
+      (totalSegmentWidth > 101 || totalSegmentWidth < 99) &&
+      totalSegmentWidth !== 0
+    ) {
+      const scaleFactor = 100 / totalSegmentWidth;
+      Array.from(progressBarEl.children).forEach((el) => {
+        el.style.width = `${parseFloat(el.style.width || 0) * scaleFactor}%`;
+      });
+    }
+  } else {
+    summaryEl.textContent = 'No category activity tracked today.';
+    progressBarEl.style.display = 'none';
+  }
+}
+
+function renderDomainSummary(summaryEl, progressBarEl, domainData, totalSeconds) {
+  summaryEl.innerHTML = '';
+  progressBarEl.innerHTML = '';
+  const websiteColors = [
+    'rgba(128, 0, 128, 0.7)',
+    'rgba(0, 128, 0, 0.7)',
+    'rgba(255, 165, 0, 0.7)',
+    'rgba(0, 0, 255, 0.7)',
+    'rgba(210, 105, 30, 0.7)',
+  ];
+  const defaultOtherColor = 'rgba(128, 128, 128, 0.7)';
+
+  if (totalSeconds > 0 && domainData && Object.keys(domainData).length > 0) {
+    progressBarEl.style.display = 'flex';
+    const domainArray = Object.entries(domainData)
+      .map(([domain, time]) => ({
+        name: domain,
+        time: time,
+        percentage: totalSeconds > 0 ? (time / totalSeconds) * 100 : 0,
+      }))
+      .filter((item) => item.time > 0.1)
+      .sort((a, b) => b.time - a.time);
+
+    const maxItemsToDisplay = 5;
+    let finalDisplayItems = [];
+    if (domainArray.length <= maxItemsToDisplay) {
+      finalDisplayItems = domainArray;
+    } else {
+      finalDisplayItems = domainArray.slice(0, maxItemsToDisplay - 1);
+      const remainingDomains = domainArray.slice(maxItemsToDisplay - 1);
+      const remainingTime = remainingDomains.reduce((sum, item) => sum + item.time, 0);
+      if (remainingTime >= 1) {
+        const remainingPercentage = totalSeconds > 0 ? (remainingTime / totalSeconds) * 100 : 0;
+        finalDisplayItems.push({ name: 'Other Websites', time: remainingTime, percentage: remainingPercentage });
+      } else if (finalDisplayItems.length < maxItemsToDisplay && domainArray[maxItemsToDisplay - 1].time >= 1) {
+        finalDisplayItems.push(domainArray[maxItemsToDisplay - 1]);
+      }
+    }
+
+    finalDisplayItems.forEach((item, index) => {
+      const displayPercentage = item.time > 0.1 ? Math.max(1, Math.round(item.percentage)) : 0;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'category-item';
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'category-info';
+      const dotSpan = document.createElement('span');
+      dotSpan.className = 'category-dot';
+      dotSpan.style.backgroundColor =
+        item.name === 'Other Websites' ? defaultOtherColor : websiteColors[index % websiteColors.length];
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'category-name';
+      nameSpan.textContent = item.name;
+      infoDiv.appendChild(dotSpan);
+      infoDiv.appendChild(nameSpan);
+      const timePercentSpan = document.createElement('span');
+      timePercentSpan.className = 'category-time-percent';
+      timePercentSpan.appendChild(
+        document.createTextNode(
+          (typeof formatTime === 'function' ? formatTime(item.time, true) : item.time + 's') + ' '
+        )
+      );
+      const percentSpanElement = document.createElement('span');
+      percentSpanElement.className = 'category-percent';
+      percentSpanElement.textContent = `(${displayPercentage}%)`;
+      timePercentSpan.appendChild(percentSpanElement);
+      itemDiv.appendChild(infoDiv);
+      itemDiv.appendChild(timePercentSpan);
+      summaryEl.appendChild(itemDiv);
+
+      const segmentDiv = document.createElement('div');
+      segmentDiv.className = 'progress-bar-segment';
+      const widthPercentage = Math.max(0.5, item.percentage);
+      segmentDiv.style.width = `${widthPercentage}%`;
+      segmentDiv.style.backgroundColor =
+        item.name === 'Other Websites' ? defaultOtherColor : websiteColors[index % websiteColors.length];
+      segmentDiv.title = `${item.name}: ${
+        typeof formatTime === 'function' ? formatTime(item.time, true) : item.time + 's'
+      } (${displayPercentage}%)`;
+      progressBarEl.appendChild(segmentDiv);
+    });
+    const totalSegmentWidth = Array.from(progressBarEl.children).reduce(
+      (sum, el) => sum + parseFloat(el.style.width || 0),
+      0
+    );
+    if (
+      progressBarEl.children.length > 0 &&
+      (totalSegmentWidth > 101 || totalSegmentWidth < 99) &&
+      totalSegmentWidth !== 0
+    ) {
+      const scaleFactor = 100 / totalSegmentWidth;
+      Array.from(progressBarEl.children).forEach((el) => {
+        el.style.width = `${parseFloat(el.style.width || 0) * scaleFactor}%`;
+      });
+    }
+  } else {
+    summaryEl.textContent = 'No website activity tracked today.';
+    progressBarEl.style.display = 'none';
+  }
+}
+
+function updateSummaryDisplay(summaryEl, progressBarEl, summaryViewTitleEl) {
+  if (!summaryEl || !progressBarEl || !summaryViewTitleEl) {
+    console.warn('Summary display elements not ready for updateSummaryDisplay.');
+    return;
+  }
+  if (showCategoriesInSummary) {
+    summaryViewTitleEl.textContent = 'Top Categories';
+    renderCategorySummary(summaryEl, progressBarEl, todaysCategoryDataForSummary, totalSecondsTodayForSummary);
+  } else {
+    summaryViewTitleEl.textContent = 'Top Websites';
+    renderDomainSummary(summaryEl, progressBarEl, todaysDomainDataForSummary, totalSecondsTodayForSummary);
+  }
+}
+
 // --- Main Logic ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadTimeFormatPreference();
+  await loadSummaryViewPreference();
+
   const totalTimeEl = document.getElementById('totalTimeToday');
   const dateEl = document.getElementById('currentDate');
   const summaryEl = document.getElementById('todaySummary');
@@ -134,6 +424,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const hourlyChartCanvas = document.getElementById('hourlyChartCanvas');
   const focusScoreEl = document.getElementById('focusScoreToday');
   let hourlyChartCtx = null;
+
+  const summaryToggleBtn = document.getElementById('summaryToggleBtn');
+  const summaryViewTitleEl = document.getElementById('summaryViewTitle');
 
   const pomodoroPhaseEl = document.getElementById('pomodoro-phase');
   const pomodoroTimeEl = document.getElementById('pomodoro-time');
@@ -156,6 +449,15 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       hourlyChartCtx = hourlyChartCanvas.getContext('2d');
       if (!hourlyChartCtx) throw new Error('Canvas 2D context not supported or missing.');
+      hourlyChartCanvas.addEventListener('click', () => {
+        use24HourFormat = !use24HourFormat;
+        saveTimeFormatPreference();
+        if (hourlyChartCtx && Object.keys(todaysHourlyDataForToggle).length > 0) {
+          renderHourlyChart(hourlyChartCtx, todaysHourlyDataForToggle);
+        } else {
+          console.log('Hourly data not yet loaded for chart format toggle, preference saved.');
+        }
+      });
     } catch (e) {
       console.error('Failed to get canvas context:', e);
       const chartWrapper = document.querySelector('.chart-wrapper');
@@ -163,6 +465,23 @@ document.addEventListener('DOMContentLoaded', () => {
         chartWrapper.innerHTML =
           "<p style='color: red; font-size: small; text-align: center;'>Could not initialize chart canvas.</p>";
     }
+  }
+
+  if (summaryToggleBtn && summaryEl && progressBarEl && summaryViewTitleEl) {
+    summaryToggleBtn.addEventListener('click', () => {
+      showCategoriesInSummary = !showCategoriesInSummary;
+      saveSummaryViewPreference(); // Ensure data is available before updating
+      if (
+        Object.keys(todaysCategoryDataForSummary).length > 0 ||
+        Object.keys(todaysDomainDataForSummary).length > 0 ||
+        totalSecondsTodayForSummary > 0
+      ) {
+        updateSummaryDisplay(summaryEl, progressBarEl, summaryViewTitleEl);
+      } else {
+        summaryEl.textContent = 'Loading data...'; // Or keep previous message
+        progressBarEl.style.display = 'none'; // Title will be updated by updateSummaryDisplay when data is ready
+      }
+    });
   }
 
   if (dateEl) {
@@ -188,130 +507,40 @@ document.addEventListener('DOMContentLoaded', () => {
   browser.storage.local
     .get(['dailyDomainData', 'dailyCategoryData', 'hourlyData', 'categoryProductivityRatings'])
     .then((result) => {
-      const todaysCategoryData = result.dailyCategoryData?.[todayStr] || {};
-      const todaysDomainData = result.dailyDomainData?.[todayStr] || {};
-      const todaysHourlyData = result.hourlyData?.[todayStr] || {};
+      todaysCategoryDataForSummary = result.dailyCategoryData?.[todayStr] || {};
+      todaysDomainDataForSummary = result.dailyDomainData?.[todayStr] || {};
+      todaysHourlyDataForToggle = result.hourlyData?.[todayStr] || {};
       const userRatings = result.categoryProductivityRatings || {};
-      let totalSecondsToday = 0;
 
-      if (todaysDomainData && Object.keys(todaysDomainData).length > 0) {
-        totalSecondsToday = Object.values(todaysDomainData).reduce((sum, time) => sum + time, 0);
-      } else if (todaysCategoryData && Object.keys(todaysCategoryData).length > 0) {
-        totalSecondsToday = Object.values(todaysCategoryData).reduce((sum, time) => sum + time, 0);
+      let calculatedTotal = 0;
+      const domainDataForTotal = result.dailyDomainData?.[todayStr] || {};
+      if (domainDataForTotal && Object.keys(domainDataForTotal).length > 0) {
+        calculatedTotal = Object.values(domainDataForTotal).reduce((sum, time) => sum + time, 0);
+      } else {
+        const categoryDataForTotal = result.dailyCategoryData?.[todayStr] || {};
+        if (categoryDataForTotal && Object.keys(categoryDataForTotal).length > 0) {
+          calculatedTotal = Object.values(categoryDataForTotal).reduce((sum, time) => sum + time, 0);
+        }
       }
+      totalSecondsTodayForSummary = calculatedTotal;
 
       if (totalTimeEl)
         totalTimeEl.textContent =
-          typeof formatTime === 'function' ? formatTime(totalSecondsToday, true) : totalSecondsToday + 's';
+          typeof formatTime === 'function'
+            ? formatTime(totalSecondsTodayForSummary, true)
+            : totalSecondsTodayForSummary + 's';
 
-      if (summaryEl && progressBarEl) {
-        summaryEl.innerHTML = '';
-        progressBarEl.innerHTML = '';
-        if (totalSecondsToday > 0 && todaysCategoryData && Object.keys(todaysCategoryData).length > 0) {
-          progressBarEl.style.display = 'flex';
-          const categoryArray = Object.entries(todaysCategoryData)
-            .map(([category, time]) => ({
-              name: category,
-              time: time,
-              percentage: totalSecondsToday > 0 ? (time / totalSecondsToday) * 100 : 0,
-            }))
-            .filter((cat) => cat.time > 0.1)
-            .sort((a, b) => b.time - a.time);
-
-          const maxItemsToDisplay = 5;
-          let finalDisplayItems = [];
-          if (categoryArray.length <= maxItemsToDisplay) {
-            finalDisplayItems = categoryArray;
-          } else {
-            let topSlice = categoryArray.slice(0, maxItemsToDisplay);
-            const remainingCategories = categoryArray.slice(maxItemsToDisplay);
-            const remainingTime = remainingCategories.reduce((sum, cat) => sum + cat.time, 0);
-            const realOtherIndexInTop = topSlice.findIndex((c) => c.name === 'Other');
-
-            if (realOtherIndexInTop !== -1) {
-              topSlice[realOtherIndexInTop].time += remainingTime;
-              topSlice[realOtherIndexInTop].percentage =
-                totalSecondsToday > 0 ? (topSlice[realOtherIndexInTop].time / totalSecondsToday) * 100 : 0;
-              finalDisplayItems = topSlice;
-            } else {
-              finalDisplayItems = topSlice.slice(0, maxItemsToDisplay - 1);
-              const fifthItemTime = topSlice[maxItemsToDisplay - 1]?.time || 0;
-              const aggregateTime = fifthItemTime + remainingTime;
-              if (aggregateTime >= 1) {
-                const aggregatePercentage = totalSecondsToday > 0 ? (aggregateTime / totalSecondsToday) * 100 : 0;
-                finalDisplayItems.push({ name: 'Other', time: aggregateTime, percentage: aggregatePercentage });
-              } else if (finalDisplayItems.length < maxItemsToDisplay && fifthItemTime >= 1) {
-                finalDisplayItems.push(topSlice[maxItemsToDisplay - 1]);
-              }
-            }
-            if (finalDisplayItems.length > maxItemsToDisplay)
-              finalDisplayItems = finalDisplayItems.slice(0, maxItemsToDisplay);
-          }
-
-          finalDisplayItems.forEach((cat) => {
-            const displayPercentage = cat.time > 0.1 ? Math.max(1, Math.round(cat.percentage)) : 0;
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'category-item';
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'category-info';
-            const dotSpan = document.createElement('span');
-            dotSpan.className = 'category-dot';
-            dotSpan.style.backgroundColor =
-              typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'category-name';
-            nameSpan.textContent = cat.name;
-            infoDiv.appendChild(dotSpan);
-            infoDiv.appendChild(nameSpan);
-            const timePercentSpan = document.createElement('span');
-            timePercentSpan.className = 'category-time-percent';
-            timePercentSpan.appendChild(
-              document.createTextNode(
-                (typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's') + ' '
-              )
-            );
-            const percentSpanElement = document.createElement('span');
-            percentSpanElement.className = 'category-percent';
-            percentSpanElement.textContent = `(${displayPercentage}%)`;
-            timePercentSpan.appendChild(percentSpanElement);
-            itemDiv.appendChild(infoDiv);
-            itemDiv.appendChild(timePercentSpan);
-            summaryEl.appendChild(itemDiv);
-
-            const segmentDiv = document.createElement('div');
-            segmentDiv.className = 'progress-bar-segment';
-            const widthPercentage = Math.max(0.5, cat.percentage);
-            segmentDiv.style.width = `${widthPercentage}%`;
-            segmentDiv.style.backgroundColor =
-              typeof getCategoryColor === 'function' ? getCategoryColor(cat.name) : '#ccc';
-            segmentDiv.title = `${cat.name}: ${
-              typeof formatTime === 'function' ? formatTime(cat.time, true) : cat.time + 's'
-            } (${displayPercentage}%)`;
-            progressBarEl.appendChild(segmentDiv);
-          });
-
-          const totalSegmentWidth = Array.from(progressBarEl.children).reduce(
-            (sum, el) => sum + parseFloat(el.style.width || 0),
-            0
-          );
-          if (progressBarEl.children.length > 0 && (totalSegmentWidth > 101 || totalSegmentWidth < 99)) {
-            const scaleFactor = 100 / totalSegmentWidth;
-            Array.from(progressBarEl.children).forEach((el) => {
-              el.style.width = `${parseFloat(el.style.width || 0) * scaleFactor}%`;
-            });
-          }
-        } else {
-          summaryEl.textContent = 'No activity tracked today.';
-          progressBarEl.style.display = 'none';
-        }
+      if (summaryEl && progressBarEl && summaryViewTitleEl) {
+        updateSummaryDisplay(summaryEl, progressBarEl, summaryViewTitleEl);
       }
 
-      if (hourlyChartCtx) renderHourlyChart(hourlyChartCtx, todaysHourlyData);
+      if (hourlyChartCtx) renderHourlyChart(hourlyChartCtx, todaysHourlyDataForToggle);
+
       if (focusScoreEl) {
         try {
           const scoreData =
             typeof calculateFocusScore === 'function'
-              ? calculateFocusScore(todaysCategoryData, userRatings)
+              ? calculateFocusScore(todaysCategoryDataForSummary, userRatings)
               : { score: 0 };
           focusScoreEl.textContent = `Focus Score: ${scoreData.score}%`;
           focusScoreEl.classList.remove('score-low', 'score-medium', 'score-high');
@@ -327,7 +556,10 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch((error) => {
       console.error('Error loading data for popup:', error);
       if (totalTimeEl) totalTimeEl.textContent = 'Error';
-      if (summaryEl) summaryEl.textContent = 'Error loading data.';
+      if (summaryEl) {
+        summaryEl.textContent = 'Error loading summary data.';
+        if (summaryViewTitleEl) summaryViewTitleEl.textContent = 'Error';
+      }
       if (progressBarEl) progressBarEl.style.display = 'none';
       if (hourlyChartCtx && hourlyChartCtx.canvas) {
         hourlyChartCtx.clearRect(0, 0, hourlyChartCtx.canvas.width, hourlyChartCtx.canvas.height);
@@ -346,11 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     optionsBtn.addEventListener('click', () => browser.runtime.openOptionsPage());
   }
 
-  const POMODORO_PHASES = {
-    WORK: 'Work',
-    SHORT_BREAK: 'Short Break',
-    LONG_BREAK: 'Long Break',
-  };
+  const POMODORO_PHASES = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' };
 
   function formatTimeForDisplay(seconds) {
     const mins = Math.floor(seconds / 60);
@@ -374,12 +602,13 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('[Pomodoro Popup] No state received to update display.');
       pomodoroPhaseEl.textContent = 'N/A';
       pomodoroTimeEl.textContent = '--:--';
-      pomodoroStartPauseBtn.textContent = 'Start';
+      if (pomodoroStartPauseBtn) pomodoroStartPauseBtn.textContent = 'Start';
       if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Loading...';
-
-      pomodoroNotifyIcon.textContent = '🔕'; // Default to notifications off icon if state is missing
-      pomodoroNotifyToggleBtn.title = 'Enable Notifications / Setup';
-      pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
+      if (pomodoroNotifyIcon) pomodoroNotifyIcon.textContent = '🔕';
+      if (pomodoroNotifyToggleBtn) {
+        pomodoroNotifyToggleBtn.title = 'Enable Notifications / Setup';
+        pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
+      }
       return;
     }
 
@@ -390,11 +619,18 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (state.currentPhase === POMODORO_PHASES.LONG_BREAK) pomodoroPhaseEl.classList.add('long-break');
 
     pomodoroTimeEl.textContent = formatTimeForDisplay(state.remainingTime);
-    pomodoroStartPauseBtn.textContent = state.timerState === 'running' ? 'Pause' : 'Start';
 
-    // The 'state.notifyEnabled' comes directly from the background script,
-    // which has already reconciled it with actual browser permissions.
-    // So, we can trust this value to reflect whether notifications *can* and *will* be shown.
+    if (pomodoroStartPauseBtn) {
+      if (state.timerState === 'running') {
+        pomodoroStartPauseBtn.textContent = 'Pause';
+      } else if (state.timerState === 'paused') {
+        pomodoroStartPauseBtn.textContent = 'Resume';
+      } else {
+        // 'stopped'
+        pomodoroStartPauseBtn.textContent = 'Start';
+      }
+    }
+
     const isNotifyEffectivelyEnabled = state.notifyEnabled === true;
 
     if (isNotifyEffectivelyEnabled) {
@@ -403,22 +639,18 @@ document.addEventListener('DOMContentLoaded', () => {
       pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Disable Notifications');
     } else {
       pomodoroNotifyIcon.textContent = '🔕';
-      // If notifications are not effectively enabled, check if it's due to missing permission
-      // to guide the user appropriately.
       try {
         const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
         if (hasPermission) {
-          // Permission exists, but notifyEnabled is false (user turned them off)
           pomodoroNotifyToggleBtn.title = 'Notifications: Off (Click to enable)';
           pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Enable Notifications');
         } else {
-          // Permission does NOT exist, and notifyEnabled is false (likely because of missing permission)
           pomodoroNotifyToggleBtn.title = 'Notifications: Setup Required (Click to open settings)';
           pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Setup Notifications in Options');
         }
       } catch (err) {
         console.warn('[Popup] Error checking notification permission for title (updatePomodoroDisplay):', err);
-        pomodoroNotifyToggleBtn.title = 'Notifications: Check Settings'; // Fallback title
+        pomodoroNotifyToggleBtn.title = 'Notifications: Check Settings';
         pomodoroNotifyToggleBtn.setAttribute('aria-label', 'Check Notification Settings');
       }
     }
@@ -429,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (
         state.timerState === 'stopped' &&
         state.currentPhase !== POMODORO_PHASES.WORK &&
-        state.durations && // Ensure durations is present
+        state.durations &&
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `${state.currentPhase} complete. Start next?`;
@@ -437,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.timerState === 'stopped' &&
         state.currentPhase === POMODORO_PHASES.WORK &&
         state.workSessionsCompleted > 0 &&
-        state.durations && // Ensure durations is present
+        state.durations &&
         state.remainingTime < state.durations[state.currentPhase]
       ) {
         pomodoroStatusMessageEl.textContent = `Work session complete.`;
@@ -488,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentButtonText === 'Start' || currentButtonText === 'Resume' ? 'startPomodoro' : 'pausePomodoro';
       browser.runtime
         .sendMessage({ action: action })
-        .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI after action
+        .then(fetchAndUpdatePomodoroStatus)
         .catch((err) => console.error(`Error sending ${action}:`, err));
     });
   }
@@ -510,14 +742,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (isAtVeryStartOfCycle) {
             if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Timer is already at the start.';
-            setTimeout(() => updatePomodoroDisplay(state), 1500); // Revert message after a delay
+            setTimeout(() => updatePomodoroDisplay(state), 1500);
             return;
           }
           const message = `Reset current ${state.currentPhase} timer?`;
           showCustomConfirm(message, () => {
             browser.runtime
               .sendMessage({ action: 'resetPomodoro', resetCycle: false })
-              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+              .then(fetchAndUpdatePomodoroStatus)
               .catch((err) => console.error('Error sending resetPomodoro:', err));
           });
         })
@@ -538,13 +770,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showCustomConfirm('Switching the timer will stop the current session. Continue?', () => {
               browser.runtime
                 .sendMessage({ action: 'changePomodoroPhase' })
-                .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+                .then(fetchAndUpdatePomodoroStatus)
                 .catch((err) => console.error('Error sending changePomodoroPhase:', err));
             });
           } else {
             browser.runtime
               .sendMessage({ action: 'changePomodoroPhase' })
-              .then(fetchAndUpdatePomodoroStatus) // Fetch and update UI
+              .then(fetchAndUpdatePomodoroStatus)
               .catch((err) => console.error('Error sending changePomodoroPhase:', err));
           }
         })
@@ -566,46 +798,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (hasPermission) {
         console.log('[Popup] Permission granted. Getting current Pomodoro status to determine toggle direction...');
-        // Fetch the current state from the background, which includes the *reconciled* notifyEnabled.
         const currentState = await browser.runtime.sendMessage({ action: 'getPomodoroStatus' });
 
         if (currentState) {
-          const currentNotifySettingEnabled = currentState.notifyEnabled; // This is the authoritative state
-          const newDesiredState = !currentNotifySettingEnabled; // User's intent is to toggle
+          const currentNotifySettingEnabled = currentState.notifyEnabled;
+          const newDesiredState = !currentNotifySettingEnabled;
           console.log(
             `[Popup] Current notifyEnabled from background: ${currentNotifySettingEnabled}. Requesting change to: ${newDesiredState}`
           );
-
-          // Send the user's *intent* to the background.
-          // The background will handle saving this intent, reconciling with permissions if needed,
-          // and then broadcasting the final state via 'pomodoroStatusUpdate'.
           browser.runtime
             .sendMessage({
               action: 'updatePomodoroNotificationSetting',
               enabled: newDesiredState,
             })
-            // No explicit call to fetchAndUpdatePomodoroStatus() here.
-            // The UI will be updated reactively by the 'pomodoroStatusUpdate' message
-            // listener when the background broadcasts the new state.
             .catch((err) => {
               console.error('[Popup] Error sending notification toggle message to background:', err);
-              fetchAndUpdatePomodoroStatus(); // Fallback UI refresh on error
+              fetchAndUpdatePomodoroStatus();
             });
         } else {
           console.error('[Popup] Could not get current Pomodoro status to determine toggle direction.');
-          fetchAndUpdatePomodoroStatus(); // Attempt to refresh UI as a fallback
+          fetchAndUpdatePomodoroStatus();
         }
       } else {
-        // Permission not granted, open options page with hash for scrolling
         console.log('[Popup] Notification permission not granted. Opening options page to #pomodoro-settings-section.');
         const optionsUrl = browser.runtime.getURL('options/options.html#pomodoro-settings-section');
         browser.tabs.create({ url: optionsUrl });
-        window.close(); // Close the popup after opening the options page
+        window.close();
       }
     } catch (err) {
       console.error('[Popup] Error in handleNotifyToggleClick:', err);
       try {
-        // Fallback: try to open options page without hash on error
         browser.runtime.openOptionsPage();
         window.close();
       } catch (openErr) {
@@ -624,22 +846,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function fetchAndUpdatePomodoroStatus() {
     if (!browser.runtime || !browser.runtime.sendMessage) {
       console.warn('[Pomodoro Popup] Browser runtime or sendMessage not available. Cannot fetch status.');
-      updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+      updatePomodoroDisplay(null);
       return Promise.resolve();
     }
     return browser.runtime
       .sendMessage({ action: 'getPomodoroStatus' })
       .then((response) => {
         if (response) {
-          updatePomodoroDisplay(response); // Update UI with fresh status
+          updatePomodoroDisplay(response);
         } else {
           console.warn('[Pomodoro Popup] No response or error from getPomodoroStatus.');
-          updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+          updatePomodoroDisplay(null);
         }
       })
       .catch((err) => {
         console.error('Error fetching Pomodoro status:', err);
-        updatePomodoroDisplay(null); // Update UI to a "loading/error" state
+        updatePomodoroDisplay(null);
       });
   }
 
@@ -652,16 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.visibilityState === 'visible') {
       fetchAndUpdatePomodoroStatus();
     }
-  }, 1000); // Refresh every second
+  }, 1000);
 
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'pomodoroStatusUpdate' && request.status) {
       console.log('[Popup] Received direct pomodoroStatusUpdate from background:', request.status);
-      updatePomodoroDisplay(request.status); // Update UI with the broadcasted status
+      updatePomodoroDisplay(request.status);
     }
-
-    return false;
+    return true;
   });
 });
-
-console.log('[System] popup.js loaded (v9.24 - Scroll to Options & Refined Logic)');

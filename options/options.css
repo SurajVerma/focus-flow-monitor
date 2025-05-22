@@ -1,6 +1,3 @@
-/* options.css (v0.8.7 - Added Pomodoro Notification Settings Styles) */
-
-/* --- Base & Variables --- */
 :root {
   --bg-page: #f7f8fc;
   --bg-card: #ffffff;
@@ -71,6 +68,10 @@ body {
   color: var(--text-color-primary);
   padding: var(--spacing-xl);
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .container {
@@ -80,6 +81,8 @@ body {
   padding: 0;
   border-radius: 0;
   box-shadow: none;
+  flex-grow: 1;
+  width: 100%;
 }
 
 section {
@@ -122,10 +125,6 @@ h4 {
   color: var(--text-color-secondary);
   font-size: 0.95rem;
   font-weight: 500;
-}
-
-hr {
-  display: none;
 }
 
 .form-group {
@@ -228,8 +227,9 @@ button:not(:disabled):active {
 button#addCategoryBtn,
 button#assignDomainBtn,
 button#addRuleBtn,
-button#saveRuleChangesBtn,
+button#saveRuleChangesBtn, /* Also used in modal, but base style is primary */
 button#saveAssignmentChangesBtn {
+  /* Also used in modal, but base style is primary */
   background-color: var(--bg-button-primary);
   color: var(--text-color-button);
   border-color: var(--bg-button-primary);
@@ -271,6 +271,7 @@ button.edit-btn:hover {
   border-color: var(--bg-button-warning-hover);
 }
 button.save-btn {
+  /* General save button, e.g., for inline edits */
   background-color: var(--bg-button-success);
   color: var(--text-color-button);
   border-color: var(--bg-button-success);
@@ -315,8 +316,7 @@ button.export-button:hover {
 
 #categoryList,
 #assignmentList,
-#ruleList,
-.stats-list-container ul {
+#ruleList {
   list-style: none;
   padding: 0;
   margin: var(--spacing-sm) 0 0 0;
@@ -325,31 +325,47 @@ button.export-button:hover {
   border: 1px solid var(--border-color-medium);
   border-radius: var(--border-radius);
 }
+
 #categoryList li,
 #assignmentList li,
 #ruleList li,
 #detailedTimeList li,
-#categoryTimeList li {
+#categoryTimeList li,
+.settings-list li {
+  /* Added .settings-list li here */
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: none;
+  border-bottom: 1px solid var(--border-color-light); /* Standardized border */
   transition: background-color 0.15s ease-in-out;
   font-size: var(--font-size-sm);
 }
+
+#categoryList li:last-child,
+#assignmentList li:last-child,
+#ruleList li:last-child,
+#detailedTimeList li:last-child,
+#categoryTimeList li:last-child,
+.settings-list li:last-child {
+  border-bottom: none;
+}
+
 #categoryList li:nth-child(even),
 #assignmentList li:nth-child(even),
 #ruleList li:nth-child(even),
 #detailedTimeList li:nth-child(even),
-#categoryTimeList li:nth-child(even) {
+#categoryTimeList li:nth-child(even),
+.settings-list li:nth-child(even) {
   background-color: var(--bg-alternate-row);
 }
+
 #categoryList li:hover,
 #assignmentList li:hover,
 #ruleList li:hover,
 #detailedTimeList li:hover,
-#categoryTimeList li:hover {
+#categoryTimeList li:hover,
+.settings-list li:hover {
   background-color: var(--bg-hover-row);
 }
 
@@ -630,8 +646,10 @@ button.export-button:hover {
   margin: 0;
   overflow-y: auto;
   flex-grow: 1;
-  max-height: 250px;
+  max-height: 430px;
   border: 1px solid var(--border-color-light);
+  list-style: none; /* ensure no bullets */
+  padding: 0; /* ensure no default padding */
 }
 
 .calendar-header-controls {
@@ -795,7 +813,8 @@ button.export-button:hover {
   max-height: 100%;
 }
 .chart-view-controls {
-  margin-bottom: var(--spacing-lg);
+  display: flex;
+  justify-content: center;
   text-align: center;
   padding: var(--spacing-sm);
   background-color: var(--bg-alternate-row);
@@ -909,13 +928,17 @@ button.export-button:hover {
 .modal-actions button {
   padding: var(--spacing-sm) var(--spacing-lg);
 }
+/* Modal save buttons specifically use success color */
 .modal-actions button#saveRuleChangesBtn,
 .modal-actions button#saveAssignmentChangesBtn {
   background-color: var(--bg-button-success);
+  color: var(--text-color-button); /* Ensure text color is white */
+  border-color: var(--bg-button-success); /* Ensure border color matches */
 }
 .modal-actions button#saveRuleChangesBtn:hover,
 .modal-actions button#saveAssignmentChangesBtn:hover {
   background-color: var(--bg-button-success-hover);
+  border-color: var(--bg-button-success-hover); /* Ensure border color matches on hover */
 }
 
 #tracking-settings-section .form-group {
@@ -1005,17 +1028,7 @@ button.export-button:hover {
   border: 1px solid var(--border-color-medium);
   border-radius: var(--border-radius);
 }
-.settings-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-bottom: 1px solid var(--border-color-light);
-  font-size: var(--font-size-sm);
-}
-.settings-list li:last-child {
-  border-bottom: none;
-}
+/* .settings-list li is already defined and grouped above */
 .settings-list .category-name {
   font-weight: 500;
   margin-right: var(--spacing-lg);
@@ -1043,9 +1056,6 @@ button.export-button:hover {
   margin-right: 3px;
   cursor: pointer;
   accent-color: var(--bg-button-primary);
-}
-.settings-list li:nth-child(even) {
-  background-color: var(--bg-alternate-row);
 }
 
 .productivity-score-container {
@@ -1114,10 +1124,12 @@ button.export-button:hover {
 
 .total-time-range-container {
   text-align: center;
-  margin-top: var(--spacing-lg);
   padding: var(--spacing-lg);
   min-height: auto;
   display: flex;
+  flex-direction: column; /* Ensure h3 and value stack correctly */
+  align-items: center; /* Center content */
+  justify-content: center; /* Center content */
 }
 
 .total-time-range-container h3 {
@@ -1135,11 +1147,9 @@ button.export-button:hover {
   padding: var(--spacing-xs) 0;
 }
 
-/* New Styles for Pomodoro Notification Settings */
 #pomodoro-settings-section .form-group > label {
-  /* General label for the setting */
-  display: block; /*Make it full width before the inline group */
-  margin-bottom: var(--spacing-sm); /* Add some space below this main label */
+  display: block;
+  margin-bottom: var(--spacing-sm);
 }
 .permission-status-label {
   cursor: pointer;
@@ -1150,15 +1160,15 @@ button.export-button:hover {
   user-select: none;
 }
 .checkbox-group-inline {
-  display: flex; /* Align items in a row */
-  align-items: center; /* Vertically align checkbox and text */
-  gap: var(--spacing-sm); /* Space between checkbox and status text */
-  margin-top: var(--spacing-xs); /* Space above the checkbox and status text */
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
 }
 
 .checkbox-group-inline input[type='checkbox'] {
-  width: auto; /* Don't make checkbox full width */
-  margin-right: var(--spacing-xs); /* Space between checkbox and its implicit label (if any) */
+  width: auto;
+  margin-right: var(--spacing-xs);
   vertical-align: middle;
 }
 
@@ -1178,7 +1188,206 @@ button.export-button:hover {
   color: var(--text-color-permission-denied);
   font-weight: 500;
 }
-/* End New Styles */
+
+.tabs-container {
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.tab-nav {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.tab-link {
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  border: 1px solid var(--border-color-medium);
+  background-color: var(--bg-alternate-row);
+  color: var(--text-color-secondary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  flex-grow: 1;
+  text-align: center;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  margin-right: 2px;
+  position: relative;
+}
+
+.tab-link:last-child {
+  margin-right: 0;
+}
+
+.tab-link:hover {
+  color: var(--text-color-primary);
+  background-color: var(--bg-hover-row);
+  border-color: var(--border-color-input-focus);
+}
+
+.tab-link.active {
+  color: var(--text-color-button);
+  background-color: var(--bg-button-primary);
+  border-color: var(--bg-button-primary);
+  font-weight: 600;
+  border-bottom-color: var(--bg-button-primary);
+  z-index: 2;
+}
+
+.tab-link:focus-visible {
+  outline: 2px solid var(--bg-button-primary-hover);
+  outline-offset: 2px;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+  display: block;
+  border: 1px solid var(--bg-button-primary);
+  padding: var(--spacing-lg);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  margin-top: -1px;
+  position: relative;
+  z-index: 1;
+  background-color: var(--bg-card);
+}
+
+.tab-section-divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color-light);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.tab-content section {
+  margin-bottom: 0;
+  border-top: none;
+  box-shadow: none;
+  padding-top: 0;
+}
+
+.tab-content section + section {
+  margin-top: var(--spacing-xl);
+}
+
+.top-summary-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background-color: var(--bg-alternate-row);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color-light);
+}
+
+.summary-metric-box {
+  flex: 1 1 300px;
+  padding: var(--spacing-lg);
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  border: 1px solid var(--border-color-light);
+}
+
+.summary-metric-box h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  border-bottom: 1px solid var(--border-color-light);
+  padding-bottom: var(--spacing-sm);
+}
+
+.top-summary-area .productivity-score-container {
+  min-height: auto;
+}
+
+.top-summary-area .focus-score-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--spacing-xs);
+  line-height: 1.3;
+  max-width: 100%;
+}
+
+.top-summary-area .total-time-range-container {
+  min-height: auto;
+}
+
+.top-summary-area .total-time-value {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: var(--text-color-primary);
+  padding: var(--spacing-xs) 0;
+}
+
+.error-message {
+  display: block;
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  text-align: left;
+}
+
+.error-message:empty {
+  display: none;
+}
+
+.error-message[style*='var(--accent-color-red'] {
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.error-message[style*='var(--accent-color-green'] {
+  background-color: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.category-list-item.editing {
+  background-color: var(--bg-selected-row, #e9f5ff);
+}
+
+.category-list-item.editing .category-edit-input {
+  border-color: var(--border-color-input-focus, #80bdff);
+  box-shadow: var(--shadow-focus, 0 0 0 0.2rem rgba(0, 123, 255, 0.25));
+}
+
+#assignmentList .list-item-editing {
+  background-color: var(--bg-selected-row, #e9f5ff);
+  border-left: 3px solid var(--bg-button-primary, #007bff);
+  padding-left: calc(var(--spacing-md) - 3px);
+}
+
+.attribution-footer {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  text-align: center;
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color-light);
+  line-height: 1.3;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 @media (max-width: 900px) {
   .stats-dashboard {
@@ -1226,13 +1435,21 @@ button.export-button:hover {
     width: 100%;
     box-sizing: border-box;
   }
-  .time-limit-input {
+  .add-rule-form .time-limit-input, /* Ensure this also stacks */
+  #editRuleLimitGroup .time-limit-input {
+    /* And this one in modal */
     flex-direction: column;
     align-items: stretch;
   }
-  .time-limit-input input[type='number'] {
-    width: auto;
+  .add-rule-form .time-limit-input input[type='number'],
+  #editRuleLimitGroup .time-limit-input input[type='number'] {
+    width: 100%; /* Make full width when stacked */
   }
+  .add-rule-form .time-limit-input select,
+  #editRuleLimitGroup .time-limit-input select {
+    width: 100%; /* Make full width when stacked */
+  }
+
   .calendar-day {
     min-height: 55px;
     font-size: 0.75rem;
@@ -1249,15 +1466,17 @@ button.export-button:hover {
   .category-controls,
   .assignment-controls,
   #ruleList li > div:last-child {
+    /* Assuming the controls are the last div */
     min-width: unset;
     justify-content: flex-start;
     margin-top: var(--spacing-sm);
     width: 100%;
   }
-  #assignmentList .assignment-domain {
+  .assignment-list-item .assignment-domain {
+    /* Changed from #assignmentList */
     margin-right: 0;
     margin-bottom: var(--spacing-xs);
-    display: block;
+    display: block; /* Ensure it takes full width before controls */
   }
   #block-page-customization-section .form-group {
     flex-direction: column;
@@ -1277,20 +1496,15 @@ button.export-button:hover {
     font-size: 1.4em;
   }
   .checkbox-group-inline {
-    /* Ensure it doesn't break on small screens */
-    flex-wrap: wrap; /* Allow wrapping if space is very tight */
+    flex-wrap: wrap;
   }
-}
-
-.attribution-footer {
-  font-size: var(--font-size-sm);
-  color: var(--text-color-muted);
-  text-align: center;
-  margin-top: var(--spacing-xl);
-  margin-bottom: var(--spacing-sm);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--border-color-light);
-  line-height: 1.3;
+  .top-summary-area {
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+  .summary-metric-box {
+    flex-basis: auto;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1315,6 +1529,7 @@ button.export-button:hover {
     --bg-button-info: #64d2ff;
     --bg-button-info-hover: #82dfff;
     --bg-button-disabled: #555;
+
     --text-color-primary: #f2f2f7;
     --text-color-secondary: #c7c7cc;
     --text-color-muted: #8e8e93;
@@ -1323,78 +1538,167 @@ button.export-button:hover {
     --text-color-warning-button: #1c1c1e;
     --text-color-link: var(--bg-button-primary);
     --text-color-disabled: #999;
-    --text-color-permission-granted: var(--accent-color-green); /* Dark mode success color */
-    --text-color-permission-denied: var(--accent-color-red); /* Dark mode danger color */
+    --text-color-permission-granted: var(--accent-color-green);
+    --text-color-permission-denied: var(--accent-color-red);
+
     --border-color-light: #3a3a3c;
     --border-color-medium: #4a4a4c;
     --border-color-input: #545456;
     --border-color-input-focus: #0a84ff;
     --border-color-selected: var(--bg-button-primary);
+
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-focus: 0 0 0 0.2rem rgba(10, 132, 255, 0.35);
+
     --accent-color-green: #30d158;
     --accent-color-red: #ff453a;
     --accent-color-blue: #0a84ff;
   }
+
   #detailedTimeList li .time,
   #categoryTimeList li .time,
   .assignment-list-item .assignment-category {
-    background-color: #48484a;
+    background-color: #48484a; /* A slightly different shade for embedded elements */
     color: var(--text-color-primary);
   }
+
   .chart-wrapper {
-    color: var(--text-color-secondary);
+    color: var(--text-color-secondary); /* Ensure text in chart placeholder is visible */
   }
+
   .calendar-day.selected:hover {
-    background-color: #0050a0;
+    background-color: #0050a0; /* Darker hover for selected day */
   }
   .calendar-day.today {
-    background-color: rgba(10, 132, 255, 0.1);
+    background-color: rgba(10, 132, 255, 0.1); /* Subtle highlight for today */
   }
   .calendar-detail-popup {
     background-color: var(--bg-card);
     border-color: var(--border-color-medium);
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Stronger shadow for popup */
   }
   .calendar-detail-popup strong {
     border-color: var(--border-color-light);
   }
+
   .close-button {
-    color: #aaa;
+    color: #aaa; /* Default close button color */
   }
   .close-button:hover {
-    color: var(--text-color-primary);
+    color: var(--text-color-primary); /* Brighter on hover */
   }
+
   .stats-loader {
     background-color: rgba(50, 50, 50, 0.85);
     color: var(--text-color-primary);
     border: 1px solid var(--border-color-medium);
   }
+
   #importStatus.success {
     color: var(--accent-color-green);
   }
   #importStatus.error {
     color: var(--accent-color-red);
   }
+
   .settings-list .rating-controls label {
     color: var(--text-color-secondary);
   }
+  /* Productivity score colors already use accent vars, which are updated for dark mode */
   .score-value.score-low {
     color: var(--accent-color-red);
   }
   .score-value.score-medium {
-    color: var(--bg-button-warning);
+    color: var(--bg-button-warning); /* Warning button bg is distinct */
   }
   .score-value.score-high {
     color: var(--accent-color-green);
   }
+
   #block-page-customization-section .checkbox-group label {
     color: var(--text-color-primary);
   }
+
   .total-time-value {
     color: var(--text-color-primary);
   }
   .total-time-range-container h3 {
     color: var(--text-color-secondary);
+  }
+
+  /* Tabs Dark Mode */
+  .tab-nav {
+    border-bottom-color: var(--border-color-medium);
+  }
+  .tab-link {
+    background-color: var(--bg-input);
+    border-color: var(--border-color-medium);
+    color: var(--text-color-secondary);
+  }
+  .tab-link:hover {
+    background-color: var(--bg-input-focus);
+    border-color: var(--border-color-input-focus);
+    color: var(--text-color-primary);
+  }
+  .tab-link.active {
+    background-color: var(--bg-button-primary);
+    border-color: var(--bg-button-primary);
+    color: var(--text-color-button);
+    border-bottom-color: var(--bg-button-primary);
+  }
+  .tab-link:focus-visible {
+    outline-color: var(--bg-button-primary-hover);
+  }
+  .tab-content.active {
+    border-color: var(--bg-button-primary);
+    background-color: var(--bg-card);
+  }
+  .tab-section-divider {
+    background-color: var(--border-color-medium);
+  }
+
+  /* Top Summary Area Dark Mode */
+  .top-summary-area {
+    background-color: var(--bg-page);
+    border-color: var(--border-color-medium);
+  }
+  .summary-metric-box {
+    background-color: var(--bg-card);
+    border-color: var(--border-color-medium);
+  }
+  .summary-metric-box h3 {
+    color: var(--text-color-secondary);
+    border-bottom-color: var(--border-color-medium);
+  }
+  .top-summary-area .focus-score-description {
+    color: var(--text-color-muted);
+  }
+  .top-summary-area .total-time-value {
+    color: var(--text-color-primary);
+  }
+
+  /* Error/Success Messages Dark Mode */
+  .error-message[style*='var(--accent-color-red'] {
+    background-color: rgba(255, 69, 58, 0.15);
+    border-color: rgba(255, 69, 58, 0.4);
+  }
+  .error-message[style*='var(--accent-color-green'] {
+    background-color: rgba(48, 209, 88, 0.15);
+    border-color: rgba(48, 209, 88, 0.4);
+  }
+
+  /* Category List Item Editing Dark Mode */
+  .category-list-item.editing {
+    background-color: var(--bg-selected-row);
+  }
+  .category-list-item.editing .category-edit-input {
+    border-color: var(--border-color-input-focus);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* Assignment List Item Editing Dark Mode */
+  #assignmentList .list-item-editing {
+    background-color: var(--bg-selected-row);
+    border-left-color: var(--bg-button-primary);
   }
 }

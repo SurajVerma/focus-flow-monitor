@@ -1,8 +1,4 @@
-// background/blocking.js (v0.7.1 - Added Blocking Logs)
-console.log('[System] background/blocking.js loaded (v0.7.1 - Added Blocking Logs)');
-
 function urlMatchesPattern(url, pattern) {
-  // Using the robust version from previous steps
   if (!url || !pattern) return false;
   const normalize = (input) => {
     try {
@@ -33,11 +29,8 @@ function urlMatchesPattern(url, pattern) {
 
 // --- Main Blocking Handler ---
 function handleBlockingRequest(requestDetails) {
-  // console.log(`[Blocking] Checking request: ${requestDetails.url} (Type: ${requestDetails.type}, Method: ${requestDetails.method})`); // Log every check
-
   // Ignore irrelevant requests
   if (requestDetails.type !== 'main_frame' || !requestDetails.url || requestDetails.method !== 'GET') {
-    // console.log('[Blocking] Ignoring request: Not main_frame or not GET.');
     return {};
   }
   const requestedUrl = requestDetails.url;
@@ -46,14 +39,12 @@ function handleBlockingRequest(requestDetails) {
     requestedUrl.startsWith('moz-extension:') ||
     requestedUrl.startsWith('chrome-extension:')
   ) {
-    // console.log('[Blocking] Ignoring request: Internal URL scheme.');
     return {};
   }
 
   // Allow the block page itself to load
   const blockPageBaseUrl = browser.runtime.getURL('blocked/blocked.html');
   if (requestedUrl.startsWith(blockPageBaseUrl)) {
-    // console.log('[Blocking] Allowing request: Is block page.');
     return {};
   }
 
@@ -67,7 +58,6 @@ function handleBlockingRequest(requestDetails) {
   const currentRules = FocusFlowState.rules || []; // Get rules from state.js
   const currentAssignments = FocusFlowState.categoryAssignments || {}; // Get assignments from state.js
   console.log(`[Blocking] Checking against ${currentRules.length} rules for domain: ${requestedDomain}`);
-  // console.log('[Blocking] Current Rules:', JSON.stringify(currentRules)); // Can be verbose
 
   // Access other needed state
   const todayStr = getCurrentDateString(); // Using util function
@@ -83,7 +73,7 @@ function handleBlockingRequest(requestDetails) {
   const dayMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const currentDayStr = dayMap[currentDayIndex];
 
-  console.log(`[Blocking] Check time: ${currentTimeStr}, Day: ${currentDayStr}`); // Log current time/day
+  console.log(`[Blocking] Check time: ${currentTimeStr}, Day: ${currentDayStr}`);
 
   // --- Check Limit Rules First ---
   console.log('[Blocking] === Checking Limit Rules ===');
@@ -114,7 +104,6 @@ function handleBlockingRequest(requestDetails) {
             }
           } else {
             if (todaysDomainData.hasOwnProperty(targetValue)) {
-              // Use targetValue for exact match lookup
               timeSum = todaysDomainData[targetValue];
             }
           }
@@ -150,13 +139,12 @@ function handleBlockingRequest(requestDetails) {
           console.log(`[Blocking] Limit not reached.`);
         }
       }
-      // else { console.log(`[Blocking] Rule ${rule.type}="${targetValue}" did NOT match URL/Category.`); } // Verbose
     } catch (e) {
       console.error(`[Blocking] Error during limit check for rule ${JSON.stringify(rule)}:`, e);
     }
   } // End limit rules loop
 
-  // --- Check Block Rules (MODIFIED) ---
+  // --- Check Block Rules ---
   console.log('[Blocking] === Checking Block Rules ===');
   if (!determinedCategory && currentRules.some((r) => r.type === 'block-category')) {
     determinedCategory = getCategoryForDomain(requestedDomain); // Determine category only if needed
@@ -233,10 +221,9 @@ function handleBlockingRequest(requestDetails) {
           console.log(`[Blocking] *** BLOCK ENFORCED *** for ${rule.type}='${targetValue}'. Redirecting.`);
           const params = new URLSearchParams();
           params.append('url', requestedUrl);
-          params.append('reason', 'block'); // Use 'block' or maybe 'scheduled_block'?
+          params.append('reason', 'block');
           params.append('type', rule.type);
           params.append('value', targetValue);
-          // Optionally add schedule info to params if needed on block page
           if (hasSchedule || hasDayRestriction) {
             params.append('schedule_start', rule.startTime || 'N/A');
             params.append('schedule_end', rule.endTime || 'N/A');
@@ -253,5 +240,3 @@ function handleBlockingRequest(requestDetails) {
   console.log(`[Blocking] No blocking/limiting rules triggered for ${requestedUrl}`);
   return {}; // Allow request
 }
-
-console.log('[System] background/blocking.js loaded (v0.7.1 - Added Blocking Logs)');

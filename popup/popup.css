@@ -1,4 +1,3 @@
-/* popup/popup.css (v14.7.1 - Robust Bell Icon Button) */
 :root {
   --popup-bg: #f0f2f5;
   --popup-text-primary: #1c1e21;
@@ -6,10 +5,10 @@
   --popup-text-muted: #8a8d91;
   --popup-text-total: #1c1e21;
   --popup-header-border: #e0e0e0;
-  --popup-options-btn-bg: #e4e6eb; /* Default light mode button background */
+  --popup-options-btn-bg: #e4e6eb;
   --popup-options-btn-hover-bg: #dcdde1;
-  --popup-options-btn-text: #050505; /* Color for the SVG icon in light mode */
-  --popup-options-btn-border: #caced4; /* Subtle border for the button */
+  --popup-options-btn-text: #050505;
+  --popup-options-btn-border: #caced4;
 
   --popup-progress-bg: #e4e6eb;
   --popup-chart-placeholder: #aaa;
@@ -46,14 +45,15 @@
     --popup-text-muted: #8d8d91;
     --popup-text-total: #ffffff;
     --popup-header-border: #3a3a3c;
-    --popup-options-btn-bg: #3a3a3c; /* Dark mode button background */
+    --popup-options-btn-bg: #3a3a3c;
     --popup-options-btn-hover-bg: #4a4a4e;
-    --popup-options-btn-text: #f5f5f7; /* Color for the SVG icon in dark mode */
-    --popup-options-btn-border: #545458; /* Subtle border for dark mode button */
+    --popup-options-btn-text: #f5f5f7;
+    --popup-options-btn-border: #545458;
 
     --popup-progress-bg: #3a3a3c;
     --popup-chart-placeholder: #888;
     --popup-logo-filter: brightness(0) invert(1);
+
     --pomodoro-btn-primary-bg: #0a84ff;
     --pomodoro-btn-primary-hover-bg: #339cff;
     --pomodoro-btn-secondary-bg: #58585a;
@@ -150,6 +150,60 @@ body {
   text-align: center;
 }
 
+.summary-toggle-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.summary-view-title {
+  font-size: 0.9em;
+  color: var(--popup-text-secondary);
+  font-weight: 600;
+  text-align: left;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.popup-icon-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin-left: 6px;
+  cursor: pointer;
+  color: var(--popup-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.popup-icon-btn:hover {
+  color: var(--popup-text-primary);
+  background-color: var(--popup-options-btn-bg);
+}
+.popup-icon-btn:focus-visible {
+  outline: 2px solid var(--pomodoro-btn-primary-bg);
+  outline-offset: 1px;
+}
+
+#summaryToggleIcon {
+  font-size: 1.2em;
+  display: inline-block;
+}
+
+.today-summary {
+  text-align: left;
+  font-size: 0.9em;
+  padding: 0 2px;
+  /* margin-top: 8px; Removed as summary-toggle-area provides spacing */
+}
+
 .date-display {
   font-size: 0.85em;
   color: var(--popup-text-secondary);
@@ -161,13 +215,6 @@ body {
   font-weight: 700;
   color: var(--popup-text-total);
   margin-bottom: 8px;
-}
-
-.today-summary {
-  text-align: left;
-  margin-top: 8px;
-  font-size: 0.9em;
-  padding: 0 2px;
 }
 
 .category-item {
@@ -313,34 +360,30 @@ body {
   flex-grow: 1;
 }
 
-/* MODIFIED Styles for the icon-only button (bell icon) */
 .pomodoro-icon-btn.title-align-icon {
   background: none;
   border: none;
-  /* Added symmetrical padding to make the button's clickable area more robust */
   padding: 4px 6px;
-  margin-left: 8px; /* Space from the title, was padding-left before */
+  margin-left: 8px;
   cursor: pointer;
   color: var(--popup-text-secondary);
   flex-shrink: 0;
-  display: inline-flex; /* Helps center the span content */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  /* Ensure pointer events are enabled, though default is auto */
   pointer-events: auto;
 }
 
-/* Style for the span INSIDE the button, which holds the icon text */
 .pomodoro-icon-btn.title-align-icon span#pomodoro-notify-icon {
-  font-size: 1.1em; /* Size of the bell character */
-  display: inline-block; /* Ensures it behaves well within the flex button */
+  font-size: 1.1em;
+  display: inline-block;
 }
 
 .pomodoro-icon-btn.title-align-icon:hover {
   color: var(--popup-text-primary);
+  background-color: var(--popup-options-btn-bg);
 }
-/* End of MODIFIED Styles */
 
 .pomodoro-timer-display {
   font-size: 2em;
@@ -434,28 +477,6 @@ body {
 #pomodoro-change-phase-btn:hover {
   background-color: var(--pomodoro-change-phase-btn-hover-bg);
 }
-
-/*
-.pomodoro-secondary-controls { 
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin-top: 6px;
-  margin-bottom: 8px;
-}
-.pomodoro-notify-container {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.pomodoro-notify-container #pomodoro-notify-label {
-    vertical-align: middle;
-    font-size: 0.9em;
-    color: var(--popup-text-secondary);
-    cursor: pointer; 
-}
-*/
 
 .pomodoro-status {
   font-size: 0.85em;

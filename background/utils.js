@@ -1,5 +1,3 @@
-// background/utils.js (v0.7.1 - With Duplicated Utils)
-
 /**
  * Gets the current date as YYYY-MM-DD string. Used for storage keys.
  * @returns {string} Formatted date string.
@@ -29,7 +27,6 @@ function getDomain(url) {
     if (!hostname) return null;
     return hostname.startsWith('www.') ? hostname.substring(4) : hostname;
   } catch (e) {
-    // console.error(`[Util] Error parsing URL ${url}:`, e); // Optional debug log
     return null;
   }
 }
@@ -41,18 +38,15 @@ function getDomain(url) {
  * @returns {string} The category name.
  */
 function getCategoryForDomain(domain) {
-  // Access global state defined in state.js
   const assignments = FocusFlowState.categoryAssignments;
   const defaultCat = FocusFlowState.defaultCategory;
 
   if (!domain) return defaultCat;
 
-  // Direct match has highest priority
   if (assignments.hasOwnProperty(domain)) {
     return assignments[domain];
   }
 
-  // Wildcard match (*.example.com)
   const parts = domain.split('.');
   for (let i = 1; i < parts.length; i++) {
     const wildcardPattern = '*.' + parts.slice(i).join('.');
@@ -82,9 +76,6 @@ function debounce(func, wait) {
   };
 }
 
-// --- Duplicated Utilities Needed by Background Scripts ---
-
-// Copied from options-utils.js because background can't directly access it
 function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   if (seconds === null || seconds === undefined || isNaN(seconds)) seconds = 0;
   if (seconds < 0) seconds = 0;
@@ -99,7 +90,7 @@ function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   }
 
   if (seconds === 0) return '0s';
-  if (seconds < 60 && !includeSeconds) return '<1m'; // Needed for blocking page formatting
+  if (seconds < 60 && !includeSeconds) return '<1m';
 
   const totalMinutes = Math.floor(seconds / 60);
   const hours = Math.floor(totalMinutes / 60);
@@ -122,7 +113,6 @@ function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   return parts.length > 0 ? parts.join(' ') : '0s';
 }
 
-// Copied from options-utils.js because background can't directly access it
 const categoryColors = {
   'Work/Productivity': 'rgba(54, 162, 235, 0.8)',
   'Social Media': 'rgba(255, 99, 132, 0.8)',
@@ -139,6 +129,3 @@ const defaultCategoryColor = categoryColors['Other'];
 function getCategoryColor(category) {
   return categoryColors[category] || defaultCategoryColor;
 }
-// --- End Duplicated Utilities ---
-
-console.log('[System] background/utils.js loaded (with duplicated utils)');

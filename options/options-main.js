@@ -1,6 +1,3 @@
-// options/options-main.js (v0.8.7 - Replace all unsafe innerHTML)
-
-// --- Helper function to safely set list item content ---
 /**
  * Clears an element and appends a new list item with the given text message.
  * @param {HTMLElement} element - The UL or OL element to update.
@@ -15,21 +12,79 @@ function setListMessage(element, message, options = {}) {
   const li = document.createElement('li');
   li.textContent = message;
   li.style.textAlign = options.textAlign || 'center';
-  li.style.color = options.color || 'var(--text-color-muted)'; // Ensure this CSS variable is defined
+  li.style.color = options.color || 'var(--text-color-muted)';
   element.appendChild(li);
 }
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
+let isChartRenderPending = false;
+let pendingChartData = null;
+let pendingChartLabel = '';
+let pendingChartViewMode = 'domain';
+
+function setupTabs() {
+  const tabLinks = document.querySelectorAll('.tab-nav .tab-link');
+  const tabContents = document.querySelectorAll('.tabs-container .tab-content');
+
+  tabLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      const targetTab = link.dataset.tab;
+
+      tabLinks.forEach((l) => l.classList.remove('active'));
+      link.classList.add('active');
+
+      tabContents.forEach((content) => {
+        if (content.id === targetTab) {
+          content.classList.add('active');
+          if (targetTab === 'dashboardTab' && isChartRenderPending) {
+            console.log('[Tabs] Dashboard tab activated, rendering pending chart.');
+            if (typeof renderChart === 'function' && pendingChartData) {
+              renderChart(pendingChartData, pendingChartLabel, pendingChartViewMode);
+            } else if (typeof clearChartOnError === 'function') {
+              clearChartOnError(
+                pendingChartLabel ? `No significant data for ${pendingChartLabel}` : 'Chart data unavailable'
+              );
+            }
+            isChartRenderPending = false;
+            pendingChartData = null;
+          }
+        } else {
+          content.classList.remove('active');
+        }
+      });
+      if (browser && browser.storage && browser.storage.local) {
+        browser.storage.local.set({ optionsActiveTab: targetTab }).catch((err) => {
+          console.warn('Error saving active tab state:', err);
+        });
+      }
+    });
+  });
+}
+
+async function restoreActiveTab() {
+  if (browser && browser.storage && browser.storage.local) {
+    try {
+      const result = await browser.storage.local.get('optionsActiveTab');
+      const activeTabId = result.optionsActiveTab;
+      if (activeTabId) {
+        const tabToActivate = document.querySelector(`.tab-nav .tab-link[data-tab="${activeTabId}"]`);
+        if (tabToActivate) {
+          tabToActivate.click();
+          console.log(`[Tabs] Restored active tab to: ${activeTabId}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Error restoring active tab state:', err);
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Options Main] DOMContentLoaded');
-  // Ensure UI elements are queried and available before proceeding
   if (!queryUIElements()) {
-    // From options-state.js
     console.error('Failed to initialize UI elements. Aborting setup.');
     const container = document.querySelector('.container');
     if (container) {
-      // Safely set error message
-      container.innerHTML = ''; // Clear existing content first
+      container.innerHTML = '';
       const p = document.createElement('p');
       p.textContent = 'Error: Could not load page elements. Please try refreshing.';
       p.style.color = 'red';
@@ -39,52 +94,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return;
   }
+
+  setupTabs();
+
   try {
-    // Set the initial state of the chart view radio button
     const defaultChartView = AppState.currentChartViewMode || 'domain';
     const radioToCheck = document.querySelector(`input[name="chartView"][value="${defaultChartView}"]`);
     if (radioToCheck) {
       radioToCheck.checked = true;
     } else {
       const fallback = document.querySelector('input[name="chartView"][value="domain"]');
-      if (fallback) fallback.checked = true; // Default to 'domain' if currentChartViewMode is somehow invalid
+      if (fallback) fallback.checked = true;
     }
   } catch (e) {
     console.error('Error setting initial chart view radio button:', e);
   }
 
-  loadAllData().then(() => {
-    setupEventListeners(); // Setup all event listeners for the options page
+  await loadAllData();
+  setupEventListeners();
 
-    // Register storage change listener for Pomodoro settings
-    if (browser.storage && browser.storage.onChanged) {
-      browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
-      console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
-    }
+  if (browser.storage && browser.storage.onChanged) {
+    browser.storage.onChanged.addListener(handlePomodoroSettingsStorageChange);
+    console.log('[Options Main] Storage change listener for Pomodoro settings registered.');
+  }
 
-    // Handle scrolling to a specific section if a hash is present in the URL
-    if (window.location.hash) {
-      const sectionId = window.location.hash.substring(1);
-      if (sectionId === 'pomodoro-settings-section') {
-        const sectionElement = document.getElementById(sectionId);
-        if (sectionElement) {
-          console.log(`[Options Main] Scrolling to section: ${sectionId}`);
-          sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          sectionElement.style.transition = 'background-color 0.9s ease-in-out';
-          sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
-          setTimeout(() => {
-            sectionElement.style.backgroundColor = '';
-          }, 2000);
-        } else {
-          console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
+  await restoreActiveTab();
+
+  if (window.location.hash) {
+    const sectionId = window.location.hash.substring(1);
+    const sectionElement = document.getElementById(sectionId);
+
+    if (sectionElement) {
+      const parentTabContent = sectionElement.closest('.tab-content');
+      if (parentTabContent && !parentTabContent.classList.contains('active')) {
+        const tabLink = document.querySelector(`.tab-nav .tab-link[data-tab="${parentTabContent.id}"]`);
+        if (tabLink) {
+          tabLink.click();
         }
       }
+
+      setTimeout(() => {
+        console.log(`[Options Main] Scrolling to section: ${sectionId}`);
+        sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const originalBg = sectionElement.style.backgroundColor;
+        sectionElement.style.transition = 'background-color 0.9s ease-in-out';
+        sectionElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
+        setTimeout(() => {
+          sectionElement.style.backgroundColor = originalBg;
+          sectionElement.style.transition = '';
+        }, 2000);
+      }, 100);
+    } else {
+      console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
     }
-  });
-  console.log('Options Main script initialized (v0.8.7 - Replace all unsafe innerHTML).');
+  }
+
+  console.log('Options Main script initialized (v0.8.9 - Update event listeners for new assign domain flow).');
 });
 
-// --- Function to handle storage changes for Pomodoro notification settings ---
 function handlePomodoroSettingsStorageChange(changes, area) {
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
     const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
@@ -112,7 +179,6 @@ function handlePomodoroSettingsStorageChange(changes, area) {
   }
 }
 
-// --- Data Loading ---
 async function loadAllData() {
   console.log('[Options Main] loadAllData starting...');
   const keysToLoad = [
@@ -241,15 +307,12 @@ async function loadAllData() {
   } catch (error) {
     console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
     const errorMessage = 'Error loading data. Please try refreshing.';
-
     setListMessage(UIElements.categoryTimeList, errorMessage);
     setListMessage(UIElements.detailedTimeList, errorMessage);
-
     if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
   }
 }
 
-// --- Function to update the permission status display ---
 async function updatePomodoroPermissionStatusDisplay() {
   if (!UIElements.pomodoroNotificationPermissionStatus) {
     console.warn('[Options Main] pomodoroNotificationPermissionStatus element not found.');
@@ -271,7 +334,6 @@ async function updatePomodoroPermissionStatusDisplay() {
   }
 }
 
-// --- UI Update Wrappers ---
 function updateDisplayForSelectedRangeUI() {
   if (!UIElements.dateRangeSelect) {
     console.warn('Date range select element not found for UI update.');
@@ -427,11 +489,26 @@ function updateStatsDisplay(
     const chartLabelForRender = label;
     const hasSignificantData = Object.values(chartDataView).some((time) => time > 0.1);
 
-    if (hasSignificantData) {
-      if (typeof renderChart === 'function')
-        renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode);
+    const dashboardTab = document.getElementById('dashboardTab');
+    if (dashboardTab && dashboardTab.classList.contains('active')) {
+      if (hasSignificantData) {
+        if (typeof renderChart === 'function')
+          renderChart(chartDataView, chartLabelForRender, AppState.currentChartViewMode);
+      } else {
+        if (typeof clearChartOnError === 'function')
+          clearChartOnError(`No significant data for ${chartLabelForRender}`);
+      }
+      isChartRenderPending = false;
+    } else if (hasSignificantData || Object.keys(chartDataView).length > 0) {
+      console.log('[Tabs] Dashboard tab inactive, chart render is pending.');
+      isChartRenderPending = true;
+      pendingChartData = chartDataView;
+      pendingChartLabel = chartLabelForRender;
+      pendingChartViewMode = AppState.currentChartViewMode;
+      if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...');
     } else {
-      if (typeof clearChartOnError === 'function') clearChartOnError(`No significant data for ${chartLabelForRender}`);
+      if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${chartLabelForRender}`);
+      isChartRenderPending = false;
     }
 
     if (UIElements.chartTitleElement) {
@@ -497,14 +574,28 @@ function renderChartForSelectedDateUI() {
 
   const displayDate =
     typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
-  if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode);
+
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (dashboardTab && dashboardTab.classList.contains('active')) {
+    if (typeof renderChart === 'function') renderChart(data, displayDate, AppState.currentChartViewMode);
+    isChartRenderPending = false;
+  } else if (Object.keys(data).length > 0) {
+    console.log('[Tabs] Dashboard tab inactive during renderChartForSelectedDateUI, chart render is pending.');
+    isChartRenderPending = true;
+    pendingChartData = data;
+    pendingChartLabel = displayDate;
+    pendingChartViewMode = AppState.currentChartViewMode;
+    if (typeof clearChartOnError === 'function') clearChartOnError('Loading chart data...');
+  } else {
+    if (typeof clearChartOnError === 'function') clearChartOnError(`No data for ${displayDate}`);
+    isChartRenderPending = false;
+  }
 
   if (UIElements.chartTitleElement) {
     UIElements.chartTitleElement.textContent = `Usage Chart (${displayDate})`;
   }
 }
 
-// --- Get Filtered Data ---
 function getFilteredDataForRange(range, isSpecificDate = false) {
   let initialDomainData = {};
   let initialCategoryData = {};
@@ -595,7 +686,6 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
   return { domainData: mergedDomainData, categoryData: initialCategoryData, label: periodLabel };
 }
 
-// --- Data Saving Functions ---
 function saveCategoriesAndAssignments() {
   return browser.storage.local
     .set({ categories: AppState.categories, categoryAssignments: AppState.categoryAssignments })
@@ -627,7 +717,6 @@ function saveRules() {
     });
 }
 
-// --- CSV Generation/Download ---
 function convertDataToCsv(dataObject) {
   if (!dataObject) return '';
   const headers = ['Domain', 'Category', 'Time Spent (HH:MM:SS)', 'Time Spent (Seconds)'];
@@ -635,7 +724,7 @@ function convertDataToCsv(dataObject) {
 
   const sortedData = Object.entries(dataObject)
     .map(([d, s]) => ({ domain: d, seconds: s }))
-    .sort((a, b) => b.seconds - a.seconds);
+    .sort((a, b) => b.time - a.time);
 
   const getCategory = (domain) => {
     if (AppState.categoryAssignments.hasOwnProperty(domain)) {
@@ -684,7 +773,6 @@ function triggerCsvDownload(csvString, filename) {
   }
 }
 
-// --- Recalculation Logic ---
 async function recalculateAndUpdateCategoryTotals(changeDetails) {
   console.log('[Options Main] RECALCULATING category totals. Change Details:', changeDetails);
   try {
@@ -782,7 +870,6 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-// --- Event Listener Setup ---
 function setupEventListeners() {
   console.log('[Options Main] Setting up event listeners...');
   try {
@@ -805,9 +892,13 @@ function setupEventListeners() {
       });
     }
 
-    // Assignment Management
-    if (UIElements.assignDomainBtn && typeof handleAssignDomain === 'function')
-      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomain);
+    if (UIElements.assignDomainBtn && typeof handleAssignDomainOrSaveChanges === 'function')
+      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomainOrSaveChanges); // Changed handler
+
+    if (UIElements.cancelAssignDomainBtn && typeof handleCancelAssignDomainEdit === 'function')
+      // New listener for Cancel
+      UIElements.cancelAssignDomainBtn.addEventListener('click', handleCancelAssignDomainEdit);
+
     if (UIElements.assignmentList) {
       UIElements.assignmentList.addEventListener('click', (event) => {
         if (event.target.classList.contains('assignment-delete-btn') && typeof handleDeleteAssignment === 'function')
@@ -816,21 +907,11 @@ function setupEventListeners() {
           event.target.classList.contains('assignment-edit-btn') &&
           typeof handleEditAssignmentClick === 'function'
         )
+          // This now prepares the top form
           handleEditAssignmentClick(event);
       });
-    }
-    if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
-      UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
-      UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
-      UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
-    if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
-      UIElements.editAssignmentModal.addEventListener('click', (event) => {
-        if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
-      });
+    } // Rule Management
 
-    // Rule Management
     if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
       UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
     if (UIElements.addRuleBtn && typeof handleAddRule === 'function')
@@ -852,9 +933,8 @@ function setupEventListeners() {
     if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
       UIElements.editRuleModal.addEventListener('click', (event) => {
         if (event.target === UIElements.editRuleModal) handleCancelEditClick();
-      });
+      }); // Stats Display
 
-    // Stats Display
     if (UIElements.dateRangeSelect)
       UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
     if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
@@ -871,33 +951,28 @@ function setupEventListeners() {
       });
     }
     if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
-      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv); // General Settings
 
-    // General Settings
     if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
       UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
     if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange); // Data Management
 
-    // Data Management
     if (UIElements.exportDataBtn && typeof handleExportData === 'function')
       UIElements.exportDataBtn.addEventListener('click', handleExportData);
     if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
       UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
-      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange); // Productivity Settings
 
-    // Productivity Settings
     if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
-    }
+    } // Pomodoro Notification Settings Listener
 
-    // Pomodoro Notification Settings Listener
     if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
       UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
-    }
+    } // Block Page Customization
 
-    // Block Page Customization
     if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
         handleBlockPageSettingChange(
@@ -950,10 +1025,9 @@ function setupEventListeners() {
     if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
       UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
 
-    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
+    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange(); // Initial call to set correct visibility
     console.log('[Options Main] Event listeners setup complete.');
   } catch (e) {
     console.error('[Options Main] Error setting up event listeners:', e);
   }
 }
-console.log('[System] options-main.js loaded (v0.8.7 - Replace all unsafe innerHTML)');
