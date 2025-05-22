@@ -1,10 +1,5 @@
-// background/tracking.js (v0.7.3 - Enhanced Error Handling)
-console.log('[System] background/tracking.js loaded (v0.7.3 - Enhanced Error Handling)');
-
-// recordTime function remains the same as v0.7.2
 function recordTime(domain, seconds) {
   if (!domain || seconds <= 0) {
-    // console.log(`[Tracking RecordTime] Skipped recording: Domain=${domain}, Seconds=${seconds}`);
     return;
   }
   console.log(`[Tracking RecordTime] Recording ${seconds}s for domain: ${domain}`);
@@ -14,7 +9,6 @@ function recordTime(domain, seconds) {
   const currentHourStr = currentHour.toString().padStart(2, '0');
 
   try {
-    // Add try block around state modification
     // Ensure data structures exist
     if (!FocusFlowState.dailyDomainData[todayStr]) FocusFlowState.dailyDomainData[todayStr] = {};
     if (!FocusFlowState.dailyCategoryData[todayStr]) FocusFlowState.dailyCategoryData[todayStr] = {};
@@ -32,22 +26,20 @@ function recordTime(domain, seconds) {
     FocusFlowState.dailyCategoryData[todayStr][category] =
       (FocusFlowState.dailyCategoryData[todayStr][category] || 0) + seconds;
 
-    saveDataBatched(); // from storage.js - saveDataBatched calls performSave which has its own try/catch
+    saveDataBatched(); // from storage.js
   } catch (error) {
     console.error(`[Tracking RecordTime] Error modifying state for domain ${domain}:`, error);
-    // Depending on severity, might consider stopping tracking or other recovery
   }
 }
 
 // --- Core Time Tracking Logic ---
 async function updateTrackingStateImplementation(triggerContext = 'unknown') {
   const now = Date.now();
-  // console.log(`\n[Tracking Check Start] Triggered by: ${triggerContext}, Time: ${new Date(now).toLocaleTimeString()}`); // Reduced verbosity
 
   let currentDomain = null;
   let isActive = false;
   let finalDomainToRecord = null;
-  let previousState = null; // Define here for broader scope in catch block
+  let previousState = null;
 
   try {
     // 1. Get Idle Threshold
@@ -71,7 +63,6 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
       try {
         idleState = await browser.idle.queryState(thresholdSeconds);
       } catch (idleError) {
-        // Non-critical, assume active if API fails
         console.warn('[Tracking] Error querying idle state:', idleError);
         idleState = 'active';
       }
@@ -86,7 +77,6 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
         activeTab = focusedWindow.tabs.find((t) => t.active);
       }
     } catch (browserApiError) {
-      // Can happen if no window/tab focused, generally safe to ignore
       console.warn(
         '[Tracking Check] Could not get focused window/tab (may be normal). Error:',
         browserApiError?.message
@@ -100,12 +90,11 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
         isActive = true;
         currentDomain = domain;
       } else {
-        isActive = false; // e.g., about:blank, invalid URL
+        isActive = false;
       }
     } else {
-      isActive = false; // Idle, no focus, or no active tab
+      isActive = false;
     }
-    // console.log(`[Tracking Check] User considered: ${isActive ? 'ACTIVE' : 'INACTIVE'}. Current Domain: ${currentDomain || 'None'}`); // Reduced verbosity
 
     // 5. Get Previous Tracking State
     try {
@@ -113,18 +102,15 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
       previousState = storageResult[FocusFlowState.STORAGE_KEY_TRACKING_STATE] || null;
     } catch (storageError) {
       console.error('[Tracking] Error getting previous tracking state:', storageError);
-      previousState = null; // Assume no previous state on error
+      previousState = null;
     }
-    // console.log('[Tracking Check] Previous state loaded:', previousState); // Reduced verbosity
 
     // 6. Process State Change / Update Time
     let elapsedSeconds = 0;
     if (previousState) {
-      elapsedSeconds = Math.floor((now - previousState.timestamp) / 1000); // Use floor
+      elapsedSeconds = Math.floor((now - previousState.timestamp) / 1000);
       finalDomainToRecord = previousState.domain;
-      // console.log(`[Tracking Check] Time since last check: ${elapsedSeconds}s (floored). Domain from previous state: ${finalDomainToRecord}`); // Reduced verbosity
     }
-    // else { console.log('[Tracking Check] No previous active state found.'); } // Reduced verbosity
 
     // --- State Machine Logic ---
     if (isActive) {
@@ -135,7 +121,6 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
         if (finalDomainToRecord && elapsedSeconds > 0) {
           recordTime(finalDomainToRecord, elapsedSeconds);
         }
-        // Update stored state (always update timestamp)
         try {
           await browser.storage.local.set({ [FocusFlowState.STORAGE_KEY_TRACKING_STATE]: newState });
         } catch (storageError) {
@@ -166,29 +151,22 @@ async function updateTrackingStateImplementation(triggerContext = 'unknown') {
       }
       // else: PREVIOUSLY INACTIVE -> STILL INACTIVE (do nothing)
     }
-    // --- End State Machine ---
   } catch (error) {
-    // Catch errors in the main logic flow
     console.error(
       `[Tracking] CRITICAL Error in updateTrackingStateImplementation (Trigger: ${triggerContext}):`,
       error
     );
-    // Attempt to clear potentially corrupted state as a recovery measure
     try {
       if (previousState) {
-        // Only clear if we know there *was* a state potentially
         await browser.storage.local.remove(FocusFlowState.STORAGE_KEY_TRACKING_STATE);
         console.error('[Tracking] Cleared potentially corrupted tracking state due to error.');
       }
     } catch (clearError) {
       console.error('[Tracking] Failed to clear tracking state during error handling:', clearError);
     }
-  } finally {
-    // console.log(`[Tracking Check End] Finished check triggered by: ${triggerContext}`); // Reduced verbosity
   }
 }
 
-// Debounced version (no changes needed here)
 const updateTrackingStateDebounced = debounce(
   (context) => updateTrackingStateImplementation(context),
   FocusFlowState.UPDATE_STATE_DEBOUNCE_MS

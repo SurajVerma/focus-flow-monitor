@@ -1,5 +1,3 @@
-// options/options-ui.js (v0.7.4 - Full Edit Category UI)
-
 // --- UI Population/Display Functions ---
 
 function displayDomainTime(itemsToDisplay) {
@@ -66,7 +64,6 @@ function populateCategoryList() {
     console.error('Category list UI element not found!');
     return;
   }
-  // *** Use replaceChildren for safety ***
   UIElements.categoryList.replaceChildren();
 
   if (!AppState.categories || AppState.categories.length === 0) {
@@ -74,9 +71,8 @@ function populateCategoryList() {
     li.textContent = 'No categories defined.';
     UIElements.categoryList.appendChild(li);
     return;
-  }
+  } // Sort categories alphabetically for display, keeping 'Other' last
 
-  // Sort categories alphabetically for display, keeping 'Other' last
   const sortedCategories = [...AppState.categories].sort((a, b) => {
     if (a === 'Other') return 1;
     if (b === 'Other') return -1;
@@ -84,65 +80,56 @@ function populateCategoryList() {
   });
 
   sortedCategories.forEach((cat) => {
-    const li = document.createElement('li'); // Define li here
+    const li = document.createElement('li');
     li.classList.add('category-list-item');
     li.dataset.categoryName = cat; // Store name for editing logic
 
-    // Span to display the category name
     const nameSpan = document.createElement('span');
     nameSpan.className = 'category-name-display';
     nameSpan.textContent = cat;
-    li.appendChild(nameSpan); // Add the name span first
+    li.appendChild(nameSpan);
 
-    // Input field for editing (initially hidden)
     const inputField = document.createElement('input');
     inputField.type = 'text';
     inputField.className = 'category-edit-input';
-    inputField.value = cat; // Pre-fill with current name
-    inputField.style.display = 'none'; // Hide initially
-    inputField.style.marginRight = '10px'; // Add some spacing
-    // *** Corrected: Insert input field into the list item 'li' ***
-    li.insertBefore(inputField, nameSpan); // Insert input before the name span
+    inputField.value = cat;
+    inputField.style.display = 'none';
+    inputField.style.marginRight = '10px';
+    li.insertBefore(inputField, nameSpan);
 
-    // Container for buttons
     const controlsDiv = document.createElement('div');
     controlsDiv.className = 'category-controls';
 
     if (cat !== 'Other') {
-      // Edit Button
       const editBtn = document.createElement('button');
       editBtn.textContent = 'Edit';
       editBtn.className = 'edit-btn category-edit-btn';
       editBtn.dataset.category = cat;
       controlsDiv.appendChild(editBtn);
 
-      // Delete Button
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
       deleteBtn.className = 'delete-btn category-delete-btn';
       deleteBtn.dataset.category = cat;
       controlsDiv.appendChild(deleteBtn);
 
-      // Save Button (initially hidden)
       const saveBtn = document.createElement('button');
       saveBtn.textContent = 'Save';
-      saveBtn.className = 'save-btn category-save-btn'; // Specific class
-      saveBtn.style.display = 'none'; // Hide initially
+      saveBtn.className = 'save-btn category-save-btn';
+      saveBtn.style.display = 'none';
       controlsDiv.appendChild(saveBtn);
 
-      // Cancel Button (initially hidden)
       const cancelBtn = document.createElement('button');
       cancelBtn.textContent = 'Cancel';
-      cancelBtn.className = 'cancel-btn category-cancel-btn'; // Specific class
-      cancelBtn.style.display = 'none'; // Hide initially
+      cancelBtn.className = 'cancel-btn category-cancel-btn';
+      cancelBtn.style.display = 'none';
       controlsDiv.appendChild(cancelBtn);
     } else {
-      // Add placeholder space for 'Other' to align controls if needed
       controlsDiv.style.minWidth = '80px'; // Adjust as needed based on button sizes
     }
 
-    li.appendChild(controlsDiv); // Add the controls div to the list item
-    UIElements.categoryList.appendChild(li); // Add the completed list item to the list
+    li.appendChild(controlsDiv);
+    UIElements.categoryList.appendChild(li);
   });
 }
 
@@ -174,36 +161,34 @@ function populateAssignmentList() {
 
   sortedAssignments.forEach(([domain, category]) => {
     const li = document.createElement('li');
-    li.classList.add('assignment-list-item'); // Add class
+    li.classList.add('assignment-list-item');
 
     const domainSpan = document.createElement('span');
     domainSpan.textContent = domain;
     domainSpan.className = 'assignment-domain';
-    li.appendChild(domainSpan); // Add domain first
+    li.appendChild(domainSpan);
 
     const controlsDiv = document.createElement('div');
-    controlsDiv.className = 'assignment-controls'; // Class for styling controls together
+    controlsDiv.className = 'assignment-controls';
 
     const categorySpan = document.createElement('span');
     categorySpan.textContent = category;
     categorySpan.className = 'assignment-category';
-    controlsDiv.appendChild(categorySpan); // Add category to controls
+    controlsDiv.appendChild(categorySpan);
 
-    // *** ADDED: Edit Button for Assignments ***
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit';
-    editBtn.className = 'edit-btn assignment-edit-btn'; // Specific class
-    editBtn.dataset.domain = domain; // Store domain for handler
+    editBtn.className = 'edit-btn assignment-edit-btn';
+    editBtn.dataset.domain = domain;
     controlsDiv.appendChild(editBtn);
 
-    // Delete Button (no change, just ensure it's after edit)
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = 'Delete';
-    deleteBtn.className = 'delete-btn assignment-delete-btn'; // Specific class
-    deleteBtn.dataset.domain = domain; // Used by handler
+    deleteBtn.className = 'delete-btn assignment-delete-btn';
+    deleteBtn.dataset.domain = domain;
     controlsDiv.appendChild(deleteBtn);
 
-    li.appendChild(controlsDiv); // Append controls div to the list item
+    li.appendChild(controlsDiv);
     UIElements.assignmentList.appendChild(li);
   });
 }
@@ -239,16 +224,12 @@ function populateRuleCategorySelect() {
   }
 }
 
-// *** NEW: Function to populate category select in Edit Assignment modal ***
 function populateEditAssignmentCategorySelect() {
   if (!UIElements.editAssignmentCategorySelect) {
     console.error('Edit assignment category select element not found!');
     return;
   }
-  UIElements.editAssignmentCategorySelect.replaceChildren(); // Clear existing options
-
-  // Add current categories (excluding maybe 'Other' if you don't want direct assignment?)
-  // For now, include 'Other'
+  UIElements.editAssignmentCategorySelect.replaceChildren();
   AppState.categories.forEach((cat) => {
     const option = document.createElement('option');
     option.value = cat;
@@ -286,18 +267,14 @@ function populateRuleList() {
 
       let scheduleText = '';
       if (rule.type.includes('block-') && (rule.startTime || rule.days)) {
-        // --- USE formatTimeToAMPM ---
-        const displayStartTime = rule.startTime ? formatTimeToAMPM(rule.startTime) : '';
-        const displayEndTime = rule.endTime ? formatTimeToAMPM(rule.endTime) : '';
-        // --- END USE formatTimeToAMPM ---
-
+        const displayStartTime = rule.startTime ? formatTimeToAMPM(rule.startTime) : ''; // From utils.js
+        const displayEndTime = rule.endTime ? formatTimeToAMPM(rule.endTime) : ''; // From utils.js
         const timePart = displayStartTime && displayEndTime ? `${displayStartTime}-${displayEndTime}` : 'All Day';
         const daysPart = rule.days ? rule.days.join(',') : 'All Week';
-        // Combine only if days are specified OR time is specified
         if (rule.days || (displayStartTime && displayEndTime)) {
           scheduleText = ` (Schedule: ${timePart}, ${daysPart})`;
         } else {
-          scheduleText = ' (Permanent)'; // If no time/days set for block rule
+          scheduleText = ' (Permanent)';
         }
       }
 
@@ -307,7 +284,7 @@ function populateRuleList() {
         detailClass = 'rule-blocked';
       } else if (rule.type === 'limit-url' || rule.type === 'limit-category') {
         typeText = rule.type === 'limit-url' ? 'Limit URL' : 'Limit Cat';
-        detailContent = ` (Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`;
+        detailContent = ` (Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`; // From utils.js
         detailClass = 'rule-limit';
       } else {
         typeText = 'Unknown Rule';
@@ -357,7 +334,6 @@ function populateRuleList() {
   }
 }
 
-// --- Calendar Rendering & Interaction ---
 function renderCalendar(year, month) {
   if (!UIElements.calendarGrid || !UIElements.currentMonthYearSpan) return;
   const todayStr = getCurrentDateString(); // from utils.js
@@ -404,7 +380,7 @@ function renderCalendar(year, month) {
     const timeSpan = document.createElement('span');
     timeSpan.classList.add('day-time');
     if (dailyTotalSeconds > 0) {
-      timeSpan.textContent = formatTime(dailyTotalSeconds, false);
+      timeSpan.textContent = formatTime(dailyTotalSeconds, false); // From utils.js
     } else {
       timeSpan.textContent = '-';
       timeSpan.classList.add('no-data');
@@ -439,19 +415,19 @@ function showDayDetailsPopup(event) {
     .slice(0, 3);
   UIElements.calendarDetailPopup.replaceChildren();
   const heading = document.createElement('strong');
-  heading.textContent = formatDisplayDate(dateStr);
-  UIElements.calendarDetailPopup.appendChild(heading); // from utils.js
-  const totalText = document.createTextNode(`Total: ${formatTime(totalSeconds, true)}`);
+  heading.textContent = formatDisplayDate(dateStr); // from utils.js
+  UIElements.calendarDetailPopup.appendChild(heading);
+  const totalText = document.createTextNode(`Total: ${formatTime(totalSeconds, true)}`); // from utils.js
   UIElements.calendarDetailPopup.appendChild(totalText);
-  UIElements.calendarDetailPopup.appendChild(document.createElement('br')); // from utils.js
+  UIElements.calendarDetailPopup.appendChild(document.createElement('br'));
   if (topDomains.length > 0) {
     const sitesHeading = document.createTextNode('Top Sites:');
     const sitesList = document.createElement('ul');
     topDomains.forEach(([domain, time]) => {
       const li = document.createElement('li');
-      li.textContent = `${domain}: ${formatTime(time, false)}`;
+      li.textContent = `${domain}: ${formatTime(time, false)}`; // from utils.js
       sitesList.appendChild(li);
-    }); // from utils.js
+    });
     UIElements.calendarDetailPopup.appendChild(document.createElement('br'));
     UIElements.calendarDetailPopup.appendChild(sitesHeading);
     UIElements.calendarDetailPopup.appendChild(sitesList);
@@ -459,7 +435,7 @@ function showDayDetailsPopup(event) {
     const noData = document.createTextNode('No site data recorded.');
     UIElements.calendarDetailPopup.appendChild(noData);
   }
-  // Positioning Logic
+
   const container = document.querySelector('.calendar-container');
   if (!container) return;
   const dayRect = dayCell.getBoundingClientRect();
@@ -496,7 +472,6 @@ function highlightSelectedCalendarDay(dateStrToSelect) {
   });
 }
 
-// --- Chart Rendering ---
 function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain') {
   if (typeof Chart === 'undefined') {
     console.error('Chart.js not loaded.');
@@ -563,13 +538,12 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
   ];
   let backgroundColors;
   if (viewMode === 'category') {
-    backgroundColors = labels.map((l) => getCategoryColor(l));
-    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other');
-  } // from utils.js
-  else {
+    backgroundColors = labels.map((l) => getCategoryColor(l)); // from utils.js
+    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other'); // from utils.js
+  } else {
     backgroundColors = labels.map((_, i) => defaultPalette[i % defaultPalette.length]);
-    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other');
-  } // from utils.js
+    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other'); // from utils.js
+  }
   try {
     AppState.timeChart = new Chart(ctx, {
       type: 'doughnut',
@@ -588,11 +562,11 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
               label: (c) => {
                 let l = c.label || '';
                 if (l) l += ': ';
-                if (c.parsed !== null && c.parsed !== undefined) l += formatTime(c.parsed, true);
+                if (c.parsed !== null && c.parsed !== undefined) l += formatTime(c.parsed, true); // from utils.js
                 return l;
               },
             },
-          }, // from utils.js
+          },
         },
       },
     });
@@ -639,24 +613,22 @@ function populateProductivitySettings() {
     console.error('Productivity settings list UI element not found!');
     return;
   }
-  // Ensure constants are accessible (they are global from options-state.js)
   if (typeof PRODUCTIVITY_TIERS === 'undefined' || typeof defaultCategoryProductivityRatings === 'undefined') {
     console.error('Productivity constants not found. Ensure options-state.js is loaded first.');
     UIElements.productivitySettingsList.innerHTML = '<li>Error loading settings.</li>';
     return;
   }
 
-  const userRatings = AppState.categoryProductivityRatings || {}; // Use ratings loaded into AppState
+  const userRatings = AppState.categoryProductivityRatings || {};
   const categories = AppState.categories || [];
 
-  UIElements.productivitySettingsList.replaceChildren(); // Clear previous items
+  UIElements.productivitySettingsList.replaceChildren();
 
   if (!categories || categories.length === 0) {
     UIElements.productivitySettingsList.innerHTML = '<li>No categories found.</li>';
     return;
   }
 
-  // Sort categories alphabetically for display, maybe keep 'Other' last
   const sortedCategories = [...categories].sort((a, b) => {
     if (a === 'Other') return 1;
     if (b === 'Other') return -1;
@@ -676,24 +648,21 @@ function populateProductivitySettings() {
     const controlsDiv = document.createElement('div');
     controlsDiv.className = 'rating-controls';
 
-    // Determine current rating: User > Default > Neutral
     const currentRating =
       userRatings[category] ?? defaultCategoryProductivityRatings[category] ?? PRODUCTIVITY_TIERS.NEUTRAL;
 
-    // Create radio buttons for Productive, Neutral, Distracting
     Object.entries(PRODUCTIVITY_TIERS).forEach(([tierName, tierValue]) => {
       const label = document.createElement('label');
       const radio = document.createElement('input');
       radio.type = 'radio';
-      radio.name = `rating-${category.replace(/[^a-zA-Z0-9]/g, '-')}`; // Create a unique name for the group
+      radio.name = `rating-${category.replace(/[^a-zA-Z0-9]/g, '-')}`;
       radio.value = tierValue;
-      radio.dataset.category = category; // Store category name
-      radio.checked = currentRating === tierValue; // Check the current rating
+      radio.dataset.category = category;
+      radio.checked = currentRating === tierValue;
 
       label.appendChild(radio);
-      // Make tier names user-friendly (e.g., PRODUCTIVE -> Productive)
       const labelText = tierName.charAt(0) + tierName.slice(1).toLowerCase();
-      label.appendChild(document.createTextNode(` ${labelText}`)); // Add space
+      label.appendChild(document.createTextNode(` ${labelText}`));
       controlsDiv.appendChild(label);
     });
 
@@ -703,5 +672,3 @@ function populateProductivitySettings() {
 
   UIElements.productivitySettingsList.appendChild(fragment);
 }
-
-console.log('[System] options-ui.js loaded (v0.7.4)');

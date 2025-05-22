@@ -1,11 +1,8 @@
-// popup.js (v9.26 - Integrated summary toggle, chart format, pomodoro button text)
-
 // --- Global Chart Instance ---
 let hourlyChartInstance = null;
 // --- Interval ID for live popup updates ---
 let popupUpdateIntervalId = null;
 
-// --- START: 12h/24h Toggle Functionality (Hourly Chart X-axis) ---
 const STORAGE_KEY_TIME_FORMAT = 'hourlyChartTimeFormat'; // true for 24-hour, false for 12-hour
 let use24HourFormat = false; // Default to 12-hour format
 let todaysHourlyDataForToggle = {}; // Store data for re-rendering on toggle
@@ -28,9 +25,7 @@ async function saveTimeFormatPreference() {
     console.warn('Error saving time format preference:', e);
   }
 }
-// --- END: 12h/24h Toggle Functionality ---
 
-// --- START: Summary View Toggle Functionality ---
 const STORAGE_KEY_SUMMARY_VIEW = 'popupSummaryViewType'; // true for categories, false for websites
 let showCategoriesInSummary = true; // Default to showing categories
 
@@ -38,7 +33,6 @@ let showCategoriesInSummary = true; // Default to showing categories
 let todaysCategoryDataForSummary = {};
 let todaysDomainDataForSummary = {};
 let totalSecondsTodayForSummary = 0;
-// --- END: Summary View Toggle Functionality ---
 
 // --- Chart Rendering Function ---
 function renderHourlyChart(canvasCtx, hourlyDataToday) {
@@ -182,7 +176,6 @@ function renderHourlyChart(canvasCtx, hourlyDataToday) {
   }
 }
 
-// --- START: Summary Display Functions ---
 async function loadSummaryViewPreference() {
   try {
     const result = await browser.storage.local.get(STORAGE_KEY_SUMMARY_VIEW);
@@ -417,7 +410,6 @@ function updateSummaryDisplay(summaryEl, progressBarEl, summaryViewTitleEl) {
     renderDomainSummary(summaryEl, progressBarEl, todaysDomainDataForSummary, totalSecondsTodayForSummary);
   }
 }
-// --- END: Summary Display Functions ---
 
 // --- Main Logic ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -478,8 +470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (summaryToggleBtn && summaryEl && progressBarEl && summaryViewTitleEl) {
     summaryToggleBtn.addEventListener('click', () => {
       showCategoriesInSummary = !showCategoriesInSummary;
-      saveSummaryViewPreference();
-      // Ensure data is available before updating
+      saveSummaryViewPreference(); // Ensure data is available before updating
       if (
         Object.keys(todaysCategoryDataForSummary).length > 0 ||
         Object.keys(todaysDomainDataForSummary).length > 0 ||
@@ -488,8 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSummaryDisplay(summaryEl, progressBarEl, summaryViewTitleEl);
       } else {
         summaryEl.textContent = 'Loading data...'; // Or keep previous message
-        progressBarEl.style.display = 'none';
-        // Title will be updated by updateSummaryDisplay when data is ready
+        progressBarEl.style.display = 'none'; // Title will be updated by updateSummaryDisplay when data is ready
       }
     });
   }
@@ -891,8 +881,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('[Popup] Received direct pomodoroStatusUpdate from background:', request.status);
       updatePomodoroDisplay(request.status);
     }
-    return true; // Keep channel open for async response if needed elsewhere, though not used here.
+    return true;
   });
-}); // End of DOMContentLoaded
-
-console.log('[System] popup.js loaded (v9.26 - Integrated summary toggle, chart format, pomodoro button text)');
+});

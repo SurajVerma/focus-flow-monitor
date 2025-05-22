@@ -1,6 +1,3 @@
-// options/options-main.js (v0.8.9 - Update event listeners for new assign domain flow)
-
-// --- Helper function to safely set list item content ---
 /**
  * Clears an element and appends a new list item with the given text message.
  * @param {HTMLElement} element - The UL or OL element to update.
@@ -19,7 +16,6 @@ function setListMessage(element, message, options = {}) {
   element.appendChild(li);
 }
 
-// --- START: TAB HANDLING LOGIC ---
 let isChartRenderPending = false;
 let pendingChartData = null;
 let pendingChartLabel = '';
@@ -81,9 +77,7 @@ async function restoreActiveTab() {
     }
   }
 }
-// --- END: TAB HANDLING LOGIC ---
 
-// --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Options Main] DOMContentLoaded');
   if (!queryUIElements()) {
@@ -158,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('Options Main script initialized (v0.8.9 - Update event listeners for new assign domain flow).');
 });
 
-// --- Function to handle storage changes for Pomodoro notification settings ---
 function handlePomodoroSettingsStorageChange(changes, area) {
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
     const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
@@ -186,7 +179,6 @@ function handlePomodoroSettingsStorageChange(changes, area) {
   }
 }
 
-// --- Data Loading ---
 async function loadAllData() {
   console.log('[Options Main] loadAllData starting...');
   const keysToLoad = [
@@ -878,7 +870,6 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
   }
 }
 
-// --- Event Listener Setup ---
 function setupEventListeners() {
   console.log('[Options Main] Setting up event listeners...');
   try {
@@ -901,7 +892,6 @@ function setupEventListeners() {
       });
     }
 
-    // --- MODIFIED: Assignment Management Event Listeners ---
     if (UIElements.assignDomainBtn && typeof handleAssignDomainOrSaveChanges === 'function')
       UIElements.assignDomainBtn.addEventListener('click', handleAssignDomainOrSaveChanges); // Changed handler
 
@@ -915,25 +905,13 @@ function setupEventListeners() {
           handleDeleteAssignment(event);
         else if (
           event.target.classList.contains('assignment-edit-btn') &&
-          typeof handleEditAssignmentClick === 'function' // This now prepares the top form
+          typeof handleEditAssignmentClick === 'function'
         )
+          // This now prepares the top form
           handleEditAssignmentClick(event);
       });
-    }
-    // --- REMOVED: Old modal listeners for assignment edit ---
-    // if (UIElements.closeEditAssignmentModalBtn && typeof handleCancelAssignmentEditClick === 'function')
-    //   UIElements.closeEditAssignmentModalBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    // if (UIElements.cancelEditAssignmentBtn && typeof handleCancelAssignmentEditClick === 'function')
-    //   UIElements.cancelEditAssignmentBtn.addEventListener('click', handleCancelAssignmentEditClick);
-    // if (UIElements.saveAssignmentChangesBtn && typeof handleSaveAssignmentClick === 'function')
-    //   UIElements.saveAssignmentChangesBtn.addEventListener('click', handleSaveAssignmentClick);
-    // if (UIElements.editAssignmentModal && typeof handleCancelAssignmentEditClick === 'function')
-    //   UIElements.editAssignmentModal.addEventListener('click', (event) => {
-    //     if (event.target === UIElements.editAssignmentModal) handleCancelAssignmentEditClick();
-    //   });
-    // --- END MODIFIED/REMOVED Assignment Listeners ---
+    } // Rule Management
 
-    // Rule Management
     if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
       UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
     if (UIElements.addRuleBtn && typeof handleAddRule === 'function')
@@ -955,9 +933,8 @@ function setupEventListeners() {
     if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
       UIElements.editRuleModal.addEventListener('click', (event) => {
         if (event.target === UIElements.editRuleModal) handleCancelEditClick();
-      });
+      }); // Stats Display
 
-    // Stats Display
     if (UIElements.dateRangeSelect)
       UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
     if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
@@ -974,33 +951,28 @@ function setupEventListeners() {
       });
     }
     if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
-      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv); // General Settings
 
-    // General Settings
     if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
       UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
     if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange); // Data Management
 
-    // Data Management
     if (UIElements.exportDataBtn && typeof handleExportData === 'function')
       UIElements.exportDataBtn.addEventListener('click', handleExportData);
     if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
       UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
-      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange); // Productivity Settings
 
-    // Productivity Settings
     if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
-    }
+    } // Pomodoro Notification Settings Listener
 
-    // Pomodoro Notification Settings Listener
     if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
       UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
-    }
+    } // Block Page Customization
 
-    // Block Page Customization
     if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
         handleBlockPageSettingChange(
@@ -1059,4 +1031,3 @@ function setupEventListeners() {
     console.error('[Options Main] Error setting up event listeners:', e);
   }
 }
-console.log('[System] options-main.js loaded (v0.8.9 - Update event listeners for new assign domain flow)');

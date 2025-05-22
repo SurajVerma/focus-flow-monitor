@@ -1,5 +1,3 @@
-// options/options-utils.js
-
 // --- Time Formatting ---
 /**
  * Formats seconds into a human-readable string (h, m, s).
@@ -9,7 +7,6 @@
  * @param {boolean} [forceHMS=false] - Whether to force HH:MM:SS format.
  * @returns {string} Formatted time string. Returns '<1m' if seconds < 60 and includeSeconds is false. Returns '0s' for 0 seconds.
  */
-
 function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   if (seconds === null || seconds === undefined || isNaN(seconds)) seconds = 0;
   if (seconds < 0) seconds = 0; // Treat negative as 0 for options/popup/blocked display
@@ -47,7 +44,6 @@ function formatTime(seconds, includeSeconds = true, forceHMS = false) {
   return parts.length > 0 ? parts.join(' ') : '0s';
 }
 
-// --- NEW: Time Formatting for AM/PM Display ---
 /**
  * Converts a "HH:MM" time string to "H:MM AM/PM" format.
  * @param {string} timeString24hr - Time in "HH:MM" format.
@@ -129,8 +125,7 @@ function escapeCsvValue(value) {
   if (value === null || value === undefined) {
     return '';
   }
-  const stringValue = String(value);
-  // Quote if value contains comma, double-quote, or newline
+  const stringValue = String(value); // Quote if value contains comma, double-quote, or newline
   if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
     // Escape existing double-quotes by doubling them
     const escapedValue = stringValue.replace(/"/g, '""');
@@ -140,14 +135,12 @@ function escapeCsvValue(value) {
 }
 
 const PRODUCTIVITY_TIERS = {
-  // Define tiers
   PRODUCTIVE: 1,
   NEUTRAL: 0,
   DISTRACTING: -1,
 };
 
 const defaultCategoryProductivityRatings = {
-  // Default ratings map
   'Work/Productivity': PRODUCTIVITY_TIERS.PRODUCTIVE,
   'Reference & Learning': PRODUCTIVITY_TIERS.PRODUCTIVE,
   Technology: PRODUCTIVITY_TIERS.NEUTRAL,
@@ -156,14 +149,11 @@ const defaultCategoryProductivityRatings = {
   Shopping: PRODUCTIVITY_TIERS.DISTRACTING,
   'Social Media': PRODUCTIVITY_TIERS.DISTRACTING,
   Entertainment: PRODUCTIVITY_TIERS.DISTRACTING,
-  Other: PRODUCTIVITY_TIERS.NEUTRAL,
-  // Note: Categories added by the user later won't have a default here
-  // The calculation function will handle this by defaulting them to Neutral.
+  Other: PRODUCTIVITY_TIERS.NEUTRAL, // Note: Categories added by the user later won't have a default here // The calculation function will handle this by defaulting them to Neutral.
 };
 
-// --- Productivity Score Constants (NEW) ---
 const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings'; // Key for user settings
-// --- Calculation Function (NEW) ---
+
 /**
  * Calculates the Focus Score based on category times and ratings.
  * Uses Formula 1: (Productive Time / Total Time) * 100
@@ -172,26 +162,10 @@ const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings'; // Key f
  * @returns {object} { score: number (0-100), totalTime: number } or null if no data.
  */
 function calculateFocusScore(categoryData, userRatings = {}) {
-  // console.log('[Utils Debug] calculateFocusScore called.');
-  // console.log('[Utils Debug] Input categoryData:', JSON.stringify(categoryData));
-  // console.log('[Utils Debug] Input userRatings:', JSON.stringify(userRatings));
-  // console.log(
-  //   '[Utils Debug] typeof PRODUCTIVITY_TIERS:',
-  //   typeof PRODUCTIVITY_TIERS,
-  //   JSON.stringify(PRODUCTIVITY_TIERS)
-  // ); // Check constant
-  // console.log(
-  //   '[Utils Debug] typeof defaultCategoryProductivityRatings:',
-  //   typeof defaultCategoryProductivityRatings,
-  //   JSON.stringify(defaultCategoryProductivityRatings)
-  // ); // Check constant
-  // *** END DEBUG LOGS ***
   let totalProductiveTime = 0;
   let totalTrackedTime = 0;
   const defaultRatings =
     typeof defaultCategoryProductivityRatings !== 'undefined' ? defaultCategoryProductivityRatings : {};
-  // const tiers =
-  //   typeof PRODUCTIVITY_TIERS !== 'undefined' ? PRODUCTIVITY_TIERS : { PRODUCTIVE: 1, NEUTRAL: 0, DISTRACTING: -1 }; // Fallback just in case
 
   const mergedRatings = { ...defaultRatings, ...userRatings }; // User ratings override defaults
 
@@ -202,27 +176,24 @@ function calculateFocusScore(categoryData, userRatings = {}) {
   for (const category in categoryData) {
     const time = categoryData[category] || 0;
     if (time > 0) {
-      totalTrackedTime += time;
-      // Get rating: User > Default > Neutral
+      totalTrackedTime += time; // Get rating: User > Default > Neutral
       const rating = mergedRatings[category] ?? PRODUCTIVITY_TIERS.NEUTRAL;
 
       if (rating === PRODUCTIVITY_TIERS.PRODUCTIVE) {
         totalProductiveTime += time;
       }
-      // We don't need distracting/neutral time for Formula 1
     }
   }
 
   if (totalTrackedTime === 0) {
     return { score: 0, totalTime: 0 }; // Avoid division by zero
-  }
+  } // Formula 1: (Productive Time / Total Time) * 100
 
-  // Formula 1: (Productive Time / Total Time) * 100
   const score = Math.round((totalProductiveTime / totalTrackedTime) * 100);
 
   return {
-    score: score, // The final percentage
-    totalTime: totalTrackedTime, // Return total time for context maybe
+    score: score,
+    totalTime: totalTrackedTime,
   };
 }
 
@@ -238,8 +209,6 @@ function isValidDomainPattern(pattern) {
     return false;
   }
 
-  // Simplified pattern for validation: remove http(s):// and www. if present at the start
-  // and anything from the first '/' onwards (path).
   const simplifiedPattern = pattern
     .trim()
     .replace(/^https?:\/\//i, '')
@@ -248,43 +217,28 @@ function isValidDomainPattern(pattern) {
     ? simplifiedPattern.substring(0, simplifiedPattern.indexOf('/'))
     : simplifiedPattern;
 
-  // Regex for domain validation:
-  // 1. Optional `*.` at the beginning.
-  // 2. Followed by a valid hostname structure (labels separated by dots, TLD at the end).
-  // 3. OR a simple hostname (like 'localhost') without dots (for development/intranet).
-  // This regex is a bit more forgiving for simple hostnames than a strict TLD-requiring one.
   const domainPatternRegex =
     /^(?:(\*\.)?([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}|([a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?))$/i;
 
-  // A TLD typically doesn't have digits only or hyphens.
-  // This is a secondary check as the regex might allow some technically valid but unusual hostnames.
   const parts = domainPart.replace(/^(\*\.)/, '').split('.');
   if (parts.length > 1) {
     const tld = parts[parts.length - 1];
     if (!/^[a-zA-Z]{2,63}$/.test(tld)) {
       // TLD should be letters
-      // console.log("TLD check failed for:", tld);
-      // return false; // You can make this stricter if desired. For now, main regex handles most.
     }
   }
 
   if (!domainPatternRegex.test(domainPart)) {
-    // console.log("Domain regex failed for:", domainPart);
     return false;
   }
 
-  // Disallow patterns that are just "*." or contain invalid wildcard usage
   if (domainPart === '*.' || (domainPart.includes('*') && !domainPart.startsWith('*.'))) {
-    // console.log("Invalid wildcard usage:", domainPart);
     return false;
   }
   if ((domainPart.match(/\*/g) || []).length > 1) {
     // More than one asterisk
-    // console.log("Multiple wildcards found:", domainPart);
     return false;
   }
 
   return true;
 }
-
-console.log('[System] options-utils.js loaded');

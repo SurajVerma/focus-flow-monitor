@@ -1,6 +1,3 @@
-// options-handlers.js (v0.8.13 - Fix assign success msg, Add rule validation msgs)
-
-// --- Helper to reset category list item UI ---
 function resetCategoryItemUI(listItem) {
   if (!listItem) return;
   const categoryNameSpan = listItem.querySelector('.category-name-display');
@@ -29,10 +26,9 @@ function resetCategoryItemUI(listItem) {
   if (cancelBtn) cancelBtn.style.display = 'none';
 
   if (listItem.dataset.originalName) delete listItem.dataset.originalName;
-  listItem.classList.remove('editing'); // Ensure editing class is removed
+  listItem.classList.remove('editing');
 }
 
-// --- Helper for displaying/clearing error messages ---
 /**
  * Displays a message in a specified error element.
  * @param {string} elementId - The ID of the HTML element to display the error in.
@@ -45,10 +41,9 @@ function displayMessage(elementId, message, isError = true) {
     errorElement.textContent = message;
     errorElement.style.display = message ? 'block' : 'none';
     errorElement.style.color = isError ? 'var(--accent-color-red, #dc3545)' : 'var(--accent-color-green, #28a745)';
-    // Clear message after a delay if it's not an error that requires user action
+    // Clear message after a delay
     if (!isError || (message && message.toLowerCase().includes('success'))) {
       setTimeout(() => {
-        // Only clear if the message currently shown is the one we set
         if (errorElement.textContent === message) {
           errorElement.textContent = '';
           errorElement.style.display = 'none';
@@ -70,14 +65,11 @@ function clearMessage(elementId) {
   }
 }
 
-// --- Event Handlers ---
-
-// Category Management Handlers
 const ADD_CATEGORY_ERROR_ID = 'newCategoryNameError';
 
 function handleAddCategory() {
   try {
-    clearMessage(ADD_CATEGORY_ERROR_ID); // Clear previous messages for this specific action
+    clearMessage(ADD_CATEGORY_ERROR_ID);
 
     if (!UIElements.newCategoryNameInput) {
       console.warn('UIElements.newCategoryNameInput not found in handleAddCategory');
@@ -113,7 +105,7 @@ function handleAddCategory() {
 
 function handleDeleteCategory(event) {
   try {
-    clearMessage(ADD_CATEGORY_ERROR_ID); // Clear category messages before this action
+    clearMessage(ADD_CATEGORY_ERROR_ID);
     if (!event.target.classList.contains('category-delete-btn') || !event.target.closest('#categoryList')) return;
     const categoryToDelete = event.target.dataset.category;
 
@@ -183,7 +175,7 @@ function handleDeleteCategory(event) {
 }
 
 function handleEditCategoryClick(event) {
-  clearMessage(ADD_CATEGORY_ERROR_ID); // Clear general category messages
+  clearMessage(ADD_CATEGORY_ERROR_ID);
 
   if (!event.target.classList.contains('category-edit-btn')) return;
   const listItem = event.target.closest('.category-list-item');
@@ -198,13 +190,12 @@ function handleEditCategoryClick(event) {
     return;
   }
 
-  // Reset any other item that might be in edit mode
   const currentlyEditingItem = document.querySelector('.category-list-item.editing');
   if (currentlyEditingItem && currentlyEditingItem !== listItem) {
     resetCategoryItemUI(currentlyEditingItem);
   }
 
-  listItem.classList.add('editing'); // Add class for styling edit mode
+  listItem.classList.add('editing');
 
   const currentName = categoryNameSpan.textContent;
   listItem.dataset.originalName = currentName;
@@ -229,12 +220,12 @@ function handleCancelCategoryEditClick(event) {
   if (!event.target.classList.contains('category-cancel-btn')) return;
   const listItem = event.target.closest('.category-list-item');
   resetCategoryItemUI(listItem);
-  clearMessage(ADD_CATEGORY_ERROR_ID); // Clear any messages related to category form
+  clearMessage(ADD_CATEGORY_ERROR_ID);
 }
 
 async function handleSaveCategoryClick(event) {
   if (!event.target.classList.contains('category-save-btn')) return;
-  clearMessage(ADD_CATEGORY_ERROR_ID); // Clear previous messages specifically for category operations
+  clearMessage(ADD_CATEGORY_ERROR_ID);
 
   const saveButton = event.target;
   const listItem = saveButton.closest('.category-list-item');
@@ -315,7 +306,6 @@ async function handleSaveCategoryClick(event) {
       await recalculateAndUpdateCategoryTotals({ type: 'categoryRename', oldCategory: oldName, newCategory: newName });
     }
 
-    // Repopulate lists which might depend on the changed category name
     if (typeof populateCategoryList === 'function') populateCategoryList();
     if (typeof populateCategorySelect === 'function') populateCategorySelect();
     if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
@@ -333,14 +323,12 @@ async function handleSaveCategoryClick(event) {
     saveButton.textContent = originalButtonText;
     saveButton.disabled = false;
     if (cancelButton) cancelButton.disabled = false;
-    // If an error occurred and we are not repopulating the list, ensure edit mode is exited
     if (listItem.classList.contains('editing')) {
-      resetCategoryItemUI(listItem); // Ensures UI reset
+      resetCategoryItemUI(listItem);
     }
   }
 }
 
-// Assignment Management Handlers
 const ASSIGN_DOMAIN_ERROR_ID = 'assignDomainError';
 
 function resetAssignDomainForm() {
@@ -349,8 +337,6 @@ function resetAssignDomainForm() {
   if (UIElements.assignDomainBtn) UIElements.assignDomainBtn.textContent = 'Assign Domain';
   if (UIElements.cancelAssignDomainBtn) UIElements.cancelAssignDomainBtn.style.display = 'none';
   AppState.editingAssignmentOriginalDomain = null;
-  // The message span (ASSIGN_DOMAIN_ERROR_ID) is cleared at the beginning of handleAssignDomainOrSaveChanges
-  // or by displayMessage's own timeout for success messages.
 
   const currentlyEditedItem = document.querySelector('#assignmentList .list-item-editing');
   if (currentlyEditedItem) {
@@ -359,7 +345,7 @@ function resetAssignDomainForm() {
 }
 
 function handleAssignDomainOrSaveChanges() {
-  clearMessage(ASSIGN_DOMAIN_ERROR_ID); // Clear previous errors/messages for this action
+  clearMessage(ASSIGN_DOMAIN_ERROR_ID);
 
   if (!UIElements.domainPatternInput || !UIElements.categorySelect || !UIElements.assignDomainBtn) {
     displayMessage(ASSIGN_DOMAIN_ERROR_ID, 'Form elements missing. Cannot proceed.', true);
@@ -378,9 +364,7 @@ function handleAssignDomainOrSaveChanges() {
     return;
   }
 
-  // Use the new isValidDomainPattern function from options-utils.js
   if (typeof isValidDomainPattern === 'function' && !isValidDomainPattern(domainPattern)) {
-    // isValidDomainPattern is from options-utils.js
     displayMessage(
       ASSIGN_DOMAIN_ERROR_ID,
       'Invalid domain pattern format. Use "example.com", "*.example.com", or a simple hostname like "localhost". Paths are not allowed.',
@@ -388,9 +372,7 @@ function handleAssignDomainOrSaveChanges() {
     );
     return;
   } else if (typeof isValidDomainPattern !== 'function') {
-    // Fallback or warning if function isn't loaded, though it should be
     console.warn('isValidDomainPattern function not found, using basic checks for assignment.');
-    // Basic regex from previous version if needed as a fallback, though less ideal
     const domainRegexBasic = /^(?:([\w\-*]+)\.)?([\w\-]+)\.([a-z\.]{2,})$/i;
     const hostnameRegexBasic = /^[\w\-]+$/i;
     const isValidDomainBasic = domainRegexBasic.test(domainPattern);
@@ -405,7 +387,6 @@ function handleAssignDomainOrSaveChanges() {
   const isEditMode = !!AppState.editingAssignmentOriginalDomain;
   const originalDomain = AppState.editingAssignmentOriginalDomain;
 
-  // Check for conflicts only if the domain pattern has changed or it's a new assignment
   if (!isEditMode || (isEditMode && domainPattern.toLowerCase() !== originalDomain.toLowerCase())) {
     const conflictingDomainKey = Object.keys(AppState.categoryAssignments).find(
       (key) => key.toLowerCase() === domainPattern.toLowerCase()
@@ -424,22 +405,19 @@ function handleAssignDomainOrSaveChanges() {
   let successMessage = '';
 
   if (isEditMode) {
-    // --- Edit Mode ---
     if (originalDomain && AppState.categoryAssignments.hasOwnProperty(originalDomain)) {
       oldCategoryForRecalc = AppState.categoryAssignments[originalDomain];
-      // If domain pattern changed, delete old one.
       if (domainPattern.toLowerCase() !== originalDomain.toLowerCase()) {
         delete AppState.categoryAssignments[originalDomain];
       }
     } else {
       displayMessage(ASSIGN_DOMAIN_ERROR_ID, 'Error: Original assignment not found for editing.', true);
-      resetAssignDomainForm(); // Reset form to avoid inconsistent state
+      resetAssignDomainForm();
       return;
     }
     AppState.categoryAssignments[domainPattern] = category;
     successMessage = `Assignment for "${domainPattern}" updated successfully.`;
   } else {
-    // --- Add Mode ---
     if (
       AppState.categoryAssignments.hasOwnProperty(domainPattern) &&
       AppState.categoryAssignments[domainPattern] === category
@@ -486,11 +464,10 @@ function handleAssignDomainOrSaveChanges() {
 
 function handleDeleteAssignment(event) {
   try {
-    clearMessage(ASSIGN_DOMAIN_ERROR_ID); // Clear messages for this section
+    clearMessage(ASSIGN_DOMAIN_ERROR_ID);
     if (!event.target.classList.contains('assignment-delete-btn') || !event.target.closest('#assignmentList')) return;
     const domainToDelete = event.target.dataset.domain;
 
-    // If the form is in edit mode for the item being deleted, reset the form.
     if (AppState.editingAssignmentOriginalDomain === domainToDelete) {
       resetAssignDomainForm();
     }
@@ -512,7 +489,7 @@ function handleDeleteAssignment(event) {
                 type: 'assignmentChange',
                 domain: domainToDelete,
                 oldCategory: oldCategory,
-                newCategory: null, // Indicates deletion or falling back to 'Other'
+                newCategory: null,
               });
             }
           })
@@ -571,11 +548,10 @@ function handleEditAssignmentClick(event) {
 }
 
 function handleCancelAssignDomainEdit() {
-  resetAssignDomainForm(); // This will now NOT clear the message span by default
-  clearMessage(ASSIGN_DOMAIN_ERROR_ID); // Explicitly clear if cancel is hit.
+  resetAssignDomainForm();
+  clearMessage(ASSIGN_DOMAIN_ERROR_ID);
 }
 
-// Rule Management Handlers
 const ADD_RULE_ERROR_ID = 'addRuleError';
 
 function handleRuleTypeChange() {
@@ -637,9 +613,7 @@ function handleAddRule() {
         displayMessage(ADD_RULE_ERROR_ID, 'Please enter a URL pattern (e.g., example.com or *.example.com).', true);
         return;
       }
-      // Use the new isValidDomainPattern function from options-utils.js
       if (typeof isValidDomainPattern === 'function' && !isValidDomainPattern(value)) {
-        // isValidDomainPattern is from options-utils.js
         displayMessage(
           ADD_RULE_ERROR_ID,
           'Invalid URL pattern. Please use a valid domain (e.g., example.com) or wildcard (e.g., *.example.com). Paths are not allowed.',
@@ -725,7 +699,7 @@ function handleAddRule() {
 }
 
 function handleDeleteRule(event) {
-  clearMessage(ADD_RULE_ERROR_ID); // Clear messages for this section
+  clearMessage(ADD_RULE_ERROR_ID);
   try {
     const ruleIndex = parseInt(event.target.dataset.ruleIndex, 10);
     if (!isNaN(ruleIndex) && ruleIndex >= 0 && ruleIndex < AppState.rules.length) {
@@ -760,16 +734,15 @@ function handleDeleteRule(event) {
 }
 
 function handleEditRuleClick(event) {
-  clearMessage(ADD_RULE_ERROR_ID); // Clear add rule errors when starting an edit
+  clearMessage(ADD_RULE_ERROR_ID);
   const ruleIndex = parseInt(event.target.dataset.ruleIndex, 10);
   if (isNaN(ruleIndex) || ruleIndex < 0 || ruleIndex >= AppState.rules.length) {
-    alert('Could not find rule to edit.'); // Modal will not open, so alert is okay here.
+    alert('Could not find rule to edit.');
     return;
   }
   AppState.editingRuleIndex = ruleIndex;
   const rule = AppState.rules[ruleIndex];
 
-  // Ensure modal UI elements are correctly referenced from UIElements
   if (
     !UIElements.editRuleModal ||
     !UIElements.editRuleTypeDisplay ||
@@ -801,30 +774,27 @@ function handleEditRuleClick(event) {
 
   if (isUrlType) UIElements.editRulePatternInput.value = rule.value;
   if (isCategoryType) {
-    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect(); // Ensures edit modal's select is populated
+    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
     UIElements.editRuleCategorySelect.value = rule.value;
-    // If category was deleted, show it as disabled
     if (!AppState.categories.includes(rule.value)) {
       const tempOpt = document.createElement('option');
       tempOpt.value = rule.value;
       tempOpt.textContent = `${rule.value} (Deleted)`;
       tempOpt.disabled = true;
       UIElements.editRuleCategorySelect.appendChild(tempOpt);
-      UIElements.editRuleCategorySelect.value = rule.value; // Ensure it's selected
+      UIElements.editRuleCategorySelect.value = rule.value;
     }
   }
   if (isLimitType) {
     const limitSec = rule.limitSeconds || 0;
     if (limitSec > 0 && limitSec % 3600 === 0 && limitSec / 3600 >= 1) {
-      // Check for whole hours
       UIElements.editRuleLimitInput.value = limitSec / 3600;
       UIElements.editRuleUnitSelect.value = 'hours';
     } else {
-      UIElements.editRuleLimitInput.value = Math.round(limitSec / 60); // Default to minutes
+      UIElements.editRuleLimitInput.value = Math.round(limitSec / 60);
       UIElements.editRuleUnitSelect.value = 'minutes';
     }
     if (limitSec > 0 && UIElements.editRuleLimitInput.value == 0) {
-      // Ensure small limits (e.g. 30s) are shown as 1 min
       UIElements.editRuleLimitInput.value = 1;
       UIElements.editRuleUnitSelect.value = 'minutes';
     }
@@ -836,7 +806,7 @@ function handleEditRuleClick(event) {
   if (isBlockType) {
     UIElements.editRuleStartTimeInput.value = rule.startTime || '';
     UIElements.editRuleEndTimeInput.value = rule.endTime || '';
-    UIElements.editRuleDayCheckboxes.forEach((cb) => (cb.checked = false)); // Reset first
+    UIElements.editRuleDayCheckboxes.forEach((cb) => (cb.checked = false));
     if (rule.days && Array.isArray(rule.days)) {
       rule.days.forEach((dayValue) => {
         const cb = document.querySelector(`#editRuleModal input[name="editRuleDay"][value="${dayValue}"]`);
@@ -844,7 +814,6 @@ function handleEditRuleClick(event) {
       });
     }
   } else {
-    // Ensure schedule fields are clear if not a block rule
     UIElements.editRuleStartTimeInput.value = '';
     UIElements.editRuleEndTimeInput.value = '';
     UIElements.editRuleDayCheckboxes.forEach((cb) => (cb.checked = false));
@@ -853,13 +822,11 @@ function handleEditRuleClick(event) {
 }
 
 function handleCancelEditClick() {
-  // For Edit Rule Modal
   if (UIElements.editRuleModal) UIElements.editRuleModal.style.display = 'none';
   AppState.editingRuleIndex = -1;
 }
 
 function handleSaveChangesClick() {
-  // For Edit Rule Modal
   const editIndex = AppState.editingRuleIndex;
   if (editIndex < 0 || editIndex >= AppState.rules.length) {
     alert('Error: No rule selected for saving.');
@@ -879,9 +846,7 @@ function handleSaveChangesClick() {
       alert('Please enter a URL or pattern.');
       return;
     }
-    // Use the new isValidDomainPattern function from options-utils.js
     if (typeof isValidDomainPattern === 'function' && !isValidDomainPattern(newVal)) {
-      // isValidDomainPattern is from options-utils.js
       alert(
         'Invalid URL pattern. Please use a valid domain (e.g., example.com) or wildcard (e.g., *.example.com). Paths are not allowed.'
       );
@@ -950,11 +915,10 @@ function handleSaveChangesClick() {
   if (typeof saveRules === 'function') saveRules();
   if (typeof populateRuleList === 'function') populateRuleList();
 
-  handleCancelEditClick(); // Close modal
+  handleCancelEditClick();
   displayMessage(ADD_RULE_ERROR_ID, `Rule for "${updatedRule.value}" updated successfully.`, false);
 }
 
-// Stats Display Handlers
 function handleDomainPrev() {
   if (AppState.domainCurrentPage > 1) {
     AppState.domainCurrentPage--;
@@ -1038,7 +1002,6 @@ function handleExportCsv() {
   triggerCsvDownload(csvString, filename);
 }
 
-// General Settings Handlers
 function handleIdleThresholdChange() {
   if (!UIElements.idleThresholdSelect) return;
   const selectedValue = parseInt(UIElements.idleThresholdSelect.value, 10);
@@ -1072,7 +1035,6 @@ function handleDataRetentionChange() {
     });
 }
 
-// Data Management Handlers
 async function handleExportData() {
   console.log('[Data Export] Starting export...');
   try {
@@ -1227,7 +1189,6 @@ function handleImportFileChange(event) {
   reader.readAsText(file);
 }
 
-// Productivity Settings Handlers
 async function handleProductivityRatingChange(event) {
   if (event.target.type !== 'radio' || !event.target.name.startsWith('rating-')) return;
   const category = event.target.dataset.category;
@@ -1249,7 +1210,6 @@ async function handleProductivityRatingChange(event) {
   }
 }
 
-// Block Page Customization Handlers
 function handleBlockPageSettingChange(storageKey, value) {
   browser.storage.local
     .set({ [storageKey]: value })
@@ -1272,7 +1232,6 @@ function handleBlockPageUserQuotesChange() {
   handleBlockPageSettingChange(STORAGE_KEY_BLOCK_PAGE_USER_QUOTES, quotesArray);
 }
 
-// Pomodoro Settings Handlers
 let isHandlingPomodoroNotificationToggle = false;
 async function handlePomodoroNotificationToggle() {
   if (isHandlingPomodoroNotificationToggle) {
@@ -1337,5 +1296,3 @@ async function handlePomodoroNotificationToggle() {
     isHandlingPomodoroNotificationToggle = false;
   }
 }
-
-console.log('[System] options-handlers.js loaded (v0.8.13 - Fix assign success msg, Add rule validation msgs)');
