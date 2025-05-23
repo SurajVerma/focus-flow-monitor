@@ -15,7 +15,21 @@ Focus Flow Monitor helps you understand your online habits by tracking the time 
 
 ---
 
-## ✨ What's New in Version 0.9.0.1 Beta ✨
+**Quick Links**
+- [What's New](#whats-new-in-version-0901-beta)
+- [Key Features](#key-features)
+- [Privacy](#privacy)
+- [Installation](#installation)
+- [Beta Version & Data Management](#beta-version--data-management)
+- [Usage Notes](#usage-notes)
+- [Screenshots](#screenshots)
+- [Contributing](#contributing)
+  - [Development Setup](#development-setup)
+- [License](#license)
+
+---
+
+## What's New in Version 0.9.0.1 Beta
 
 For more details on this and previous updates, check out the [Releases Page](https://github.com/SurajVerma/focus-flow-monitor/releases).
 
@@ -65,7 +79,7 @@ For the latest features and updates, you can install the **Beta version** direct
 
 ---
 
-## ⚠️ Beta Version & Data Management
+## Beta Version & Data Management
 
 Starting with version 0.9.0.x, the version available on GitHub Releases will be tagged as **beta**. Beta versions are typically identified by a **four-part version number** (e.g., `0.9.0.1`), while stable AMO releases use a three-part version number (e.g., `0.9.0`).
 
