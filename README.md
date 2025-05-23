@@ -33,6 +33,7 @@ Focus Flow Monitor helps you understand your online habits by tracking the time 
 
 For more details on this and previous updates, check out the [Releases Page](https://github.com/SurajVerma/focus-flow-monitor/releases).
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Key Features
@@ -59,6 +60,7 @@ For more details on this and previous updates, check out the [Releases Page](htt
 - **Theme Support:** Automatically matches your browser or operating system's light or dark theme.
 - **Privacy Focused:** All your tracking data is stored locally within your browser. No data is ever sent to external servers.
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Privacy
@@ -67,6 +69,7 @@ For more details on this and previous updates, check out the [Releases Page](htt
 
 Focus Flow Monitor does not employ any external tracking or analytics. Your Browse and time data stays local, stored entirely within your browser's storage, and is never transmitted elsewhere. You have full control over your data, including options to export it, clear it, and set data retention periods.
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Installation
@@ -77,6 +80,7 @@ Get the latest **stable version** from the official Firefox Add-ons page:
 
 For the latest features and updates, you can install the **Beta version** directly from [GitHub Releases](https://github.com/SurajVerma/focus-flow-monitor/releases).
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Beta Version & Data Management
@@ -95,6 +99,7 @@ Starting with version 0.9.0.x, the version available on GitHub Releases will be 
   1.  **Export your data** from the version you are currently using (via the Options page > Data Management > Export All Data).
   2.  **Import that data** into the new version you've installed (via its Options page > Data Management > Import Data from File).
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Usage Notes
@@ -103,7 +108,7 @@ Starting with version 0.9.0.x, the version available on GitHub Releases will be 
 - **Accessing Options Page:** You can access detailed statistics, manage categories, set site rules (including schedules and block page customization), and configure all settings via the extension's options page.
   - Right-click the extension icon in the Firefox toolbar → "Manage Extension" → "Preferences/Options" (⚙️ icon).
   - Alternatively, click the gear (⚙️) icon in the extension popup.
-- **How to use 🍅 Tomato Clock:**
+- **How to use Tomato Clock:**
 
   - Click on the Focus Flow Monitor icon in your browser toolbar.
   - You'll find the "Tomato Clock" section right in the popup.
@@ -113,6 +118,7 @@ Starting with version 0.9.0.x, the version available on GitHub Releases will be 
 
 - **Active Development:** Focus Flow Monitor is actively maintained and improved. Feedback and suggestions are always welcome!
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Screenshots
@@ -132,6 +138,7 @@ Starting with version 0.9.0.x, the version available on GitHub Releases will be 
 **Blocked Page Example:**
 ![Blocked Page](https://github.com/user-attachments/assets/01c6ba2b-595c-41a1-943b-15ed34228b61)
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## Contributing
@@ -158,6 +165,7 @@ We welcome contributions from the community! Whether it's reporting a bug, sugge
 4.  Browse to the directory where you cloned the repository and select the `manifest.json` file (or the specific manifest for the version you are working on, e.g., `manifest-beta.json` if you set one up).
 5.  The extension will now be loaded. To see changes you make to the code, you'll typically need to reload the extension from the `about:debugging` page (using the "Reload" button for the extension).
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 ## License
@@ -168,6 +176,7 @@ You can view the full license text in the [LICENSE](LICENSE) file.
 
 _In simple terms, this means you are free to use, modify, and distribute the software, but if you modify files licensed under MPL 2.0, you must make your modifications available under the same MPL 2.0 license. Please ensure you retain the original copyright and license notices._
 
+[⬆️ Back to Top](#focus-flow-monitor)
 ---
 
 _Created with ❤️ in India by Suraj_
