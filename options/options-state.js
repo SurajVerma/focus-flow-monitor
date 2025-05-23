@@ -155,7 +155,8 @@ function queryUIElements() {
 
   UIElements.totalTimeForRangeContainer = document.getElementById('totalTimeForRangeContainer');
   UIElements.totalTimeForRangeLabel = document.getElementById('totalTimeForRangeLabel');
-  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue'); // NEW: UI Element References for Pomodoro Notification Settings
+  UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
+  UIElements.averageTimeForRange = document.getElementById('averageTimeForRange');
 
   UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
   UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus'); // Add references for other Pomodoro settings if you add them (e.g., duration inputs) // Basic check to ensure critical elements were found
@@ -178,7 +179,8 @@ function queryUIElements() {
     !UIElements.blockPageUserQuotesTextarea ||
     !UIElements.totalTimeForRangeContainer ||
     !UIElements.totalTimeForRangeLabel ||
-    !UIElements.totalTimeForRangeValue || // NEW: Check for new Pomodoro elements
+    !UIElements.totalTimeForRangeValue ||
+    !UIElements.averageTimeForRange ||
     !UIElements.pomodoroEnableNotificationsCheckbox ||
     !UIElements.pomodoroNotificationPermissionStatus
   ) {

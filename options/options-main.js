@@ -463,7 +463,8 @@ function updateStatsDisplay(
     if (
       UIElements.totalTimeForRangeContainer &&
       UIElements.totalTimeForRangeLabel &&
-      UIElements.totalTimeForRangeValue
+      UIElements.totalTimeForRangeValue &&
+      UIElements.averageTimeForRange
     ) {
       if (isRangeView) {
         let totalSecondsForRange = 0;
@@ -472,6 +473,40 @@ function updateStatsDisplay(
         }
         UIElements.totalTimeForRangeValue.textContent =
           typeof formatTime === 'function' ? formatTime(totalSecondsForRange, true) : totalSecondsForRange + 's';
+        let numberOfDaysInRange = 0;
+        let averageTimeText;
+        const selectedRangeValue = UIElements.dateRangeSelect ? UIElements.dateRangeSelect.value : '';
+        if (selectedRangeValue === 'week') {
+          numberOfDaysInRange = 7;
+        } else if (selectedRangeValue === 'month') {
+          const today = new Date();
+          numberOfDaysInRange = today.getDate();
+        } else if (selectedRangeValue === 'all') {
+          numberOfDaysInRange = Object.keys(AppState.dailyDomainData).length;
+        }
+        const daySuffix = (n) => (n === 1 ? 'day' : 'days');
+        if (numberOfDaysInRange > 0) {
+          let avgSecondsPerDay;
+          let formattedDisplayTime;
+          if (totalSecondsForRange === 0) {
+            formattedDisplayTime = typeof formatTime === 'function' ? formatTime(0, true) : '0s';
+          } else {
+            avgSecondsPerDay = totalSecondsForRange / numberOfDaysInRange;
+            formattedDisplayTime =
+              typeof formatTime === 'function' ? formatTime(avgSecondsPerDay, true) : `${avgSecondsPerDay.toFixed(0)}s`;
+          }
+          averageTimeText = `On average, you spent ${formattedDisplayTime}/day for ${numberOfDaysInRange} ${daySuffix(
+            numberOfDaysInRange
+          )}.`;
+        } else {
+          if (totalSecondsForRange === 0) {
+            const formattedZeroTime = typeof formatTime === 'function' ? formatTime(0, true) : '0s';
+            averageTimeText = `Avg: ${formattedZeroTime}/day (period N/A)`;
+          } else {
+            averageTimeText = `Avg: N/A / day (period unknown)`;
+          }
+        }
+        UIElements.averageTimeForRange.textContent = averageTimeText;
 
         const periodSpanInTotalLabel = UIElements.totalTimeForRangeLabel.querySelector('.stats-period');
         if (periodSpanInTotalLabel) {
