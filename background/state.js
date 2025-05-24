@@ -47,6 +47,20 @@ const FocusFlowState = {
     timerIntervalId: null,
     notifyEnabled: true,
   },
+  // --- Pomodoro Timer State ---
+  // Note: The active pomodoro timer's state (currentPhase, remainingTime, etc.)
+  // is managed by `pomodoroState` in main.js and saved/loaded separately via
+  // STORAGE_KEY_POMODORO_STATE. `pomodoroSettings` (durations, notifyEnabled, etc.)
+  // are also loaded into a variable in main.js from STORAGE_KEY_POMODORO_SETTINGS.
+
+  // --- Pomodoro Statistics Storage ---
+  // These will be stored under their own keys and primarily managed in main.js & storage.js
+  pomodoroDailyStats: {}, // Key: "YYYY-MM-DD", Value: { workSessions: count, totalWorkTime: seconds }
+  pomodoroAllTimeStats: {
+    totalWorkSessionsCompleted: 0,
+    totalTimeFocused: 0, // in seconds
+  },
+
   STORAGE_KEY_POMODORO_STATE: 'pomodoroPersistentState',
   STORAGE_KEY_POMODORO_SETTINGS: 'pomodoroUserSettings',
   STORAGE_KEY_POMODORO_STATS_DAILY: 'pomodoroStatsDaily',

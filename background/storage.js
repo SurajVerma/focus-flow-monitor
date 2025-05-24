@@ -14,10 +14,13 @@ async function loadData() {
       'dailyCategoryData',
       'hourlyData',
       'dataRetentionPeriodDays',
+      // Pomodoro stats keys
+      FocusFlowState.STORAGE_KEY_POMODORO_STATS_DAILY,
+      FocusFlowState.STORAGE_KEY_POMODORO_STATS_ALL_TIME,
     ];
 
     const result = await browser.storage.local.get(keysToLoad);
-    console.log('[Storage] Config/History Data loaded from storage.');
+    console.log('[Storage] Config/History/Stats Data loaded from storage.');
 
     let needsSave = false;
     let defaults = null;
@@ -31,7 +34,7 @@ async function loadData() {
       try {
         console.log('[Storage] Fetching defaults...');
         const response = await fetch(browser.runtime.getURL('data/default_config.json'));
-        if (!response.ok) throw new Error(`Fetch error: ${response.statusText || response.status}`);
+        if (!response.ok) throw new Error(`Workspace error: ${response.statusText || response.status}`);
         defaults = await response.json();
         if (!defaults || !Array.isArray(defaults.categories) || typeof defaults.assignments !== 'object') {
           throw new Error('Invalid default config structure.');
@@ -62,6 +65,13 @@ async function loadData() {
     FocusFlowState.dailyCategoryData = result.dailyCategoryData || {};
     FocusFlowState.hourlyData = result.hourlyData || {};
 
+    // Load Pomodoro Stats
+    FocusFlowState.pomodoroDailyStats = result[FocusFlowState.STORAGE_KEY_POMODORO_STATS_DAILY] || {};
+    FocusFlowState.pomodoroAllTimeStats = result[FocusFlowState.STORAGE_KEY_POMODORO_STATS_ALL_TIME] || {
+      totalWorkSessionsCompleted: 0,
+      totalTimeFocused: 0,
+    };
+
     if (!FocusFlowState.categories.includes(FocusFlowState.defaultCategory)) {
       FocusFlowState.categories.push(FocusFlowState.defaultCategory);
       needsSave = true;
@@ -76,9 +86,18 @@ async function loadData() {
       }
     }
 
-    if (needsSave || needDefaultConfig || categoriesChanged || !result.hourlyData || !result.rules) {
-      console.log('[Storage] Saving initial/updated non-tracking state.');
-      await performSave();
+    // Also consider if pomodoro stats were missing as a reason to save initially
+    if (
+      needsSave ||
+      needDefaultConfig ||
+      categoriesChanged ||
+      !result.hourlyData ||
+      !result.rules ||
+      !result[FocusFlowState.STORAGE_KEY_POMODORO_STATS_DAILY] ||
+      !result[FocusFlowState.STORAGE_KEY_POMODORO_STATS_ALL_TIME]
+    ) {
+      console.log('[Storage] Saving initial/updated non-tracking state (including Pomodoro stats if new).');
+      await performSave(); // This will now also save the (potentially empty/default) pomodoro stats
     }
 
     await pruneOldData(result['dataRetentionPeriodDays']);
@@ -99,11 +118,127 @@ async function loadData() {
     FocusFlowState.dailyDomainData = {};
     FocusFlowState.dailyCategoryData = {};
     FocusFlowState.hourlyData = {};
+    FocusFlowState.pomodoroDailyStats = {}; // Reset stats on error
+    FocusFlowState.pomodoroAllTimeStats = { totalWorkSessionsCompleted: 0, totalTimeFocused: 0 };
+
     try {
       await browser.storage.local.remove(FocusFlowState.STORAGE_KEY_TRACKING_STATE);
     } catch (clearError) {
       console.error('[Storage] Failed to clear tracking state during loadData error handling:', clearError);
     }
+  }
+}
+
+async function performSave() {
+  if (FocusFlowState.isSaving) return;
+  FocusFlowState.isSaving = true;
+  const stateToSave = {
+    trackedData: FocusFlowState.trackedData,
+    categoryTimeData: FocusFlowState.categoryTimeData,
+    dailyDomainData: FocusFlowState.dailyDomainData,
+    dailyCategoryData: FocusFlowState.dailyCategoryData,
+    hourlyData: FocusFlowState.hourlyData,
+    categories: FocusFlowState.categories,
+    categoryAssignments: FocusFlowState.categoryAssignments,
+    rules: FocusFlowState.rules,
+    // Add Pomodoro stats to save
+    [FocusFlowState.STORAGE_KEY_POMODORO_STATS_DAILY]: FocusFlowState.pomodoroDailyStats,
+    [FocusFlowState.STORAGE_KEY_POMODORO_STATS_ALL_TIME]: FocusFlowState.pomodoroAllTimeStats,
+  };
+  try {
+    await browser.storage.local.set(stateToSave);
+    console.log('[Storage performSave] Successfully saved state including Pomodoro stats.');
+  } catch (error) {
+    console.error('[Storage] CRITICAL Error during performSave:', error);
+  } finally {
+    FocusFlowState.isSaving = false;
+  }
+}
+
+function saveDataBatched() {
+  if (FocusFlowState.saveTimeoutId) {
+    clearTimeout(FocusFlowState.saveTimeoutId);
+  }
+  FocusFlowState.saveTimeoutId = setTimeout(() => {
+    performSave();
+    FocusFlowState.saveTimeoutId = null;
+  }, FocusFlowState.SAVE_DATA_DEBOUNCE_MS);
+}
+
+/**
+ * Deletes daily and hourly tracking data older than the configured retention period.
+ * Also prunes Pomodoro daily stats.
+ * @param {number|undefined} [retentionDaysSetting] - Optional pre-fetched retention setting. If not provided, it will be fetched from storage.
+ */
+async function pruneOldData(retentionDaysSetting = undefined) {
+  console.log('[Pruning] Checking for old data to prune...');
+  let retentionDays = retentionDaysSetting;
+
+  try {
+    if (retentionDays === undefined) {
+      const result = await browser.storage.local.get(FocusFlowState.STORAGE_KEY_DATA_RETENTION_DAYS);
+      retentionDays = result[FocusFlowState.STORAGE_KEY_DATA_RETENTION_DAYS];
+    }
+
+    if (retentionDays === undefined || retentionDays === null) {
+      retentionDays = FocusFlowState.DEFAULT_DATA_RETENTION_DAYS;
+    } else {
+      retentionDays = parseInt(retentionDays, 10);
+    }
+
+    if (isNaN(retentionDays) || retentionDays < 0) {
+      console.log('[Pruning] Data retention set to Forever. No pruning needed.');
+      return;
+    }
+
+    console.log(`[Pruning] Data retention period: ${retentionDays} days.`);
+
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setDate(today.getDate() - retentionDays);
+    cutoffDate.setHours(0, 0, 0, 0);
+
+    let dataWasPruned = false;
+
+    const pruneObject = (dataObject, objectName) => {
+      if (!dataObject) return;
+      const keysToDelete = [];
+      for (const dateKey in dataObject) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+          try {
+            const entryDate = new Date(dateKey + 'T00:00:00'); // Ensure consistent date parsing
+            if (!isNaN(entryDate) && entryDate < cutoffDate) {
+              keysToDelete.push(dateKey);
+            }
+          } catch (e) {
+            console.warn(`[Pruning] Error parsing date key '${dateKey}' in ${objectName}. Skipping.`);
+          }
+        } else {
+          console.warn(`[Pruning] Invalid date key format '${dateKey}' found in ${objectName}. Skipping.`);
+        }
+      }
+
+      if (keysToDelete.length > 0) {
+        console.log(`[Pruning] Deleting ${keysToDelete.length} old entries from ${objectName}:`, keysToDelete);
+        keysToDelete.forEach((key) => delete dataObject[key]);
+        dataWasPruned = true;
+      }
+    };
+
+    pruneObject(FocusFlowState.dailyDomainData, 'dailyDomainData');
+    pruneObject(FocusFlowState.dailyCategoryData, 'dailyCategoryData');
+    pruneObject(FocusFlowState.hourlyData, 'hourlyData');
+    pruneObject(FocusFlowState.pomodoroDailyStats, 'pomodoroDailyStats'); // Prune Pomodoro daily stats
+
+    if (dataWasPruned) {
+      console.log('[Pruning] Old data removed. Saving updated state...');
+      await performSave();
+      console.log('[Pruning] Updated state saved.');
+    } else {
+      console.log('[Pruning] No old data found to prune.');
+    }
+  } catch (error) {
+    console.error('[Pruning] Error during data pruning:', error);
   }
 }
 

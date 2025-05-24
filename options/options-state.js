@@ -53,6 +53,16 @@ let AppState = {
 
   pomodoroNotifyEnabled: true, // Default, will be loaded from storage
   isRequestingPermission: false,
+  // NEW: Pomodoro Stats (will be populated from background/storage)
+  pomodoroStatsToday: {
+    sessionsCompleted: 0,
+    timeFocused: 0, // in seconds
+  },
+  pomodoroStatsAllTime: {
+    // If you plan to show all-time stats later
+    sessionsCompleted: 0,
+    timeFocused: 0,
+  },
 };
 
 // --- UI Element References ---
@@ -158,8 +168,24 @@ function queryUIElements() {
   UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
   UIElements.averageTimeForRange = document.getElementById('averageTimeForRange');
 
+  // --- NEW: Pomodoro Settings UI Elements ---
+  UIElements.pomodoroWorkDurationInput = document.getElementById('pomodoroWorkDuration');
+  UIElements.pomodoroShortBreakDurationInput = document.getElementById('pomodoroShortBreakDuration');
+  UIElements.pomodoroLongBreakDurationInput = document.getElementById('pomodoroLongBreakDuration');
+  UIElements.pomodoroSessionsInput = document.getElementById('pomodoroSessionsBeforeLongBreak');
+  UIElements.savePomodoroSettingsBtn = document.getElementById('savePomodoroSettingsBtn');
+  UIElements.resetPomodoroSettingsBtn = document.getElementById('resetPomodoroSettingsBtn');
+  UIElements.pomodoroSettingsError = document.getElementById('pomodoroSettingsError');
   UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
-  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus'); // Add references for other Pomodoro settings if you add them (e.g., duration inputs) // Basic check to ensure critical elements were found
+  UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus');
+
+  // --- NEW: Pomodoro Stats UI Elements (Dashboard) ---
+  UIElements.pomodoroStatsContainer = document.getElementById('pomodoroStatsContainer');
+  UIElements.pomodoroStatsLabel = document.getElementById('pomodoroStatsLabel');
+  UIElements.pomodoroSessionsCompletedEl = document.getElementById('pomodoroSessionsCompleted');
+  UIElements.pomodoroTimeFocusedEl = document.getElementById('pomodoroTimeFocused');
+
+  // Basic check to ensure critical elements were found
   if (
     !UIElements.detailedTimeList ||
     !UIElements.categoryList ||
@@ -181,8 +207,20 @@ function queryUIElements() {
     !UIElements.totalTimeForRangeLabel ||
     !UIElements.totalTimeForRangeValue ||
     !UIElements.averageTimeForRange ||
-    !UIElements.pomodoroEnableNotificationsCheckbox ||
-    !UIElements.pomodoroNotificationPermissionStatus
+    !UIElements.pomodoroEnableNotificationsCheckbox || // Already existed, but good to keep in check
+    !UIElements.pomodoroNotificationPermissionStatus || // Already existed
+    // New Pomodoro elements
+    !UIElements.pomodoroWorkDurationInput ||
+    !UIElements.pomodoroShortBreakDurationInput ||
+    !UIElements.pomodoroLongBreakDurationInput ||
+    !UIElements.pomodoroSessionsInput ||
+    !UIElements.savePomodoroSettingsBtn ||
+    !UIElements.resetPomodoroSettingsBtn ||
+    !UIElements.pomodoroSettingsError ||
+    !UIElements.pomodoroStatsContainer ||
+    !UIElements.pomodoroStatsLabel ||
+    !UIElements.pomodoroSessionsCompletedEl ||
+    !UIElements.pomodoroTimeFocusedEl
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure

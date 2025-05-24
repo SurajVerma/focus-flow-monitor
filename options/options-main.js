@@ -149,31 +149,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  console.log('Options Main script initialized (v0.8.9 - Update event listeners for new assign domain flow).');
+  console.log('Options Main script initialized (v0.9.0 - Pomodoro settings & stats).');
 });
 
 function handlePomodoroSettingsStorageChange(changes, area) {
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
+    // STORAGE_KEY_POMODORO_SETTINGS is defined in options-state.js
     const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
 
-    if (newStorageValue && newStorageValue.notifyEnabled !== undefined) {
-      const newNotifyState = newStorageValue.notifyEnabled;
-      console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
-
-      if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
-        AppState.pomodoroNotifyEnabled = newNotifyState;
+    if (newStorageValue) {
+      if (newStorageValue.durations && typeof populatePomodoroSettingsInputs === 'function') {
+        populatePomodoroSettingsInputs(newStorageValue);
+        console.log('[Options Main] Pomodoro settings UI repopulated due to storage change.');
       }
-
-      if (
-        UIElements.pomodoroEnableNotificationsCheckbox &&
-        UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
-      ) {
-        UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState;
-        console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
-      }
-
-      if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
-        updatePomodoroPermissionStatusDisplay();
+      if (newStorageValue.notifyEnabled !== undefined) {
+        const newNotifyState = newStorageValue.notifyEnabled;
+        console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
+        if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
+          // AppState is defined in options-state.js
+          AppState.pomodoroNotifyEnabled = newNotifyState;
+        }
+        if (
+          UIElements.pomodoroEnableNotificationsCheckbox &&
+          UIElements.pomodoroEnableNotificationsCheckbox.checked !== newNotifyState
+        ) {
+          UIElements.pomodoroEnableNotificationsCheckbox.checked = newNotifyState;
+          console.log(`[Options Page] pomodoroEnableNotificationsCheckbox UI updated to: ${newNotifyState}`);
+        }
+        if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
+          updatePomodoroPermissionStatusDisplay();
+        }
       }
     }
   }
@@ -190,10 +195,10 @@ async function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD,
-    STORAGE_KEY_DATA_RETENTION_DAYS,
-    STORAGE_KEY_PRODUCTIVITY_RATINGS,
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
+    STORAGE_KEY_IDLE_THRESHOLD, // Defined in options-state.js
+    STORAGE_KEY_DATA_RETENTION_DAYS, // Defined in options-state.js
+    STORAGE_KEY_PRODUCTIVITY_RATINGS, // Defined in options-state.js (via options-utils.js indirectly)
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, // Defined in options-state.js
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
     STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
@@ -203,7 +208,9 @@ async function loadAllData() {
     STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
     STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
     STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
-    STORAGE_KEY_POMODORO_SETTINGS,
+    STORAGE_KEY_POMODORO_SETTINGS, // Defined in options-state.js
+    // No direct need to load pomodoro stats keys here for AppState,
+    // as displayPomodoroStats will message the background script.
   ];
 
   try {
@@ -284,16 +291,38 @@ async function loadAllData() {
     if (UIElements.blockPageUserQuotesTextarea)
       UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
 
-    const pomodoroSettings = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
-    AppState.pomodoroNotifyEnabled =
-      pomodoroSettings.notifyEnabled !== undefined ? pomodoroSettings.notifyEnabled : true;
-    console.log(`[Options Main] Loaded Pomodoro notifyEnabled: ${AppState.pomodoroNotifyEnabled}`);
+    // --- Load and Populate Pomodoro Settings ---
+    const pomodoroSettingsStorage = result[STORAGE_KEY_POMODORO_SETTINGS] || {}; // Use constant from options-state.js
+    const defaultPomodoroDurations = {
+      Work: 25 * 60,
+      'Short Break': 5 * 60,
+      'Long Break': 15 * 60,
+    };
+    const defaultSessions = 4;
+
+    // Use loaded settings or fall back to defaults for populating inputs
+    const currentDurations = pomodoroSettingsStorage.durations || defaultPomodoroDurations;
+    const currentSessions =
+      pomodoroSettingsStorage.sessionsBeforeLongBreak === undefined
+        ? defaultSessions
+        : pomodoroSettingsStorage.sessionsBeforeLongBreak;
+    AppState.pomodoroNotifyEnabled = // Ensure AppState for notifications is correctly set
+      pomodoroSettingsStorage.notifyEnabled !== undefined ? pomodoroSettingsStorage.notifyEnabled : true;
+
+    if (typeof populatePomodoroSettingsInputs === 'function') {
+      populatePomodoroSettingsInputs({
+        // Pass the resolved settings to the UI function
+        durations: currentDurations,
+        sessionsBeforeLongBreak: currentSessions,
+      });
+    }
 
     if (UIElements.pomodoroEnableNotificationsCheckbox) {
       UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
     await updatePomodoroPermissionStatusDisplay();
 
+    // Populate other UI elements
     if (typeof populateCategoryList === 'function') populateCategoryList();
     if (typeof populateCategorySelect === 'function') populateCategorySelect();
     if (typeof populateAssignmentList === 'function') populateAssignmentList();
@@ -302,7 +331,9 @@ async function loadAllData() {
     if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
     if (typeof renderCalendar === 'function')
       renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
+
     if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+
     if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
   } catch (error) {
     console.error('[Options Main] Error during data processing/UI update after loading from storage!', error);
@@ -310,6 +341,7 @@ async function loadAllData() {
     setListMessage(UIElements.categoryTimeList, errorMessage);
     setListMessage(UIElements.detailedTimeList, errorMessage);
     if (typeof clearChartOnError === 'function') clearChartOnError('Error processing data');
+    if (typeof displayPomodoroStats === 'function') displayPomodoroStats('Error', true);
   }
 }
 
@@ -385,9 +417,12 @@ function updateDisplayForSelectedRangeUI() {
         if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
       }
       updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
+      // Updated: Call displayPomodoroStats with the correct label for the current view
+      if (typeof displayPomodoroStats === 'function') displayPomodoroStats(label);
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
       updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
+      if (typeof displayPomodoroStats === 'function') displayPomodoroStats(label);
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -595,6 +630,7 @@ function displayNoDataForDate(displayDateLabel) {
   if (UIElements.totalTimeForRangeContainer) {
     UIElements.totalTimeForRangeContainer.style.display = 'none';
   }
+  if (typeof displayPomodoroStats === 'function') displayPomodoroStats(displayDateLabel, true);
 }
 
 function renderChartForSelectedDateUI() {
@@ -928,10 +964,9 @@ function setupEventListeners() {
     }
 
     if (UIElements.assignDomainBtn && typeof handleAssignDomainOrSaveChanges === 'function')
-      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomainOrSaveChanges); // Changed handler
+      UIElements.assignDomainBtn.addEventListener('click', handleAssignDomainOrSaveChanges);
 
     if (UIElements.cancelAssignDomainBtn && typeof handleCancelAssignDomainEdit === 'function')
-      // New listener for Cancel
       UIElements.cancelAssignDomainBtn.addEventListener('click', handleCancelAssignDomainEdit);
 
     if (UIElements.assignmentList) {
@@ -942,10 +977,9 @@ function setupEventListeners() {
           event.target.classList.contains('assignment-edit-btn') &&
           typeof handleEditAssignmentClick === 'function'
         )
-          // This now prepares the top form
           handleEditAssignmentClick(event);
       });
-    } // Rule Management
+    }
 
     if (UIElements.ruleTypeSelect && typeof handleRuleTypeChange === 'function')
       UIElements.ruleTypeSelect.addEventListener('change', handleRuleTypeChange);
@@ -968,7 +1002,7 @@ function setupEventListeners() {
     if (UIElements.editRuleModal && typeof handleCancelEditClick === 'function')
       UIElements.editRuleModal.addEventListener('click', (event) => {
         if (event.target === UIElements.editRuleModal) handleCancelEditClick();
-      }); // Stats Display
+      });
 
     if (UIElements.dateRangeSelect)
       UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
@@ -986,27 +1020,34 @@ function setupEventListeners() {
       });
     }
     if (UIElements.exportCsvBtn && typeof handleExportCsv === 'function')
-      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv); // General Settings
+      UIElements.exportCsvBtn.addEventListener('click', handleExportCsv);
 
     if (UIElements.idleThresholdSelect && typeof handleIdleThresholdChange === 'function')
       UIElements.idleThresholdSelect.addEventListener('change', handleIdleThresholdChange);
     if (UIElements.dataRetentionSelect && typeof handleDataRetentionChange === 'function')
-      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange); // Data Management
+      UIElements.dataRetentionSelect.addEventListener('change', handleDataRetentionChange);
 
     if (UIElements.exportDataBtn && typeof handleExportData === 'function')
       UIElements.exportDataBtn.addEventListener('click', handleExportData);
     if (UIElements.importDataBtn && typeof handleImportDataClick === 'function')
       UIElements.importDataBtn.addEventListener('click', handleImportDataClick);
     if (UIElements.importFileInput && typeof handleImportFileChange === 'function')
-      UIElements.importFileInput.addEventListener('change', handleImportFileChange); // Productivity Settings
+      UIElements.importFileInput.addEventListener('change', handleImportFileChange);
 
     if (UIElements.productivitySettingsList && typeof handleProductivityRatingChange === 'function') {
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
-    } // Pomodoro Notification Settings Listener
+    }
 
+    // --- Pomodoro Settings Listeners ---
+    if (UIElements.savePomodoroSettingsBtn && typeof handleSavePomodoroSettings === 'function') {
+      UIElements.savePomodoroSettingsBtn.addEventListener('click', handleSavePomodoroSettings);
+    }
+    if (UIElements.resetPomodoroSettingsBtn && typeof handleResetPomodoroSettings === 'function') {
+      UIElements.resetPomodoroSettingsBtn.addEventListener('click', handleResetPomodoroSettings);
+    }
     if (UIElements.pomodoroEnableNotificationsCheckbox && typeof handlePomodoroNotificationToggle === 'function') {
       UIElements.pomodoroEnableNotificationsCheckbox.addEventListener('change', handlePomodoroNotificationToggle);
-    } // Block Page Customization
+    }
 
     if (UIElements.blockPageCustomHeadingInput && typeof handleBlockPageSettingChange === 'function')
       UIElements.blockPageCustomHeadingInput.addEventListener('change', () =>
@@ -1060,7 +1101,7 @@ function setupEventListeners() {
     if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
       UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
 
-    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange(); // Initial call to set correct visibility
+    if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
     console.log('[Options Main] Event listeners setup complete.');
   } catch (e) {
     console.error('[Options Main] Error setting up event listeners:', e);

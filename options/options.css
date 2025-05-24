@@ -195,6 +195,26 @@ textarea:focus {
   flex-shrink: 0;
 }
 
+/* NEW: .form-row for Pomodoro settings */
+.form-row {
+  display: flex;
+  gap: var(--spacing-lg); /* Gap between items in a row */
+  margin-bottom: var(--spacing-sm); /* Smaller bottom margin for rows */
+}
+
+.form-group-half {
+  flex: 1 1 calc(50% - (var(--spacing-lg) / 2)); /* Allow items to take up half width, accounting for gap */
+  box-sizing: border-box;
+  margin-bottom: var(--spacing-sm); /* Consistent margin for items within a row */
+}
+
+.setting-description-inline {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--spacing-xs); /* Adjust as needed */
+  display: block; /* Or inline-block if preferred for wrapping */
+}
+
 button {
   display: inline-block;
   font-weight: 400;
@@ -223,17 +243,19 @@ button:not(:disabled):active {
   filter: brightness(95%);
 }
 
-.form-inline button,
+/* Styles for primary action buttons (blue) */
+button.action-button.primary,
+.form-inline button, /* Keep existing style for these */
 button#addCategoryBtn,
 button#assignDomainBtn,
 button#addRuleBtn,
-button#saveRuleChangesBtn, /* Also used in modal, but base style is primary */
+button#saveRuleChangesBtn,
 button#saveAssignmentChangesBtn {
-  /* Also used in modal, but base style is primary */
   background-color: var(--bg-button-primary);
   color: var(--text-color-button);
   border-color: var(--bg-button-primary);
 }
+button.action-button.primary:hover,
 .form-inline button:hover,
 button#addCategoryBtn:hover,
 button#assignDomainBtn:hover,
@@ -242,6 +264,17 @@ button#saveRuleChangesBtn:hover,
 button#saveAssignmentChangesBtn:hover {
   background-color: var(--bg-button-primary-hover);
   border-color: var(--bg-button-primary-hover);
+}
+
+/* Styles for secondary action buttons (grey) */
+button.action-button.secondary {
+  background-color: var(--bg-button-secondary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-secondary);
+}
+button.action-button.secondary:hover {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--bg-button-secondary-hover);
 }
 
 button.delete-btn,
@@ -997,16 +1030,47 @@ button.export-button:hover {
   align-items: center;
   margin-top: var(--spacing-md);
 }
-#data-management-section button.action-button {
+
+/* General action button style for Data Management and Pomodoro Settings */
+button.action-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  /* Default to secondary if not further specified */
   background-color: var(--bg-button-secondary);
   color: var(--text-color-button);
   border-color: var(--bg-button-secondary);
-  padding: var(--spacing-sm) var(--spacing-lg);
 }
-#data-management-section button.action-button:hover {
+button.action-button:hover {
   background-color: var(--bg-button-secondary-hover);
   border-color: var(--bg-button-secondary-hover);
 }
+
+/* Primary action button (blue) - Pomodoro Save, Export, Import */
+button.action-button.primary,
+#exportDataBtn, /* Specific ID for existing button */
+#importDataBtn {
+  /* Specific ID for existing button */
+  background-color: var(--bg-button-primary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-primary);
+}
+button.action-button.primary:hover,
+#exportDataBtn:hover,
+#importDataBtn:hover {
+  background-color: var(--bg-button-primary-hover);
+  border-color: var(--bg-button-primary-hover);
+}
+
+/* Secondary action button (grey) - Pomodoro Reset to Default */
+button.action-button.secondary {
+  background-color: var(--bg-button-secondary);
+  color: var(--text-color-button);
+  border-color: var(--bg-button-secondary);
+}
+button.action-button.secondary:hover {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--bg-button-secondary-hover);
+}
+
 #importStatus {
   margin-top: var(--spacing-md);
   font-size: var(--font-size-sm);
@@ -1147,6 +1211,21 @@ button.export-button:hover {
   padding: var(--spacing-xs) 0;
 }
 
+/* Pomodoro Stats Specific Styles */
+.pomodoro-stats-container h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+.pomodoro-stat-value {
+  font-size: 1.1em; /* Slightly smaller than total time */
+  font-weight: 500;
+  color: var(--text-color-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
 #pomodoro-settings-section .form-group > label {
   display: block;
   margin-bottom: var(--spacing-sm);
@@ -1187,6 +1266,26 @@ button.export-button:hover {
 .permission-status-text.denied {
   color: var(--text-color-permission-denied);
   font-weight: 500;
+}
+
+/* Pomodoro settings button group */
+.form-buttons-group {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  align-items: center; /* Align items vertically if they wrap */
+  flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+}
+
+.form-buttons-group .action-button {
+  flex-grow: 1; /* Allow buttons to grow */
+  min-width: 150px; /* Minimum width for buttons */
+}
+
+.form-buttons-group .error-message {
+  flex-basis: 100%; /* Error message takes full width if it appears */
+  margin-top: var(--spacing-sm);
+  text-align: left;
 }
 
 .tabs-container {
@@ -1286,13 +1385,14 @@ button.export-button:hover {
 }
 
 .summary-metric-box {
-  flex: 1 1 300px;
+  flex: 1 1 300px; /* Allow boxes to grow and shrink, with a base size */
   padding: var(--spacing-lg);
   background-color: var(--bg-card);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-card);
   text-align: center;
   border: 1px solid var(--border-color-light);
+  min-width: 250px; /* Minimum width to prevent too much squishing */
 }
 
 .summary-metric-box h3 {
@@ -1425,29 +1525,45 @@ button.export-button:hover {
   section {
     padding: var(--spacing-md);
   }
-  .form-inline {
+  .form-inline,
+  .form-row {
+    /* Apply to form-row as well */
     flex-direction: column;
     align-items: stretch;
   }
   .form-inline input,
   .form-inline select,
-  .form-inline button {
+  .form-inline button,
+  .form-group-half {
+    /* Ensure form-group-half takes full width when stacked */
     width: 100%;
     box-sizing: border-box;
+    flex-basis: auto !important; /* Override flex-basis for stacking */
   }
-  .add-rule-form .time-limit-input, /* Ensure this also stacks */
+  .form-buttons-group {
+    /* Ensure buttons stack nicely */
+    flex-direction: column;
+  }
+  .form-buttons-group .action-button {
+    width: 100%; /* Make buttons full width when stacked */
+    margin-bottom: var(--spacing-sm);
+  }
+  .form-buttons-group .action-button:last-child {
+    margin-bottom: 0;
+  }
+
+  .add-rule-form .time-limit-input,
   #editRuleLimitGroup .time-limit-input {
-    /* And this one in modal */
     flex-direction: column;
     align-items: stretch;
   }
   .add-rule-form .time-limit-input input[type='number'],
   #editRuleLimitGroup .time-limit-input input[type='number'] {
-    width: 100%; /* Make full width when stacked */
+    width: 100%;
   }
   .add-rule-form .time-limit-input select,
   #editRuleLimitGroup .time-limit-input select {
-    width: 100%; /* Make full width when stacked */
+    width: 100%;
   }
 
   .calendar-day {
@@ -1466,17 +1582,15 @@ button.export-button:hover {
   .category-controls,
   .assignment-controls,
   #ruleList li > div:last-child {
-    /* Assuming the controls are the last div */
     min-width: unset;
     justify-content: flex-start;
     margin-top: var(--spacing-sm);
     width: 100%;
   }
   .assignment-list-item .assignment-domain {
-    /* Changed from #assignmentList */
     margin-right: 0;
     margin-bottom: var(--spacing-xs);
-    display: block; /* Ensure it takes full width before controls */
+    display: block;
   }
   #block-page-customization-section .form-group {
     flex-direction: column;

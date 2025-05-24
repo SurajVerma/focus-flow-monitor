@@ -50,6 +50,12 @@
                 <div id="totalTimeForRangeValue" class="total-time-value">--h --m --s</div>
                 <p class="focus-score-description" id="averageTimeForRange">Calculating average...</p>
               </div>
+              <div id="pomodoroStatsContainer" class="summary-metric-box pomodoro-stats-container">
+                <h3 id="pomodoroStatsLabel">Tomato Clock Stats (<span class="stats-period">Today</span>)</h3>
+                <div id="pomodoroSessionsCompleted" class="pomodoro-stat-value">Work Sessions: --</div>
+                <div id="pomodoroTimeFocused" class="pomodoro-stat-value">Time Focused: --h --m</div>
+                <p class="focus-score-description">Summary of your Pomodoro activity.</p>
+              </div>
             </div>
             <div class="stats-dashboard">
               <div class="calendar-column">
@@ -268,18 +274,46 @@
           <hr class="tab-section-divider" />
           <section id="pomodoro-settings-section">
             <h2>Tomato Clock Settings</h2>
+            <div class="form-row">
+              <div class="form-group form-group-half">
+                <label for="pomodoroWorkDuration">Work Duration (minutes):</label>
+                <input type="number" id="pomodoroWorkDuration" min="1" value="25" />
+                <p class="setting-description setting-description-inline">Recommended: 25-50 minutes.</p>
+              </div>
+              <div class="form-group form-group-half">
+                <label for="pomodoroShortBreakDuration">Short Break (minutes):</label>
+                <input type="number" id="pomodoroShortBreakDuration" min="1" value="5" />
+                <p class="setting-description setting-description-inline">Recommended: 5-10 minutes.</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group form-group-half">
+                <label for="pomodoroLongBreakDuration">Long Break (minutes):</label>
+                <input type="number" id="pomodoroLongBreakDuration" min="1" value="15" />
+                <p class="setting-description setting-description-inline">Recommended: 15-30 minutes.</p>
+              </div>
+              <div class="form-group form-group-half">
+                <label for="pomodoroSessionsBeforeLongBreak">Work Sessions Before Long Break:</label>
+                <input type="number" id="pomodoroSessionsBeforeLongBreak" min="1" value="4" />
+                <p class="setting-description setting-description-inline">Number of work sessions for a long break.</p>
+              </div>
+            </div>
+            <div class="form-group form-buttons-group">
+              <button id="savePomodoroSettingsBtn" class="action-button primary">Save Tomato Clock Settings</button>
+              <button id="resetPomodoroSettingsBtn" class="action-button secondary">Reset to Defaults</button>
+              <span id="pomodoroSettingsError" class="error-message" style="display: none"></span>
+            </div>
+            <hr class="tab-section-divider" />
             <div class="form-group">
               <label for="pomodoroEnableNotificationsCheckbox" class="checkbox-label-clickable"
                 >Enable Notifications:</label
               >
-
               <div class="checkbox-group-inline">
                 <input type="checkbox" id="pomodoroEnableNotificationsCheckbox" />
                 <label for="pomodoroEnableNotificationsCheckbox" class="permission-status-label">
                   <span id="pomodoroNotificationPermissionStatus" class="permission-status-text"></span>
                 </label>
               </div>
-
               <p class="setting-description">
                 Receive browser notifications when a Pomodoro work session or break ends. If not enabled, you may need
                 to grant notification permission to the extension.
