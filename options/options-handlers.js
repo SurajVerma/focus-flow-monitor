@@ -1047,6 +1047,8 @@ async function handleExportData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
+      'pomodoroStatsDaily',
+      'pomodoroStatsAllTime',
       STORAGE_KEY_IDLE_THRESHOLD,
       STORAGE_KEY_DATA_RETENTION_DAYS,
       STORAGE_KEY_PRODUCTIVITY_RATINGS,
@@ -1077,6 +1079,12 @@ async function handleExportData() {
           notifyEnabled: true, // Default value
           durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 }, // Default durations
           sessionsBeforeLongBreak: 4, // Default sessions
+        };
+      else if (key === 'pomodoroStatsDaily') dataToExport[key] = storedData[key] || {};
+      else if (key === 'pomodoroStatsAllTime')
+        dataToExport[key] = storedData[key] || {
+          totalWorkSessionsCompleted: 0,
+          totalTimeFocused: 0,
         };
       else if (key.startsWith('blockPage_')) {
         if (key.includes('show')) dataToExport[key] = storedData[key] ?? true;
@@ -1390,7 +1398,7 @@ async function handleResetPomodoroSettings() {
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS] &&
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled !== undefined
         ? settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled
-        : true; 
+        : true;
 
     const settingsToSave = {
       durations: defaultSettings.durations,
