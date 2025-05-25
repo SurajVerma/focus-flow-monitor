@@ -672,3 +672,114 @@ function populateProductivitySettings() {
 
   UIElements.productivitySettingsList.appendChild(fragment);
 }
+
+// --- Populate Pomodoro Settings Inputs ---
+function populatePomodoroSettingsInputs(settings) {
+  if (
+    !UIElements.pomodoroWorkDurationInput ||
+    !UIElements.pomodoroShortBreakDurationInput ||
+    !UIElements.pomodoroLongBreakDurationInput ||
+    !UIElements.pomodoroSessionsInput
+  ) {
+    console.warn('[Options UI] Pomodoro settings input elements not found for population.');
+    return;
+  }
+
+  const { durations, sessionsBeforeLongBreak } = settings || {}; // Handle undefined settings gracefully
+
+  const POMODORO_PHASES_WORK = 'Work'; // Or use a globally available constant
+  const POMODORO_PHASES_SHORT_BREAK = 'Short Break';
+  const POMODORO_PHASES_LONG_BREAK = 'Long Break';
+
+  const defaultDurations = {
+    // Define defaults for robustness
+    [POMODORO_PHASES_WORK]: 25 * 60,
+    [POMODORO_PHASES_SHORT_BREAK]: 5 * 60,
+    [POMODORO_PHASES_LONG_BREAK]: 15 * 60,
+  };
+  const defaultSessions = 4;
+
+  const currentDurations = durations || defaultDurations;
+  const currentSessions = sessionsBeforeLongBreak !== undefined ? sessionsBeforeLongBreak : defaultSessions;
+
+  if (currentDurations[POMODORO_PHASES_WORK] !== undefined) {
+    UIElements.pomodoroWorkDurationInput.value = currentDurations[POMODORO_PHASES_WORK] / 60;
+  } else {
+    UIElements.pomodoroWorkDurationInput.value = defaultDurations[POMODORO_PHASES_WORK] / 60;
+  }
+
+  if (currentDurations[POMODORO_PHASES_SHORT_BREAK] !== undefined) {
+    UIElements.pomodoroShortBreakDurationInput.value = currentDurations[POMODORO_PHASES_SHORT_BREAK] / 60;
+  } else {
+    UIElements.pomodoroShortBreakDurationInput.value = defaultDurations[POMODORO_PHASES_SHORT_BREAK] / 60;
+  }
+  if (currentDurations[POMODORO_PHASES_LONG_BREAK] !== undefined) {
+    UIElements.pomodoroLongBreakDurationInput.value = currentDurations[POMODORO_PHASES_LONG_BREAK] / 60;
+  } else {
+    UIElements.pomodoroLongBreakDurationInput.value = defaultDurations[POMODORO_PHASES_LONG_BREAK] / 60;
+  }
+
+  UIElements.pomodoroSessionsInput.value = currentSessions;
+}
+
+// --- Display Pomodoro Stats ---
+async function displayPomodoroStats(periodLabel = 'Today', noData = false) {
+  if (
+    !UIElements.pomodoroStatsContainer ||
+    !UIElements.pomodoroStatsLabel ||
+    !UIElements.pomodoroSessionsCompletedEl ||
+    !UIElements.pomodoroTimeFocusedEl
+  ) {
+    console.warn('[Options UI] Pomodoro stats UI elements not found.');
+    return;
+  }
+
+  UIElements.pomodoroStatsLabel.textContent = `Tomato Clock Stats (${periodLabel})`;
+
+  if (noData) {
+    UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: N/A`;
+    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: N/A`;
+    UIElements.pomodoroStatsContainer.style.display = 'block';
+    return;
+  }
+
+  try {
+    let statsToDisplay = { workSessions: 0, totalWorkTime: 0 }; // Default to 0 if no data found
+
+    let dateToFetch = getCurrentDateString(); // Default to today
+    if (
+      periodLabel !== 'Today' &&
+      periodLabel !== 'This Week' &&
+      periodLabel !== 'This Month' &&
+      periodLabel !== 'All Time'
+    ) {
+      dateToFetch = AppState.selectedDateStr || getCurrentDateString();
+    }
+
+    if (browser && browser.runtime && browser.runtime.sendMessage) {
+      try {
+        console.log(`[Options UI] Requesting Pomodoro stats for date: ${dateToFetch}`);
+        const response = await browser.runtime.sendMessage({ action: 'getPomodoroStatsForDate', date: dateToFetch });
+        if (response && response.success && response.stats) {
+          statsToDisplay = response.stats;
+          console.log(`[Options UI] Received Pomodoro stats for ${dateToFetch}:`, statsToDisplay);
+        } else {
+          console.warn(
+            `[Options UI] Failed to fetch Pomodoro stats for ${dateToFetch} from background or no stats available. Error:`,
+            response?.error
+          );
+        }
+      } catch (err) {
+        console.warn(`[Options UI] Error sending message to get Pomodoro stats for ${dateToFetch}:`, err);
+      }
+    }
+
+    UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: ${statsToDisplay.workSessions}`;
+    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: ${formatTime(statsToDisplay.totalWorkTime, false)}`;
+    UIElements.pomodoroStatsContainer.style.display = 'block';
+  } catch (error) {
+    console.error('[Options UI] Error displaying Pomodoro stats:', error);
+    UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: Error`;
+    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: Error`;
+  }
+}

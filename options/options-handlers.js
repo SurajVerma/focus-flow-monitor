@@ -489,7 +489,7 @@ function handleDeleteAssignment(event) {
                 type: 'assignmentChange',
                 domain: domainToDelete,
                 oldCategory: oldCategory,
-                newCategory: null,
+                newCategory: null, // Effectively becomes 'Other' or matches another rule
               });
             }
           })
@@ -1072,10 +1072,11 @@ async function handleExportData() {
         dataToExport[key] = storedData[key] ?? DEFAULT_DATA_RETENTION_DAYS;
       else if (key === STORAGE_KEY_PRODUCTIVITY_RATINGS) dataToExport[key] = storedData[key] || {};
       else if (key === STORAGE_KEY_POMODORO_SETTINGS)
+        // Ensure Pomodoro settings are included
         dataToExport[key] = storedData[key] || {
-          notifyEnabled: true,
-          durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 },
-          sessionsBeforeLongBreak: 4,
+          notifyEnabled: true, // Default value
+          durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 }, // Default durations
+          sessionsBeforeLongBreak: 4, // Default sessions
         };
       else if (key.startsWith('blockPage_')) {
         if (key.includes('show')) dataToExport[key] = storedData[key] ?? true;
@@ -1151,15 +1152,17 @@ function handleImportFileChange(event) {
         UIElements.importStatus.className = 'status-message';
         UIElements.importStatus.style.display = 'block';
       }
+      // Ensure Pomodoro settings have defaults if not present in imported file
       const pomodoroDefaults = {
         notifyEnabled: true,
         durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 },
         sessionsBeforeLongBreak: 4,
       };
       importedData[STORAGE_KEY_POMODORO_SETTINGS] = {
-        ...pomodoroDefaults,
-        ...(importedData[STORAGE_KEY_POMODORO_SETTINGS] || {}),
+        ...pomodoroDefaults, // Apply defaults first
+        ...(importedData[STORAGE_KEY_POMODORO_SETTINGS] || {}), // Then override with imported, if any
       };
+
       await browser.storage.local.set(importedData);
       await browser.runtime.sendMessage({ action: 'importedData' });
       if (UIElements.importStatus) {
@@ -1263,25 +1266,33 @@ async function handlePomodoroNotificationToggle() {
         finalNotifyEnabledState = false;
       }
     }
-    AppState.pomodoroNotifyEnabled = finalNotifyEnabledState;
+    AppState.pomodoroNotifyEnabled = finalNotifyEnabledState; // Update AppState immediately
     const settingsResult = await browser.storage.local.get(STORAGE_KEY_POMODORO_SETTINGS);
     let pomodoroSettings = settingsResult[STORAGE_KEY_POMODORO_SETTINGS] || {};
-    const defaultDurations = { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+
+    // Ensure durations and sessionsBeforeLongBreak are preserved or defaulted
+    const defaultDurations = { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 }; // Keep these consistent
     const defaultSessions = 4;
     pomodoroSettings.durations = pomodoroSettings.durations || defaultDurations;
     pomodoroSettings.sessionsBeforeLongBreak = pomodoroSettings.sessionsBeforeLongBreak || defaultSessions;
+
+    // Update only the notifyEnabled part
     pomodoroSettings.notifyEnabled = AppState.pomodoroNotifyEnabled;
+
     await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: pomodoroSettings });
     console.log('[Options Handlers] Pomodoro notification setting saved:', pomodoroSettings);
+
     if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
-      await updatePomodoroPermissionStatusDisplay();
+      await updatePomodoroPermissionStatusDisplay(); // Update UI text based on permission & new setting
     }
+    // Notify background script about the change (it will re-read from storage)
     browser.runtime
       .sendMessage({ action: 'pomodoroSettingsChanged' })
       .then((response) => console.log('[Options Handlers] Notified background of Pomodoro settings change:', response))
       .catch((err) => console.error('[Options Handlers] Error notifying background:', err));
   } catch (error) {
-    console.error('[Options Handlers] Error:', error);
+    console.error('[Options Handlers] Error in handlePomodoroNotificationToggle:', error);
+    // Revert checkbox to reflect actual AppState if error occurs
     if (UIElements.pomodoroEnableNotificationsCheckbox) {
       UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
@@ -1289,10 +1300,125 @@ async function handlePomodoroNotificationToggle() {
       updatePomodoroPermissionStatusDisplay();
     }
   } finally {
+    // Using a short timeout to prevent rapid toggling issues if permission dialog is slow
     setTimeout(() => {
       AppState.isRequestingPermission = false;
       console.log('[Options Handlers] isRequestingPermission flag reset.');
     }, 300);
     isHandlingPomodoroNotificationToggle = false;
+  }
+}
+
+// --- Pomodoro Settings Handlers ---
+const POMODORO_SETTINGS_ERROR_ID = 'pomodoroSettingsError';
+const POMODORO_PHASES_CONST = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' }; // Define for use here
+
+async function handleSavePomodoroSettings() {
+  clearMessage(POMODORO_SETTINGS_ERROR_ID);
+  try {
+    if (
+      !UIElements.pomodoroWorkDurationInput ||
+      !UIElements.pomodoroShortBreakDurationInput ||
+      !UIElements.pomodoroLongBreakDurationInput ||
+      !UIElements.pomodoroSessionsInput
+    ) {
+      displayMessage(POMODORO_SETTINGS_ERROR_ID, 'UI elements for Pomodoro settings are missing.', true);
+      return;
+    }
+
+    const workMinutes = parseInt(UIElements.pomodoroWorkDurationInput.value, 10);
+    const shortBreakMinutes = parseInt(UIElements.pomodoroShortBreakDurationInput.value, 10);
+    const longBreakMinutes = parseInt(UIElements.pomodoroLongBreakDurationInput.value, 10);
+    const sessions = parseInt(UIElements.pomodoroSessionsInput.value, 10);
+
+    if (
+      isNaN(workMinutes) ||
+      workMinutes <= 0 ||
+      isNaN(shortBreakMinutes) ||
+      shortBreakMinutes <= 0 ||
+      isNaN(longBreakMinutes) ||
+      longBreakMinutes <= 0 ||
+      isNaN(sessions) ||
+      sessions <= 0
+    ) {
+      displayMessage(
+        POMODORO_SETTINGS_ERROR_ID,
+        'Please enter valid positive numbers for all duration and session fields.',
+        true
+      );
+      return;
+    }
+
+    const settingsResult = await browser.storage.local.get(STORAGE_KEY_POMODORO_SETTINGS);
+    let currentSettings = settingsResult[STORAGE_KEY_POMODORO_SETTINGS] || {};
+
+    currentSettings.durations = {
+      [POMODORO_PHASES_CONST.WORK]: workMinutes * 60,
+      [POMODORO_PHASES_CONST.SHORT_BREAK]: shortBreakMinutes * 60,
+      [POMODORO_PHASES_CONST.LONG_BREAK]: longBreakMinutes * 60,
+    };
+    currentSettings.sessionsBeforeLongBreak = sessions;
+
+    if (currentSettings.notifyEnabled === undefined) {
+      currentSettings.notifyEnabled = true;
+    }
+
+    await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: currentSettings });
+    console.log('[Options Handlers] Pomodoro duration/session settings saved:', currentSettings);
+    await browser.runtime.sendMessage({ action: 'pomodoroSettingsChanged' });
+    displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Tomato Clock settings saved successfully!', false);
+  } catch (error) {
+    console.error('Error saving Pomodoro settings:', error);
+    displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Failed to save Tomato Clock settings. See console for details.', true);
+  }
+}
+
+async function handleResetPomodoroSettings() {
+  clearMessage(POMODORO_SETTINGS_ERROR_ID);
+  const defaultSettings = {
+    durations: {
+      [POMODORO_PHASES_CONST.WORK]: 25 * 60,
+      [POMODORO_PHASES_CONST.SHORT_BREAK]: 5 * 60,
+      [POMODORO_PHASES_CONST.LONG_BREAK]: 15 * 60,
+    },
+    sessionsBeforeLongBreak: 4,
+  };
+
+  try {
+    const settingsResult = await browser.storage.local.get(STORAGE_KEY_POMODORO_SETTINGS);
+    let currentNotifyEnabled =
+      settingsResult[STORAGE_KEY_POMODORO_SETTINGS] &&
+      settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled !== undefined
+        ? settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled
+        : true; 
+
+    const settingsToSave = {
+      durations: defaultSettings.durations,
+      sessionsBeforeLongBreak: defaultSettings.sessionsBeforeLongBreak,
+      notifyEnabled: currentNotifyEnabled, // Preserve current notification preference
+    };
+
+    if (typeof populatePomodoroSettingsInputs === 'function') {
+      populatePomodoroSettingsInputs(settingsToSave); // Update UI immediately
+    }
+
+    // Ask user if they want to save these defaults
+    if (
+      confirm(
+        "Reset Pomodoro settings to defaults? Your notification preference will be kept. Click 'Save Tomato Clock Settings' to apply."
+      )
+    ) {
+      // The user will click the save button manually if they want to persist.
+      // No automatic save here to give user a chance to review.
+      // For now:
+      // await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: settingsToSave });
+      // await browser.runtime.sendMessage({ action: 'pomodoroSettingsChanged' });
+      // displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Pomodoro settings reset to defaults. Click Save to apply.', false);
+      console.log('[Options Handlers] Pomodoro settings reset to defaults in UI. User needs to save.');
+      displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Settings reset to defaults. Click "Save" to apply changes.', false);
+    }
+  } catch (error) {
+    console.error('Error resetting Pomodoro settings:', error);
+    displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Failed to reset Tomato Clock settings.', true);
   }
 }

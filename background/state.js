@@ -47,6 +47,13 @@ const FocusFlowState = {
     timerIntervalId: null,
     notifyEnabled: true,
   },
+  // --- Pomodoro Timer State ---
+  pomodoroDailyStats: {}, // Key: "YYYY-MM-DD", Value: { workSessions: count, totalWorkTime: seconds }
+  pomodoroAllTimeStats: {
+    totalWorkSessionsCompleted: 0,
+    totalTimeFocused: 0, // in seconds
+  },
+
   STORAGE_KEY_POMODORO_STATE: 'pomodoroPersistentState',
   STORAGE_KEY_POMODORO_SETTINGS: 'pomodoroUserSettings',
   STORAGE_KEY_POMODORO_STATS_DAILY: 'pomodoroStatsDaily',
