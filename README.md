@@ -29,7 +29,7 @@ Focus Flow Monitor helps you understand your online habits by tracking the time 
 
 ---
 
-## What's New in Version 0.9.0.1 Beta
+## What's New in this Version
 
 For more details on this and previous updates, check out the [Releases Page](https://github.com/SurajVerma/focus-flow-monitor/releases).
 
