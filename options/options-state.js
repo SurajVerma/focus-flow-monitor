@@ -17,6 +17,12 @@ const STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE = 'blockPage_showQuote';
 const STORAGE_KEY_BLOCK_PAGE_USER_QUOTES = 'blockPage_userQuotes';
 const STORAGE_KEY_POMODORO_SETTINGS = 'pomodoroUserSettings';
 
+// START: Gemini File Update
+// Storage keys for Pomodoro Stats (must match values in background/state.js)
+const STORAGE_KEY_POMODORO_STATS_DAILY = 'pomodoroStatsDaily';
+const STORAGE_KEY_POMODORO_STATS_ALL_TIME = 'pomodoroStatsAllTime';
+// END: Gemini File Update
+
 // --- Global App State ---
 let AppState = {
   // Core Data
@@ -62,6 +68,9 @@ let AppState = {
     sessionsCompleted: 0,
     timeFocused: 0,
   },
+  // START: Gemini File Update
+  allPomodoroDailyStats: {}, // Will be populated from storage
+  // END: Gemini File Update
 };
 
 // --- UI Element References ---

@@ -195,10 +195,10 @@ async function loadAllData() {
     'dailyDomainData',
     'dailyCategoryData',
     'hourlyData',
-    STORAGE_KEY_IDLE_THRESHOLD, // Defined in options-state.js
-    STORAGE_KEY_DATA_RETENTION_DAYS, // Defined in options-state.js
-    STORAGE_KEY_PRODUCTIVITY_RATINGS, // Defined in options-state.js (via options-utils.js indirectly)
-    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING, // Defined in options-state.js
+    STORAGE_KEY_IDLE_THRESHOLD,
+    STORAGE_KEY_DATA_RETENTION_DAYS,
+    STORAGE_KEY_PRODUCTIVITY_RATINGS,
+    STORAGE_KEY_BLOCK_PAGE_CUSTOM_HEADING,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_MESSAGE,
     STORAGE_KEY_BLOCK_PAGE_CUSTOM_BUTTON_TEXT,
     STORAGE_KEY_BLOCK_PAGE_SHOW_URL,
@@ -208,7 +208,9 @@ async function loadAllData() {
     STORAGE_KEY_BLOCK_PAGE_SHOW_SCHEDULE_INFO,
     STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
     STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
-    STORAGE_KEY_POMODORO_SETTINGS, // Defined in options-state.js
+    STORAGE_KEY_POMODORO_SETTINGS,
+    STORAGE_KEY_POMODORO_STATS_DAILY,
+    STORAGE_KEY_POMODORO_STATS_ALL_TIME,
   ];
 
   try {
@@ -290,7 +292,7 @@ async function loadAllData() {
       UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
 
     // --- Load and Populate Pomodoro Settings ---
-    const pomodoroSettingsStorage = result[STORAGE_KEY_POMODORO_SETTINGS] || {}; // Use constant from options-state.js
+    const pomodoroSettingsStorage = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
     const defaultPomodoroDurations = {
       Work: 25 * 60,
       'Short Break': 5 * 60,
@@ -298,18 +300,16 @@ async function loadAllData() {
     };
     const defaultSessions = 4;
 
-    // Use loaded settings or fall back to defaults for populating inputs
     const currentDurations = pomodoroSettingsStorage.durations || defaultPomodoroDurations;
     const currentSessions =
       pomodoroSettingsStorage.sessionsBeforeLongBreak === undefined
         ? defaultSessions
         : pomodoroSettingsStorage.sessionsBeforeLongBreak;
-    AppState.pomodoroNotifyEnabled = // Ensure AppState for notifications is correctly set
+    AppState.pomodoroNotifyEnabled =
       pomodoroSettingsStorage.notifyEnabled !== undefined ? pomodoroSettingsStorage.notifyEnabled : true;
 
     if (typeof populatePomodoroSettingsInputs === 'function') {
       populatePomodoroSettingsInputs({
-        // Pass the resolved settings to the UI function
         durations: currentDurations,
         sessionsBeforeLongBreak: currentSessions,
       });
@@ -319,6 +319,16 @@ async function loadAllData() {
       UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
     await updatePomodoroPermissionStatusDisplay();
+
+    AppState.allPomodoroDailyStats = result[STORAGE_KEY_POMODORO_STATS_DAILY] || {};
+
+    const pomodoroAllTimeStatsStorage = result[STORAGE_KEY_POMODORO_STATS_ALL_TIME];
+    if (pomodoroAllTimeStatsStorage) {
+      AppState.pomodoroStatsAllTime.sessionsCompleted = pomodoroAllTimeStatsStorage.totalWorkSessionsCompleted || 0;
+      AppState.pomodoroStatsAllTime.timeFocused = pomodoroAllTimeStatsStorage.totalTimeFocused || 0;
+    } else {
+      AppState.pomodoroStatsAllTime = { sessionsCompleted: 0, timeFocused: 0 };
+    }
 
     // Populate other UI elements
     if (typeof populateCategoryList === 'function') populateCategoryList();
@@ -415,12 +425,24 @@ function updateDisplayForSelectedRangeUI() {
         if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
       }
       updateStatsDisplay(domainData, categoryData, label, AppState.selectedDateStr, isRangeView);
-      // Updated: Call displayPomodoroStats with the correct label for the current view
-      if (typeof displayPomodoroStats === 'function') displayPomodoroStats(label);
+
+      const noDataForPeriod =
+        Object.keys(domainData).length === 0 && Object.keys(categoryData).length === 0 && !isRangeView;
+      if (typeof displayPomodoroStats === 'function') {
+        console.log(
+          `[DEBUG Main] Calling displayPomodoroStats from updateDisplayForSelectedRangeUI. label: "${label}", noDataForPeriod: ${noDataForPeriod}`
+        );
+        displayPomodoroStats(label, noDataForPeriod);
+      }
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
       updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
-      if (typeof displayPomodoroStats === 'function') displayPomodoroStats(label);
+      if (typeof displayPomodoroStats === 'function') {
+        console.log(
+          `[DEBUG Main] Calling displayPomodoroStats from updateDisplayForSelectedRangeUI (catch block). label: "${label}", noDataForPeriod: true`
+        );
+        displayPomodoroStats(label, true);
+      }
     } finally {
       if (loader) loader.style.display = 'none';
       if (dashboard) dashboard.style.visibility = 'visible';
@@ -600,35 +622,30 @@ function updateStatsDisplay(
 
 function displayNoDataForDate(displayDateLabel) {
   console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
+  // Updates other UI elements to show "No data"
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
-
-  if (UIElements.statsPeriodSpans) {
-    UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
-  }
-
+  if (UIElements.statsPeriodSpans) UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   setListMessage(UIElements.categoryTimeList, noDataMessage);
   setListMessage(UIElements.detailedTimeList, noDataMessage);
-
-  if (UIElements.domainPaginationDiv) {
-    UIElements.domainPaginationDiv.style.display = 'none';
-  }
+  if (UIElements.domainPaginationDiv) UIElements.domainPaginationDiv.style.display = 'none';
   AppState.fullDomainDataSorted = [];
-
-  if (UIElements.productivityScoreLabel) {
+  if (UIElements.productivityScoreLabel)
     UIElements.productivityScoreLabel.textContent = `Focus Score (${displayDateLabel})`;
-  }
   if (UIElements.productivityScoreValue) {
     UIElements.productivityScoreValue.textContent = 'N/A';
     UIElements.productivityScoreValue.className = 'score-value';
   }
   if (typeof clearChartOnError === 'function') clearChartOnError(noDataMessage);
-  if (UIElements.chartTitleElement) {
-    UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
+  if (UIElements.chartTitleElement) UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
+  if (UIElements.totalTimeForRangeContainer) UIElements.totalTimeForRangeContainer.style.display = 'none';
+
+  // Now call displayPomodoroStats
+  if (typeof displayPomodoroStats === 'function') {
+    console.log(
+      `[DEBUG Main] Calling displayPomodoroStats from displayNoDataForDate. displayDateLabel: "${displayDateLabel}", noDataForMainStats: true`
+    );
+    displayPomodoroStats(displayDateLabel, true);
   }
-  if (UIElements.totalTimeForRangeContainer) {
-    UIElements.totalTimeForRangeContainer.style.display = 'none';
-  }
-  if (typeof displayPomodoroStats === 'function') displayPomodoroStats(displayDateLabel, true);
 }
 
 function renderChartForSelectedDateUI() {
@@ -936,6 +953,40 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
     UIElements.productivityScoreValue.classList.add('score-medium');
   } else {
     UIElements.productivityScoreValue.classList.add('score-high');
+  }
+}
+
+function handleCalendarDayClick(event) {
+  const dayCell = event.target.closest('.calendar-day');
+  if (!dayCell) return;
+  const dateStr = dayCell.dataset.date; // "YYYY-MM-DD"
+  if (!dateStr) return;
+
+  console.log(`[DEBUG Main] handleCalendarDayClick: Clicked on date ${dateStr}`);
+
+  AppState.selectedDateStr = dateStr;
+
+  if (typeof highlightSelectedCalendarDay === 'function') {
+    highlightSelectedCalendarDay(dateStr);
+  }
+
+  if (UIElements.dateRangeSelect) {
+    const valueWasChanged = UIElements.dateRangeSelect.value !== '';
+    if (valueWasChanged) {
+      console.log(
+        '[DEBUG Main] handleCalendarDayClick: dateRangeSelect.value was "' +
+          UIElements.dateRangeSelect.value +
+          '". Setting to "".'
+      );
+      UIElements.dateRangeSelect.value = '';
+    }
+
+    console.log(
+      '[DEBUG Main] handleCalendarDayClick: Manually calling updateDisplayForSelectedRangeUI for the new date.'
+    );
+    updateDisplayForSelectedRangeUI();
+  } else {
+    console.warn('[DEBUG Main] handleCalendarDayClick: dateRangeSelect UI element not found. Cannot update UI.');
   }
 }
 

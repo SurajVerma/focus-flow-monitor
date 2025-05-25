@@ -723,60 +723,135 @@ function populatePomodoroSettingsInputs(settings) {
 }
 
 // --- Display Pomodoro Stats ---
-async function displayPomodoroStats(periodLabel = 'Today', noData = false) {
+async function displayPomodoroStats(periodLabel = 'Today', noDataForMainStats = false) {
+  console.log(
+    `[DEBUG Pomodoro UI - ENTRY] displayPomodoroStats called. periodLabel: "${periodLabel}", noDataForMainStats: ${noDataForMainStats}`
+  );
+
   if (
     !UIElements.pomodoroStatsContainer ||
     !UIElements.pomodoroStatsLabel ||
     !UIElements.pomodoroSessionsCompletedEl ||
     !UIElements.pomodoroTimeFocusedEl
   ) {
-    console.warn('[Options UI] Pomodoro stats UI elements not found.');
+    console.warn('[Options UI] Pomodoro stats UI elements not found. Aborting displayPomodoroStats.');
     return;
   }
 
   UIElements.pomodoroStatsLabel.textContent = `Tomato Clock Stats (${periodLabel})`;
+  UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: N/A`;
+  UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: N/A`;
+  UIElements.pomodoroStatsContainer.style.display = 'block';
 
-  if (noData) {
-    UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: N/A`;
-    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: N/A`;
-    UIElements.pomodoroStatsContainer.style.display = 'block';
+  console.log(`[DEBUG Pomodoro UI - POST UI CHECK] AppState.selectedDateStr: "${AppState.selectedDateStr}"`);
+
+  const isMultiDayRangeLabel = periodLabel === 'This Week' || periodLabel === 'This Month';
+  console.log(`[DEBUG Pomodoro UI] isMultiDayRangeLabel: ${isMultiDayRangeLabel} for periodLabel: "${periodLabel}"`);
+
+  if (noDataForMainStats && isMultiDayRangeLabel) {
+    console.log(
+      '[DEBUG Pomodoro UI] Showing N/A due to noDataForMainStats and isMultiDayRangeLabel for a multi-day range.'
+    );
     return;
   }
 
   try {
-    let statsToDisplay = { workSessions: 0, totalWorkTime: 0 }; // Default to 0 if no data found
+    let statsToDisplay = { workSessions: 0, totalWorkTime: 0 };
+    const allDailyStats = AppState.allPomodoroDailyStats || {};
+    console.log(
+      '[DEBUG Pomodoro UI] AppState.allPomodoroDailyStats available:',
+      Object.keys(allDailyStats).length > 0 ? JSON.parse(JSON.stringify(allDailyStats)) : '{}'
+    );
 
-    let dateToFetch = getCurrentDateString(); // Default to today
-    if (
-      periodLabel !== 'Today' &&
-      periodLabel !== 'This Week' &&
-      periodLabel !== 'This Month' &&
-      periodLabel !== 'All Time'
-    ) {
-      dateToFetch = AppState.selectedDateStr || getCurrentDateString();
-    }
-
-    if (browser && browser.runtime && browser.runtime.sendMessage) {
-      try {
-        console.log(`[Options UI] Requesting Pomodoro stats for date: ${dateToFetch}`);
-        const response = await browser.runtime.sendMessage({ action: 'getPomodoroStatsForDate', date: dateToFetch });
-        if (response && response.success && response.stats) {
-          statsToDisplay = response.stats;
-          console.log(`[Options UI] Received Pomodoro stats for ${dateToFetch}:`, statsToDisplay);
-        } else {
-          console.warn(
-            `[Options UI] Failed to fetch Pomodoro stats for ${dateToFetch} from background or no stats available. Error:`,
-            response?.error
-          );
+    if (periodLabel === 'Today') {
+      const todayStr =
+        typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0];
+      statsToDisplay = allDailyStats[todayStr] || { workSessions: 0, totalWorkTime: 0 };
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'Today': dateStr: ${todayStr}, stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'This Week') {
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr =
+          typeof formatDate === 'function'
+            ? formatDate(date)
+            : new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+        const dailyStat = allDailyStats[dateStr];
+        if (dailyStat) {
+          statsToDisplay.workSessions += dailyStat.workSessions || 0;
+          statsToDisplay.totalWorkTime += dailyStat.totalWorkTime || 0;
         }
-      } catch (err) {
-        console.warn(`[Options UI] Error sending message to get Pomodoro stats for ${dateToFetch}:`, err);
       }
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'This Week': aggregated stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'This Month') {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      for (let day = 1; day <= today.getDate(); day++) {
+        const date = new Date(year, month, day);
+        const dateStr =
+          typeof formatDate === 'function'
+            ? formatDate(date)
+            : new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+        const dailyStat = allDailyStats[dateStr];
+        if (dailyStat) {
+          statsToDisplay.workSessions += dailyStat.workSessions || 0;
+          statsToDisplay.totalWorkTime += dailyStat.totalWorkTime || 0;
+        }
+      }
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'This Month': aggregated stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'All Time') {
+      // START: Fix for All Time Pomodoro Stats
+      statsToDisplay = { workSessions: 0, totalWorkTime: 0 }; // Initialize
+      if (Object.keys(allDailyStats).length > 0) {
+        for (const dateStr_1 in allDailyStats) {
+          const dailyStat_1 = allDailyStats[dateStr_1];
+          if (dailyStat_1) {
+            statsToDisplay.workSessions += dailyStat_1.workSessions || 0;
+            statsToDisplay.totalWorkTime += dailyStat_1.totalWorkTime || 0;
+          }
+        }
+      }
+      // END: Fix for All Time Pomodoro Stats
+      console.log(`[DEBUG Pomodoro UI] Case 'All Time': stats:`, JSON.parse(JSON.stringify(statsToDisplay)));
+    } else {
+      // This case handles specific dates selected from the calendar
+      const dateStrToUse =
+        AppState.selectedDateStr ||
+        (typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0]);
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'Specific Date/Else': periodLabel: "${periodLabel}", determined dateStrToUse: "${dateStrToUse}"`
+      );
+
+      if (allDailyStats.hasOwnProperty(dateStrToUse)) {
+        statsToDisplay = allDailyStats[dateStrToUse] || { workSessions: 0, totalWorkTime: 0 };
+        console.log(`[DEBUG Pomodoro UI] Found data for ${dateStrToUse}:`, JSON.parse(JSON.stringify(statsToDisplay)));
+      } else {
+        statsToDisplay = { workSessions: 0, totalWorkTime: 0 };
+        console.log(`[DEBUG Pomodoro UI] No data found for ${dateStrToUse} in allDailyStats. Using zeroed stats.`);
+      }
+
+      UIElements.pomodoroStatsLabel.textContent = `Tomato Clock Stats (${
+        typeof formatDisplayDate === 'function' ? formatDisplayDate(dateStrToUse) : dateStrToUse
+      })`;
     }
 
     UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: ${statsToDisplay.workSessions}`;
-    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: ${formatTime(statsToDisplay.totalWorkTime, false)}`;
-    UIElements.pomodoroStatsContainer.style.display = 'block';
+    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: ${
+      typeof formatTime === 'function'
+        ? formatTime(statsToDisplay.totalWorkTime, false)
+        : statsToDisplay.totalWorkTime / 60 + 'm'
+    }`;
   } catch (error) {
     console.error('[Options UI] Error displaying Pomodoro stats:', error);
     UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: Error`;
