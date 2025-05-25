@@ -85,7 +85,7 @@ For the latest features and updates, you can install the **Beta version** direct
 
 ## Beta Version & Data Management
 
-Starting with version 0.9.0.x, the version available on GitHub Releases will be tagged as **beta**. Beta versions are typically identified by a **four-part version number** (e.g., `0.9.0.1`), while stable AMO releases use a three-part version number (e.g., `0.9.0`).
+Starting with version 0.9.0.1, the version available on GitHub Releases will be tagged as **beta**. Beta versions are typically identified by a **four-part version number** (e.g., `0.9.0.1`), while stable AMO releases use a three-part version number (e.g., `0.9.0`).
 
 - **Early Access:** Beta versions receive updates and new features first.
 - **Testing:** While I test beta versions before releasing, they may contain bugs. Your feedback on these is invaluable!
