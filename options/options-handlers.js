@@ -1382,17 +1382,15 @@ async function handleResetPomodoroSettings() {
       [POMODORO_PHASES_CONST.LONG_BREAK]: 15 * 60,
     },
     sessionsBeforeLongBreak: 4,
-    // notifyEnabled will be preserved from current settings
   };
 
   try {
-    // Fetch current settings to preserve notifyEnabled status
     const settingsResult = await browser.storage.local.get(STORAGE_KEY_POMODORO_SETTINGS);
     let currentNotifyEnabled =
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS] &&
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled !== undefined
         ? settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled
-        : true; // Default if not found
+        : true; 
 
     const settingsToSave = {
       durations: defaultSettings.durations,
@@ -1412,7 +1410,7 @@ async function handleResetPomodoroSettings() {
     ) {
       // The user will click the save button manually if they want to persist.
       // No automatic save here to give user a chance to review.
-      // Alternatively, you could save directly:
+      // For now:
       // await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: settingsToSave });
       // await browser.runtime.sendMessage({ action: 'pomodoroSettingsChanged' });
       // displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Pomodoro settings reset to defaults. Click Save to apply.', false);

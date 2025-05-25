@@ -746,9 +746,6 @@ async function displayPomodoroStats(periodLabel = 'Today', noData = false) {
   try {
     let statsToDisplay = { workSessions: 0, totalWorkTime: 0 }; // Default to 0 if no data found
 
-    // Determine which date to fetch stats for
-    // For "Today", "This Week", "This Month", "All Time", we'll fetch today's stats for now.
-    // A more complex implementation would sum up stats for ranges.
     let dateToFetch = getCurrentDateString(); // Default to today
     if (
       periodLabel !== 'Today' &&
@@ -756,8 +753,6 @@ async function displayPomodoroStats(periodLabel = 'Today', noData = false) {
       periodLabel !== 'This Month' &&
       periodLabel !== 'All Time'
     ) {
-      // This means a specific date was clicked on the calendar
-      // AppState.selectedDateStr should hold this specific date
       dateToFetch = AppState.selectedDateStr || getCurrentDateString();
     }
 

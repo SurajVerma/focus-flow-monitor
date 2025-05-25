@@ -49,24 +49,22 @@ let AppState = {
   blockPageShowLimitInfo: true,
   blockPageShowScheduleInfo: true,
   blockPageShowQuote: false,
-  blockPageUserQuotes: [], // NEW: Pomodoro settings state for options page
+  blockPageUserQuotes: [],
 
-  pomodoroNotifyEnabled: true, // Default, will be loaded from storage
+  pomodoroNotifyEnabled: true,
   isRequestingPermission: false,
-  // NEW: Pomodoro Stats (will be populated from background/storage)
+
   pomodoroStatsToday: {
     sessionsCompleted: 0,
     timeFocused: 0, // in seconds
   },
   pomodoroStatsAllTime: {
-    // If you plan to show all-time stats later
     sessionsCompleted: 0,
     timeFocused: 0,
   },
 };
 
 // --- UI Element References ---
-// Populated by queryUIElements on DOMContentLoaded
 let UIElements = {};
 
 // Function to get references to all needed UI elements
@@ -207,8 +205,8 @@ function queryUIElements() {
     !UIElements.totalTimeForRangeLabel ||
     !UIElements.totalTimeForRangeValue ||
     !UIElements.averageTimeForRange ||
-    !UIElements.pomodoroEnableNotificationsCheckbox || // Already existed, but good to keep in check
-    !UIElements.pomodoroNotificationPermissionStatus || // Already existed
+    !UIElements.pomodoroEnableNotificationsCheckbox ||
+    !UIElements.pomodoroNotificationPermissionStatus ||
     // New Pomodoro elements
     !UIElements.pomodoroWorkDurationInput ||
     !UIElements.pomodoroShortBreakDurationInput ||

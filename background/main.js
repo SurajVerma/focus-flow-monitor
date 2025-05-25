@@ -1,6 +1,5 @@
 const PRUNE_ALARM_NAME = 'dailyDataPruneCheck'; // Used for the daily data pruning alarm
 
-// --- Pomodoro Timer Constants & Variables ---
 const POMODORO_PHASES = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' };
 
 // Default settings, will be overridden by loaded settings
@@ -22,8 +21,6 @@ let pomodoroState = {
   timerState: 'stopped', // 'stopped', 'running', 'paused'
   timerIntervalId: null,
 };
-
-// --- Pomodoro Core Logic ---
 
 /**
  * Sends the current Pomodoro status to any open popups.
@@ -68,7 +65,6 @@ async function sendPomodoroStatusToPopups() {
       })
       .catch((err) => {
         // This error is common if no popup is open, so often benign.
-        // console.warn('[Pomodoro Background] Error sending pomodoroStatusUpdate to popup (likely no popup open):', err.message);
       });
   }
 }
@@ -252,14 +248,12 @@ function setupPomodoroPhase(phase, sessionsCompleted = pomodoroState.workSession
   savePomodoroStateAndSettings();
 }
 
-// --- Pomodoro Statistics ---
 function recordPomodoroSession(phase, durationSeconds) {
   if (phase !== POMODORO_PHASES.WORK || durationSeconds <= 0) {
     return;
   }
   const todayStr = getCurrentDateString(); // from utils.js
 
-  // Daily Stats
   FocusFlowState.pomodoroDailyStats[todayStr] = FocusFlowState.pomodoroDailyStats[todayStr] || {
     workSessions: 0,
     totalWorkTime: 0,
@@ -267,7 +261,6 @@ function recordPomodoroSession(phase, durationSeconds) {
   FocusFlowState.pomodoroDailyStats[todayStr].workSessions += 1;
   FocusFlowState.pomodoroDailyStats[todayStr].totalWorkTime += durationSeconds;
 
-  // All-Time Stats
   FocusFlowState.pomodoroAllTimeStats.totalWorkSessionsCompleted =
     (FocusFlowState.pomodoroAllTimeStats.totalWorkSessionsCompleted || 0) + 1;
   FocusFlowState.pomodoroAllTimeStats.totalTimeFocused =
@@ -420,7 +413,6 @@ function changeToNextPomodoroPhase() {
   setupPomodoroPhase(nextPhase, sessions);
 }
 
-// --- Initialize Alarms ---
 async function setupAlarms() {
   try {
     const trackAlarm = await browser.alarms.get(FocusFlowState.ALARM_NAME);
@@ -444,7 +436,6 @@ async function setupAlarms() {
   }
 }
 
-// --- Initialization Flow ---
 async function initializeExtension() {
   await loadData(); // from storage.js - also loads pomodoro stats
   await loadPomodoroStateAndSettings(); // Loads pomodoro timer state and user configurations
@@ -511,7 +502,6 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-// --- Message Listener ---
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
     if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {

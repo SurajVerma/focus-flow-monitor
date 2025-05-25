@@ -209,8 +209,6 @@ async function loadAllData() {
     STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE,
     STORAGE_KEY_BLOCK_PAGE_USER_QUOTES,
     STORAGE_KEY_POMODORO_SETTINGS, // Defined in options-state.js
-    // No direct need to load pomodoro stats keys here for AppState,
-    // as displayPomodoroStats will message the background script.
   ];
 
   try {
