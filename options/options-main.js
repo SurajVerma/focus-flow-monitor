@@ -21,6 +21,8 @@ let pendingChartData = null;
 let pendingChartLabel = '';
 let pendingChartViewMode = 'domain';
 
+// Removed global isInitialPageLoad flag
+
 function setupTabs() {
   const tabLinks = document.querySelectorAll('.tab-nav .tab-link');
   const tabContents = document.querySelectorAll('.tabs-container .tab-content');
@@ -110,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error setting initial chart view radio button:', e);
   }
 
-  await loadAllData();
+  await loadAllData(); // This will call updateDisplayForSelectedRangeUI(true)
   setupEventListeners();
 
   if (browser.storage && browser.storage.onChanged) {
@@ -119,6 +121,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await restoreActiveTab();
+
+  // No longer need to set isInitialPageLoad here.
+  // The context is passed directly.
 
   if (window.location.hash) {
     const sectionId = window.location.hash.substring(1);
@@ -134,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       setTimeout(() => {
-        console.log(`[Options Main] Scrolling to section: ${sectionId}`);
+        console.log(`[Options Main] Scrolling to section via hash: ${sectionId}`);
         sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         const originalBg = sectionElement.style.backgroundColor;
         sectionElement.style.transition = 'background-color 0.9s ease-in-out';
@@ -143,18 +148,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           sectionElement.style.backgroundColor = originalBg;
           sectionElement.style.transition = '';
         }, 2000);
-      }, 100);
+      }, 100); // Delay slightly to ensure tab switch and rendering completes
     } else {
       console.warn(`[Options Main] Section ID "${sectionId}" not found for scrolling.`);
     }
   }
-
   console.log('Options Main script initialized (v0.9.0 - Pomodoro settings & stats).');
 });
 
 function handlePomodoroSettingsStorageChange(changes, area) {
   if (area === 'local' && changes[STORAGE_KEY_POMODORO_SETTINGS]) {
-    // STORAGE_KEY_POMODORO_SETTINGS is defined in options-state.js
     const newStorageValue = changes[STORAGE_KEY_POMODORO_SETTINGS].newValue;
 
     if (newStorageValue) {
@@ -166,7 +169,6 @@ function handlePomodoroSettingsStorageChange(changes, area) {
         const newNotifyState = newStorageValue.notifyEnabled;
         console.log(`[Options Page] Storage change detected for pomodoro notifyEnabled: ${newNotifyState}`);
         if (AppState.pomodoroNotifyEnabled !== newNotifyState) {
-          // AppState is defined in options-state.js
           AppState.pomodoroNotifyEnabled = newNotifyState;
         }
         if (
@@ -291,7 +293,6 @@ async function loadAllData() {
     if (UIElements.blockPageUserQuotesTextarea)
       UIElements.blockPageUserQuotesTextarea.value = AppState.blockPageUserQuotes.join('\n');
 
-    // --- Load and Populate Pomodoro Settings ---
     const pomodoroSettingsStorage = result[STORAGE_KEY_POMODORO_SETTINGS] || {};
     const defaultPomodoroDurations = {
       Work: 25 * 60,
@@ -324,23 +325,25 @@ async function loadAllData() {
 
     const pomodoroAllTimeStatsStorage = result[STORAGE_KEY_POMODORO_STATS_ALL_TIME];
     if (pomodoroAllTimeStatsStorage) {
-      AppState.pomodoroStatsAllTime.sessionsCompleted = pomodoroAllTimeStatsStorage.totalWorkSessionsCompleted || 0;
-      AppState.pomodoroStatsAllTime.timeFocused = pomodoroAllTimeStatsStorage.totalTimeFocused || 0;
+      AppState.pomodoroStatsAllTime.totalWorkSessionsCompleted =
+        pomodoroAllTimeStatsStorage.totalWorkSessionsCompleted || 0;
+      AppState.pomodoroStatsAllTime.totalTimeFocused = pomodoroAllTimeStatsStorage.totalTimeFocused || 0;
     } else {
       AppState.pomodoroStatsAllTime = { sessionsCompleted: 0, timeFocused: 0 };
     }
 
-    // Populate other UI elements
     if (typeof populateCategoryList === 'function') populateCategoryList();
     if (typeof populateCategorySelect === 'function') populateCategorySelect();
-    if (typeof populateAssignmentList === 'function') populateAssignmentList();
     if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
+    if (typeof populateAssignmentList === 'function') populateAssignmentList();
     if (typeof populateRuleList === 'function') populateRuleList();
     if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
     if (typeof renderCalendar === 'function')
       renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
 
-    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+    if (typeof updateDisplayForSelectedRangeUI === 'function') {
+      updateDisplayForSelectedRangeUI(true); // Pass true for initial load
+    }
 
     if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
   } catch (error) {
@@ -374,7 +377,8 @@ async function updatePomodoroPermissionStatusDisplay() {
   }
 }
 
-function updateDisplayForSelectedRangeUI() {
+function updateDisplayForSelectedRangeUI(isDuringInitialLoad = false) {
+  // Added parameter
   if (!UIElements.dateRangeSelect) {
     console.warn('Date range select element not found for UI update.');
     return;
@@ -395,7 +399,7 @@ function updateDisplayForSelectedRangeUI() {
   } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
-    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today'; // Default to today if nothing is selected
+    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
     isRangeView = false;
   }
 
@@ -408,22 +412,8 @@ function updateDisplayForSelectedRangeUI() {
     loader.style.display = 'none';
   }
 
-  // START: Hide item detail section when main range changes
-  if (UIElements.itemDetailSection) {
-    UIElements.itemDetailSection.style.display = 'none';
-    UIElements.itemDetailSection.classList.remove('scrolled-once', 'scrolled-once-prompt');
-    if (UIElements.itemDetailList)
-      UIElements.itemDetailList.innerHTML = '<li>Select an item from the chart or category list to see details.</li>';
-    if (UIElements.itemDetailTitle) UIElements.itemDetailTitle.textContent = 'Breakdown Details';
-    // Reset breakdown state
-    AppState.currentBreakdownType = 'category'; // Default back to category
-    AppState.currentBreakdownIdentifier = null;
-    AppState.itemDetailCurrentPage = 1;
-    if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = ''; // Reset dropdown
-    if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true; // Reset radio
-    if (UIElements.itemDetailPagination) UIElements.itemDetailPagination.style.display = 'none';
-  }
-  // END: Hide item detail section
+  AppState.currentBreakdownIdentifier = null;
+  if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = '';
 
   setTimeout(() => {
     let domainData = {},
@@ -446,19 +436,24 @@ function updateDisplayForSelectedRangeUI() {
       const noDataForPeriod =
         Object.keys(domainData).length === 0 && Object.keys(categoryData).length === 0 && !isRangeView;
       if (typeof displayPomodoroStats === 'function') {
-        console.log(
-          `[DEBUG Main] Calling displayPomodoroStats from updateDisplayForSelectedRangeUI. label: "${label}", noDataForPeriod: ${noDataForPeriod}`
-        );
         displayPomodoroStats(label, noDataForPeriod);
+      }
+
+      if (typeof updateItemDetailDisplay === 'function') {
+        console.log('[Options Main] Calling updateItemDetailDisplay after main stats update.');
+        updateItemDetailDisplay(isDuringInitialLoad); // Pass the flag here
       }
     } catch (e) {
       console.error(`Error processing range ${dataFetchKey}:`, e);
       updateStatsDisplay({}, {}, label, AppState.selectedDateStr, isRangeView);
       if (typeof displayPomodoroStats === 'function') {
-        console.log(
-          `[DEBUG Main] Calling displayPomodoroStats from updateDisplayForSelectedRangeUI (catch block). label: "${label}", noDataForPeriod: true`
-        );
         displayPomodoroStats(label, true);
+      }
+      if (typeof updateItemDetailDisplay === 'function') {
+        console.log('[Options Main] Calling updateItemDetailDisplay after error in main stats.');
+        AppState.currentBreakdownIdentifier = null;
+        if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = '';
+        updateItemDetailDisplay(isDuringInitialLoad); // Pass the flag here
       }
     } finally {
       if (loader) loader.style.display = 'none';
@@ -639,7 +634,6 @@ function updateStatsDisplay(
 
 function displayNoDataForDate(displayDateLabel) {
   console.log(`[Options Main] Displaying 'No Data' state for: ${displayDateLabel}`);
-  // Updates other UI elements to show "No data"
   const noDataMessage = `No data recorded for ${displayDateLabel}.`;
   if (UIElements.statsPeriodSpans) UIElements.statsPeriodSpans.forEach((span) => (span.textContent = displayDateLabel));
   setListMessage(UIElements.categoryTimeList, noDataMessage);
@@ -656,7 +650,6 @@ function displayNoDataForDate(displayDateLabel) {
   if (UIElements.chartTitleElement) UIElements.chartTitleElement.textContent = `Usage Chart (${displayDateLabel})`;
   if (UIElements.totalTimeForRangeContainer) UIElements.totalTimeForRangeContainer.style.display = 'none';
 
-  // Now call displayPomodoroStats
   if (typeof displayPomodoroStats === 'function') {
     console.log(
       `[DEBUG Main] Calling displayPomodoroStats from displayNoDataForDate. displayDateLabel: "${displayDateLabel}", noDataForMainStats: true`
@@ -749,6 +742,7 @@ function getFilteredDataForRange(range, isSpecificDate = false) {
         }
       }
     } else {
+      // "all"
       periodLabel = 'All Time';
       if (Object.keys(AppState.dailyDomainData).length > 0) {
         initialDomainData = {};
@@ -887,16 +881,13 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     ]);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    // --- MODIFIED LINES: Prioritize using the fetched data directly for the rebuild ---
     const assignmentsForRebuild = result.categoryAssignments || {};
     const categoriesListForRebuild = result.categories || ['Other'];
-    // Ensure 'Other' is always in the list for rebuilding, even if storage somehow misses it.
     if (!categoriesListForRebuild.includes('Other')) {
       categoriesListForRebuild.push('Other');
     }
 
     const getCategoryForDomainLocal = (domain, assignments, categoriesList) => {
-      // Renamed to avoid conflict if options-utils is also loaded
       if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
         return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other';
@@ -915,7 +906,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
       if (time > 0) {
-        // const category = getCategoryForDomainLocal(domain, currentAssignments, currentCategories);
         const category = getCategoryForDomainLocal(domain, assignmentsForRebuild, categoriesListForRebuild);
         rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
       }
@@ -928,7 +918,6 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       for (const domain in domainsForDate) {
         const time = domainsForDate[domain];
         if (time > 0) {
-          // const category = getCategoryForDomainLocal(domain, currentAssignments, currentCategories);
           const category = getCategoryForDomainLocal(domain, assignmentsForRebuild, categoriesListForRebuild);
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
@@ -984,37 +973,21 @@ function displayProductivityScore(scoreData, periodLabel = 'Selected Period', is
 function handleCalendarDayClick(event) {
   const dayCell = event.target.closest('.calendar-day');
   if (!dayCell) return;
-  const dateStr = dayCell.dataset.date; // "YYYY-MM-DD"
+  const dateStr = dayCell.dataset.date;
   if (!dateStr) return;
 
   console.log(`[DEBUG Main] handleCalendarDayClick: Clicked on date ${dateStr}`);
-
-  // 1. Update AppState with the new selected date.
   AppState.selectedDateStr = dateStr;
-
-  // 2. Update calendar visual highlighting.
   if (typeof highlightSelectedCalendarDay === 'function') {
     highlightSelectedCalendarDay(dateStr);
   }
 
   if (UIElements.dateRangeSelect) {
-    // 3. Ensure the dateRangeSelect dropdown is set to its empty value state (""),
-    //    as a specific date is now selected, not a predefined range.
     const valueWasChanged = UIElements.dateRangeSelect.value !== '';
     if (valueWasChanged) {
-      console.log(
-        '[DEBUG Main] handleCalendarDayClick: dateRangeSelect.value was "' +
-          UIElements.dateRangeSelect.value +
-          '". Setting to "".'
-      );
       UIElements.dateRangeSelect.value = '';
     }
-
-    // 4. Call the UI update function directly to reflect the calendar day selection.
-    console.log(
-      '[DEBUG Main] handleCalendarDayClick: Manually calling updateDisplayForSelectedRangeUI for the new date.'
-    );
-    updateDisplayForSelectedRangeUI();
+    updateDisplayForSelectedRangeUI(false); // Explicitly false, not initial load
   } else {
     console.warn('[DEBUG Main] handleCalendarDayClick: dateRangeSelect UI element not found. Cannot update UI.');
   }
@@ -1023,7 +996,6 @@ function handleCalendarDayClick(event) {
 function setupEventListeners() {
   console.log('[Options Main] Setting up event listeners...');
   try {
-    // Category Management
     if (UIElements.addCategoryBtn && typeof handleAddCategory === 'function')
       UIElements.addCategoryBtn.addEventListener('click', handleAddCategory);
     if (UIElements.categoryList) {
@@ -1084,7 +1056,7 @@ function setupEventListeners() {
       });
 
     if (UIElements.dateRangeSelect)
-      UIElements.dateRangeSelect.addEventListener('change', updateDisplayForSelectedRangeUI);
+      UIElements.dateRangeSelect.addEventListener('change', () => updateDisplayForSelectedRangeUI(false)); // Pass false
     if (UIElements.domainPrevBtn && typeof handleDomainPrev === 'function')
       UIElements.domainPrevBtn.addEventListener('click', handleDomainPrev);
     if (UIElements.domainNextBtn && typeof handleDomainNext === 'function')
@@ -1117,7 +1089,6 @@ function setupEventListeners() {
       UIElements.productivitySettingsList.addEventListener('change', handleProductivityRatingChange);
     }
 
-    // --- Pomodoro Settings Listeners ---
     if (UIElements.savePomodoroSettingsBtn && typeof handleSavePomodoroSettings === 'function') {
       UIElements.savePomodoroSettingsBtn.addEventListener('click', handleSavePomodoroSettings);
     }
@@ -1180,53 +1151,19 @@ function setupEventListeners() {
     if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
       UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
 
-    // START: Add event listeners for item detail section and its controls
     if (UIElements.categoryTimeList) {
       UIElements.categoryTimeList.addEventListener('click', (event) => {
         if (event.target.classList.contains('category-name-clickable')) {
           const categoryName = event.target.dataset.categoryName;
           if (categoryName && typeof handleCategoryBreakdownRequest === 'function') {
-            if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true;
-            if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = categoryName;
-            // Ensure other radio is unchecked
-            if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = false;
-
             handleCategoryBreakdownRequest(categoryName);
           }
         }
       });
     }
 
-    if (UIElements.breakdownTypeCategoryRadio) {
-      UIElements.breakdownTypeCategoryRadio.addEventListener('change', () => {
-        if (UIElements.breakdownTypeCategoryRadio.checked && typeof updateItemDetailDisplay === 'function') {
-          AppState.itemDetailCurrentPage = 1;
-          // AppState.currentBreakdownIdentifier will be set by the select's change or a category click
-          updateItemDetailDisplay();
-        }
-      });
-    }
-    if (UIElements.breakdownTypeChartOtherRadio) {
-      UIElements.breakdownTypeChartOtherRadio.addEventListener('change', () => {
-        if (UIElements.breakdownTypeChartOtherRadio.checked && typeof handleChartOtherDomainsRequest === 'function') {
-          // No need to set category select here, handleChartOtherDomainsRequest will set the correct state
-          handleChartOtherDomainsRequest(); // This will set AppState and call updateItemDetailDisplay
-        }
-      });
-    }
-
-    if (UIElements.breakdownCategorySelect) {
-      UIElements.breakdownCategorySelect.addEventListener('change', () => {
-        if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true;
-        if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = false;
-
-        if (typeof updateItemDetailDisplay === 'function') {
-          AppState.currentBreakdownIdentifier = UIElements.breakdownCategorySelect.value;
-          AppState.currentBreakdownType = 'category';
-          AppState.itemDetailCurrentPage = 1;
-          updateItemDetailDisplay();
-        }
-      });
+    if (UIElements.breakdownCategorySelect && typeof handleBreakdownCategorySelectChange === 'function') {
+      UIElements.breakdownCategorySelect.addEventListener('change', handleBreakdownCategorySelectChange);
     }
 
     if (UIElements.itemDetailPrevBtn && typeof handleItemDetailPrev === 'function') {
@@ -1235,7 +1172,6 @@ function setupEventListeners() {
     if (UIElements.itemDetailNextBtn && typeof handleItemDetailNext === 'function') {
       UIElements.itemDetailNextBtn.addEventListener('click', handleItemDetailNext);
     }
-    // END: Add event listeners
 
     if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
     console.log('[Options Main] Event listeners setup complete.');

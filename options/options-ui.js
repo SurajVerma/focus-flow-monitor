@@ -506,7 +506,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
     AppState.timeChart = null;
   }
   if (!data || Object.keys(data).length === 0) {
-    AppState.tempChartOtherDomainsData = [];
+    AppState.tempChartOtherDomainsData = []; // Clear other domains data
     clearChartOnError(`No data for ${periodLabel}`);
     return;
   }
@@ -519,6 +519,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
       .sort((a, b) => b.time - a.time);
     otherLabel = 'Other Categories';
   } else {
+    // domain view
     sortedData = Object.entries(data)
       .map(([n, t]) => ({ name: n, time: t }))
       .filter((i) => i.time > 0.1)
@@ -526,14 +527,14 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
     otherLabel = 'Other Domains';
   }
   if (sortedData.length === 0) {
-    AppState.tempChartOtherDomainsData = [];
+    AppState.tempChartOtherDomainsData = []; // Clear other domains data
     clearChartOnError(`No significant data for ${periodLabel}`);
     return;
   }
 
   let labels = sortedData.map((i) => i.name),
     times = sortedData.map((i) => i.time);
-  AppState.tempChartOtherDomainsData = [];
+  AppState.tempChartOtherDomainsData = []; // Reset before populating
 
   if (sortedData.length > maxSlices) {
     const top = sortedData.slice(0, maxSlices - 1);
@@ -545,9 +546,10 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
       labels.push(otherLabel);
       times.push(otherTime);
       if (viewMode === 'domain') {
+        // Only populate for domain view
         AppState.tempChartOtherDomainsData = otherSliceData;
         console.log(
-          '[RenderChart] Stored tempChartOtherDomainsData:',
+          '[RenderChart] Stored tempChartOtherDomainsData for "Other Domains" slice:',
           JSON.parse(JSON.stringify(AppState.tempChartOtherDomainsData))
         );
       }
@@ -597,7 +599,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
                 return l;
               },
               afterBody: function (tooltipItems) {
-                const chartInstance = this.chart;
+                // const chartInstance = this.chart; // Not used currently
                 const currentViewMode = AppState.currentChartViewMode;
                 let additionalInfo = [];
 
@@ -636,7 +638,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
                     AppState.tempChartOtherDomainsData &&
                     AppState.tempChartOtherDomainsData.length > 0
                   ) {
-                    const topOtherDomains = [...AppState.tempChartOtherDomainsData]
+                    const topOtherDomains = [...AppState.tempChartOtherDomainsData] // Use the stored data
                       .sort((a, b) => b.time - a.time)
                       .slice(0, 2);
                     if (topOtherDomains.length > 0) {
@@ -660,20 +662,16 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
 
             if (label === 'Other Domains' && AppState.currentChartViewMode === 'domain') {
               console.log("[Chart onClick] 'Other Domains' slice clicked.");
-              if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = true;
-              if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = false;
-              if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = '';
-
-              if (typeof handleChartOtherDomainsRequest === 'function') handleChartOtherDomainsRequest();
+              if (typeof handleChartOtherDomainsRequest === 'function') {
+                handleChartOtherDomainsRequest();
+              }
             } else if (AppState.currentChartViewMode === 'category') {
               const categoryName = label;
               console.log(`[Chart onClick] Category slice '${categoryName}' clicked.`);
               if (categoryName && categoryName !== 'Other Categories') {
-                if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true;
-                if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = false;
-                if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = categoryName;
-
-                if (typeof handleCategoryBreakdownRequest === 'function') handleCategoryBreakdownRequest(categoryName);
+                if (typeof handleCategoryBreakdownRequest === 'function') {
+                  handleCategoryBreakdownRequest(categoryName);
+                }
               }
             }
           }
@@ -949,34 +947,22 @@ async function displayPomodoroStats(periodLabel = 'Today', noDataForMainStats = 
   }
 }
 
-function updateItemDetailDisplay() {
+function updateItemDetailDisplay(isInitialCall = false) {
+  // Added isInitialCall parameter
   if (
     !UIElements.itemDetailSection ||
     !UIElements.itemDetailTitle ||
     !UIElements.itemDetailList ||
-    !UIElements.itemDetailPeriodDisplay ||
-    !UIElements.breakdownCategorySelect ||
-    !UIElements.breakdownTypeCategoryRadio ||
-    !UIElements.breakdownTypeChartOtherRadio
+    !UIElements.breakdownCategorySelect
   ) {
     console.warn('[updateItemDetailDisplay] Critical UI elements for breakdown section are missing. Aborting.');
     if (UIElements.itemDetailSection) UIElements.itemDetailSection.style.display = 'none';
     return;
   }
 
-  // Determine current breakdown type based on which radio is checked
-  if (UIElements.breakdownTypeCategoryRadio.checked) {
-    AppState.currentBreakdownType = 'category';
-  } else if (UIElements.breakdownTypeChartOtherRadio.checked) {
-    AppState.currentBreakdownType = 'chart_other_domains';
-  } else {
-    // Fallback if somehow neither is checked (e.g. initial load before event listeners fully set them)
-    // Default to category and check the radio.
-    console.warn("[updateItemDetailDisplay] No breakdown type radio checked. Defaulting to 'category'.");
-    AppState.currentBreakdownType = 'category';
-    UIElements.breakdownTypeCategoryRadio.checked = true;
-  }
-  console.log(`[updateItemDetailDisplay] Current Breakdown Type: ${AppState.currentBreakdownType}`);
+  console.log(
+    `[updateItemDetailDisplay] Current Breakdown Identifier: ${AppState.currentBreakdownIdentifier}, Initial Call: ${isInitialCall}`
+  );
 
   let currentPeriodLabel = 'Selected Period';
   if (UIElements.dateRangeSelect.value === '' && AppState.selectedDateStr) {
@@ -989,69 +975,53 @@ function updateItemDetailDisplay() {
     currentPeriodLabel =
       typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
   }
-  UIElements.itemDetailPeriodDisplay.textContent = currentPeriodLabel;
 
-  let title = 'Breakdown Details';
+  let titleBase = 'Breakdown Details';
   let dataForBreakdownList = [];
 
   const currentDashboardPeriodValue = UIElements.dateRangeSelect.value || AppState.selectedDateStr;
   const isSpecificDate =
     /^\d{4}-\d{2}-\d{2}$/.test(AppState.selectedDateStr) && UIElements.dateRangeSelect.value === '';
   const { domainData: currentPeriodDomainData } = getFilteredDataForRange(currentDashboardPeriodValue, isSpecificDate);
-  console.log(
-    '[updateItemDetailDisplay] currentPeriodDomainData for breakdown:',
-    JSON.parse(JSON.stringify(currentPeriodDomainData))
-  );
 
-  if (AppState.currentBreakdownType === 'category') {
-    AppState.currentBreakdownIdentifier = UIElements.breakdownCategorySelect.value;
-    title = `Websites in: ${AppState.currentBreakdownIdentifier || 'N/A'}`;
-    console.log(`[updateItemDetailDisplay] Category Breakdown for: ${AppState.currentBreakdownIdentifier}`);
-    if (AppState.currentBreakdownIdentifier && currentPeriodDomainData) {
-      const categoryName = AppState.currentBreakdownIdentifier;
+  if (AppState.currentBreakdownIdentifier === null) {
+    titleBase = `Breakdown: Other Chart Domains`;
+    dataForBreakdownList = [...AppState.tempChartOtherDomainsData].sort((a, b) => b.time - a.time);
+    if (dataForBreakdownList.length === 0) {
+      titleBase = "Details for 'Other Domains' (from Chart)";
+    }
+  } else if (typeof AppState.currentBreakdownIdentifier === 'string') {
+    const categoryName = AppState.currentBreakdownIdentifier;
+    titleBase = `Websites in: ${categoryName}`;
+    if (currentPeriodDomainData) {
       const domainsInCategory = [];
       for (const domain in currentPeriodDomainData) {
         const actualCategory =
           typeof getCategoryForDomain === 'function'
             ? getCategoryForDomain(domain, AppState.categoryAssignments, AppState.categories)
             : 'Error';
-        // console.log(`[updateItemDetailDisplay] Domain: ${domain}, Time: ${currentPeriodDomainData[domain]}, Assigned Category: ${actualCategory}`);
         if (actualCategory === categoryName) {
           domainsInCategory.push({ name: domain, time: currentPeriodDomainData[domain] });
         }
       }
       dataForBreakdownList = domainsInCategory.sort((a, b) => b.time - a.time);
-      console.log(
-        `[updateItemDetailDisplay] Found ${dataForBreakdownList.length} domains in category "${categoryName}".`
-      );
     } else {
       dataForBreakdownList = [];
-      if (!AppState.currentBreakdownIdentifier) title = 'Select a Category for Breakdown';
     }
-  } else if (AppState.currentBreakdownType === 'chart_other_domains') {
-    title = `Domains in "Other Domains" (from Chart)`;
-    console.log(
-      "[updateItemDetailDisplay] Chart 'Other Domains' Breakdown. Data from AppState.tempChartOtherDomainsData:",
-      JSON.parse(JSON.stringify(AppState.tempChartOtherDomainsData))
-    );
-    dataForBreakdownList = [...AppState.tempChartOtherDomainsData].sort((a, b) => b.time - a.time);
-    if (dataForBreakdownList.length === 0) {
-      title = "Details for 'Other Domains' (from Chart)";
-    }
+  } else {
+    dataForBreakdownList = [];
+    titleBase = 'Select an item to see details';
   }
 
-  UIElements.itemDetailTitle.textContent = title;
+  UIElements.itemDetailTitle.textContent = `${titleBase} (${currentPeriodLabel})`;
   UIElements.itemDetailList.innerHTML = '';
 
   if (dataForBreakdownList.length === 0) {
     const li = document.createElement('li');
-    if (AppState.currentBreakdownType === 'category' && !AppState.currentBreakdownIdentifier) {
-      li.textContent = 'Please select a category to see its website breakdown.';
-    } else if (
-      AppState.currentBreakdownType === 'chart_other_domains' &&
-      AppState.tempChartOtherDomainsData.length === 0
-    ) {
+    if (AppState.currentBreakdownIdentifier === null && AppState.tempChartOtherDomainsData.length === 0) {
       li.textContent = 'No "Other Domains" data from the current chart view, or this slice was not present/clicked.';
+    } else if (typeof AppState.currentBreakdownIdentifier === 'string' && !AppState.currentBreakdownIdentifier) {
+      li.textContent = 'Please select a category to see its website breakdown.';
     } else {
       li.textContent = 'No specific items to display for this selection.';
     }
@@ -1090,12 +1060,29 @@ function updateItemDetailDisplay() {
       UIElements.itemDetailPagination.style.display = totalPages > 1 ? 'flex' : 'none';
   }
 
-  UIElements.itemDetailSection.style.display = 'block';
-  if (!UIElements.itemDetailSection.classList.contains('scrolled-once')) {
-    UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    UIElements.itemDetailSection.classList.add('scrolled-once');
-  } else if (UIElements.itemDetailSection.classList.contains('scrolled-once-prompt')) {
-    UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    UIElements.itemDetailSection.classList.remove('scrolled-once-prompt');
+  const shouldShowSection =
+    dataForBreakdownList.length > 0 ||
+    typeof AppState.currentBreakdownIdentifier === 'string' ||
+    AppState.currentBreakdownIdentifier === null;
+  UIElements.itemDetailSection.style.display = shouldShowSection ? 'block' : 'none';
+
+  if (shouldShowSection) {
+    if (isInitialCall) {
+      // Only add 'scrolled-once' on initial load if section is shown, don't scroll
+      if (!UIElements.itemDetailSection.classList.contains('scrolled-once')) {
+        UIElements.itemDetailSection.classList.add('scrolled-once');
+      }
+    } else {
+      // Subsequent calls (user interactions)
+      if (!UIElements.itemDetailSection.classList.contains('scrolled-once')) {
+        UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        UIElements.itemDetailSection.classList.add('scrolled-once');
+      } else if (UIElements.itemDetailSection.classList.contains('scrolled-once-prompt')) {
+        UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        UIElements.itemDetailSection.classList.remove('scrolled-once-prompt');
+      }
+    }
+  } else {
+    UIElements.itemDetailSection.classList.remove('scrolled-once', 'scrolled-once-prompt');
   }
 }

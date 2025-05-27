@@ -360,6 +360,7 @@ button.export-button:hover {
 #ruleList li,
 #detailedTimeList li,
 #categoryTimeList li,
+#itemDetailList li, /* Added #itemDetailList li for shared styling */
 .settings-list li {
   display: flex;
   justify-content: space-between;
@@ -375,6 +376,7 @@ button.export-button:hover {
 #ruleList li:last-child,
 #detailedTimeList li:last-child,
 #categoryTimeList li:last-child,
+#itemDetailList li:last-child, /* Added for consistency */
 .settings-list li:last-child {
   border-bottom: none;
 }
@@ -384,6 +386,7 @@ button.export-button:hover {
 #ruleList li:nth-child(even),
 #detailedTimeList li:nth-child(even),
 #categoryTimeList li:nth-child(even),
+#itemDetailList li:nth-child(even), /* Added for consistency */
 .settings-list li:nth-child(even) {
   background-color: var(--bg-alternate-row);
 }
@@ -393,6 +396,7 @@ button.export-button:hover {
 #ruleList li:hover,
 #detailedTimeList li:hover,
 #categoryTimeList li:hover,
+#itemDetailList li:hover, /* Added for consistency */
 .settings-list li:hover {
   background-color: var(--bg-hover-row);
 }
@@ -463,20 +467,43 @@ button.export-button:hover {
   color: var(--accent-color-red);
   font-weight: 500;
 }
+
+/* Shared styles for domain/category name and time in lists */
 #detailedTimeList li .domain,
-#categoryTimeList li .category-name {
+#categoryTimeList li .category-name, /* Keep existing styling for clickable category names */
+#itemDetailList li .domain {
+  /* Apply to #itemDetailList */
   color: var(--text-color-secondary);
   margin-right: var(--spacing-lg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex-shrink: 1;
+  flex-grow: 1; /* Allow name to take available space */
 }
+
 #categoryTimeList li .category-name {
+  /* Specific for clickable category names */
   font-weight: 500;
+  cursor: pointer;
+  color: var(--text-color-link, #007bff);
+  text-decoration: none;
+  padding: 3px 6px;
+  border-radius: var(--border-radius, 0.3rem);
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, text-decoration 0.15s ease-in-out;
 }
+#categoryTimeList li .category-name:hover,
+#categoryTimeList li .category-name:focus {
+  color: var(--bg-button-primary-hover, #0056b3);
+  background-color: var(--bg-hover-row, #eef2f7);
+  text-decoration: underline;
+  outline: none;
+}
+
 #detailedTimeList li .time,
-#categoryTimeList li .time {
+#categoryTimeList li .time,
+#itemDetailList li .time {
+  /* Apply to #itemDetailList */
   color: var(--text-color-primary);
   font-weight: 500;
   white-space: nowrap;
@@ -484,7 +511,7 @@ button.export-button:hover {
   padding: 2px 6px;
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
-  flex-shrink: 0;
+  flex-shrink: 0; /* Prevent time from shrinking */
 }
 
 .add-rule-form {
@@ -651,30 +678,37 @@ button.export-button:hover {
 }
 .calendar-container,
 .stats-list-container {
+  /* This class is now also used by #itemDetailSection */
   border: 1px solid var(--border-color-light);
   border-radius: var(--border-radius);
   padding: var(--spacing-lg);
   background-color: var(--bg-card);
   box-shadow: var(--shadow-card);
 }
-.calendar-container {
-  position: relative;
-}
 .stats-list-container {
+  /* Specifics for list containers */
   display: flex;
   flex-direction: column;
   min-height: 150px;
 }
 .stats-list-container h3 {
+  /* Applies to #itemDetailTitle as well */
   margin-top: 0;
   margin-bottom: var(--spacing-md);
   flex-shrink: 0;
+  font-size: 1.15rem; /* Ensure consistent title size */
+  font-weight: 500;
+  color: var(--text-color-heading);
+  text-align: center; /* Center title for these sections */
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color-light);
 }
 .stats-list-container ul {
+  /* Applies to #itemDetailList as well */
   margin: 0;
   overflow-y: auto;
   flex-grow: 1;
-  max-height: 430px;
+  max-height: 430px; /* Or a suitable height for breakdown list */
   border: 1px solid var(--border-color-light);
   list-style: none;
   padding: 0;
@@ -815,11 +849,15 @@ button.export-button:hover {
 }
 
 .chart-column h3 {
+  /* Applies to #chartTitle */
   text-align: center;
   margin-top: 0;
   margin-bottom: var(--spacing-md);
   font-size: 1.15rem;
   font-weight: 500;
+  color: var(--text-color-heading); /* Ensure consistency if it was different */
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color-light);
 }
 .chart-wrapper {
   position: relative;
@@ -864,7 +902,9 @@ button.export-button:hover {
   border-top: 1px solid var(--border-color-light);
   flex-wrap: wrap;
 }
-#domainPageInfo {
+#domainPageInfo,
+#itemDetailPageInfo {
+  /* Shared pagination info style */
   font-size: var(--font-size-sm);
   color: var(--text-color-secondary);
   font-weight: 500;
@@ -1653,6 +1693,7 @@ button.action-button.secondary:hover {
 
   #detailedTimeList li .time,
   #categoryTimeList li .time,
+  #itemDetailList li .time, /* Added for dark mode consistency */
   .assignment-list-item .assignment-category {
     background-color: #48484a;
     color: var(--text-color-primary);
@@ -1793,43 +1834,18 @@ button.action-button.secondary:hover {
   }
 }
 /* --- Styling for Clickable Category Names in "Time per Category" List --- */
-#categoryTimeList .category-name-clickable {
-  cursor: pointer;
-  color: var(--text-color-link, #007bff);
-  font-weight: 500;
-  text-decoration: none; /* No underline by default */
-  padding: 3px 6px; /* Slightly increased padding for better click target */
-  border-radius: var(--border-radius, 0.3rem); /* Consistent border-radius */
-  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, text-decoration 0.15s ease-in-out;
-}
-
-#categoryTimeList .category-name-clickable:hover,
-#categoryTimeList .category-name-clickable:focus {
-  color: var(--bg-button-primary-hover, #0056b3);
-  background-color: var(--bg-hover-row, #eef2f7); /* Subtle background on hover */
-  text-decoration: underline; /* Underline on hover for clear affordance */
-  outline: none;
-}
+/* Moved this rule higher to be with other #categoryTimeList styles for better organization */
+/* #categoryTimeList .category-name-clickable { ... } */
 
 /* --- Styling for the Item Detail Section --- */
 #itemDetailSection {
   margin-top: var(--spacing-xl, 24px);
-  padding: var(--spacing-lg, 16px);
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color-light);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-card);
+  /* Inherits .stats-list-container styles for padding, background, border, shadow */
 }
 
 #itemDetailSection h3#itemDetailTitle {
-  margin-top: 0;
-  margin-bottom: var(--spacing-lg, 16px);
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: var(--text-color-heading);
-  text-align: center;
-  padding-bottom: var(--spacing-sm, 8px);
-  border-bottom: 1px solid var(--border-color-light);
+  /* Inherits .stats-list-container h3 styles for general appearance */
+  /* Specific overrides if needed, but defaults should be good */
 }
 
 #itemDetailPeriodDisplay {
@@ -1850,25 +1866,16 @@ button.action-button.secondary:hover {
   border: 1px solid var(--border-color-light, #e9ecef);
   border-radius: var(--border-radius, 0.3rem);
   align-items: center;
-  justify-content: space-between; /* Changed from space-around for better control */
+  justify-content: flex-start; /* Align to start as there's only one control group now */
 }
 
 .breakdown-controls > div {
+  /* This targets the div wrapping the label and select */
   display: flex;
   align-items: center;
   gap: var(--spacing-sm, 8px);
-  flex: 1 1 auto; /* Allow to grow and shrink, basis is auto */
-}
-
-/* Specific styling for the first control group (Category select) */
-.breakdown-controls > div:first-child {
-  min-width: 300px; /* Ensure enough space for label and select */
-  flex-grow: 2; /* Allow it to take a bit more space if available */
-}
-/* Specific styling for the second control group (Other Domains radio) */
-.breakdown-controls > div:last-child {
-  justify-content: flex-start; /* Align to start if it's the only one on a new line */
-  min-width: 250px;
+  flex: 1 1 auto;
+  min-width: 250px; /* Ensure enough space for label and select */
 }
 
 .breakdown-controls label {
@@ -1877,13 +1884,6 @@ button.action-button.secondary:hover {
   font-size: var(--font-size-base, 1rem);
   color: var(--text-color-secondary);
   white-space: nowrap;
-  flex-shrink: 0; /* Prevent label from shrinking */
-}
-
-.breakdown-controls input[type='radio'] {
-  margin-right: 5px;
-  vertical-align: middle;
-  accent-color: var(--bg-button-primary);
   flex-shrink: 0;
 }
 
@@ -1896,7 +1896,7 @@ button.action-button.secondary:hover {
   background-color: var(--bg-input);
   color: var(--text-color-primary);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
-  min-width: 150px; /* Ensure select has a decent minimum width */
+  min-width: 150px;
 }
 .breakdown-controls select#breakdownCategorySelect:focus {
   border-color: var(--border-color-input-focus);
@@ -1904,58 +1904,23 @@ button.action-button.secondary:hover {
 }
 
 #itemDetailList {
-  border: 1px solid var(--border-color-medium);
-  border-radius: var(--border-radius);
-  padding: 0;
-  list-style: none;
+  /* Inherits .stats-list-container ul styles for border, padding, list-style */
 }
 
 #itemDetailList li {
-  padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color-light);
-  font-size: var(--font-size-sm);
-}
-#itemDetailList li:last-child {
-  border-bottom: none;
-}
-
-/* Consistent styling for domain/name and time spans in all lists */
-/* For #categoryTimeList, the .category-name part is styled by .category-name-clickable */
-#detailedTimeList li .domain,
-#itemDetailList li .domain {
-  color: var(--text-color-secondary); /* Ensures this is applied */
-  font-weight: normal; /* Ensures normal weight for consistency */
-  margin-right: var(--spacing-lg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1;
-  flex-grow: 1;
-}
-
-#detailedTimeList li .time,
-#categoryTimeList li .time, /* This will style the time part in the category list */
-#itemDetailList li .time {
-  color: var(--text-color-primary);
-  font-weight: 500;
-  white-space: nowrap;
-  background-color: var(--bg-alternate-row);
-  padding: 3px 7px;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  flex-shrink: 0;
+  /* Inherits shared li styles for padding, border-bottom, font-size, etc. */
+  /* Specific overrides if needed, but shared styles should cover most */
 }
 
 #itemDetailPagination {
   margin-top: var(--spacing-md, 12px);
+  /* Inherits .pagination-controls styles */
 }
 
 /* Dark mode adjustments for new/modified styles */
 @media (prefers-color-scheme: dark) {
   #categoryTimeList .category-name-clickable {
+    /* Ensure this is still fine */
     color: var(--text-color-link, #0a84ff);
   }
 
@@ -1966,13 +1931,11 @@ button.action-button.secondary:hover {
   }
 
   #itemDetailSection {
-    background-color: var(--bg-card, #2c2c2e);
-    border-color: var(--border-color-medium, #4a4a4c);
+    /* Inherits dark mode .stats-list-container */
   }
 
   #itemDetailSection h3#itemDetailTitle {
-    color: var(--text-color-heading, #ffffff);
-    border-bottom-color: var(--border-color-medium, #4a4a4c);
+    /* Inherits dark mode .stats-list-container h3 */
   }
 
   #itemDetailPeriodDisplay {
@@ -1995,20 +1958,16 @@ button.action-button.secondary:hover {
   }
 
   #itemDetailList {
-    border-color: var(--border-color-medium);
+    /* Inherits dark mode .stats-list-container ul */
   }
   #itemDetailList li {
-    border-bottom-color: var(--border-color-light);
+    /* Inherits dark mode shared li styles */
   }
 
-  /* Ensure dark mode consistency for list item parts */
-  #detailedTimeList li .domain,
+  /* Ensure dark mode consistency for list item parts in #itemDetailList */
   #itemDetailList li .domain {
-    /* .category-name in #categoryTimeList is handled by .category-name-clickable */
     color: var(--text-color-secondary);
   }
-  #detailedTimeList li .time,
-  #categoryTimeList li .time,
   #itemDetailList li .time {
     color: var(--text-color-primary);
     background-color: var(--bg-alternate-row, #2a2a2c);

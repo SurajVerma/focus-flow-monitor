@@ -70,9 +70,8 @@ let AppState = {
 
   itemDetailCurrentPage: 1,
   itemDetailItemsPerPage: 10,
-  currentBreakdownType: 'category', // Default to category view
-  currentBreakdownIdentifier: null,
-  tempChartOtherDomainsData: [],
+  currentBreakdownIdentifier: null, // Will store category name or null (for 'Other Chart Domains')
+  tempChartOtherDomainsData: [], // Stores the domains that make up the "Other Domains" slice of the chart
 };
 
 // --- UI Element References ---
@@ -194,20 +193,20 @@ function queryUIElements() {
   UIElements.pomodoroSessionsCompletedEl = document.getElementById('pomodoroSessionsCompleted');
   UIElements.pomodoroTimeFocusedEl = document.getElementById('pomodoroTimeFocused');
 
-  // START: Added UI element references for Breakdown Details Section
+  // START: Updated UI element references for Breakdown Details Section
   UIElements.itemDetailSection = document.getElementById('itemDetailSection');
   UIElements.itemDetailTitle = document.getElementById('itemDetailTitle');
-  UIElements.itemDetailPeriodDisplay = document.getElementById('itemDetailPeriodDisplay');
+  // UIElements.itemDetailPeriodDisplay = document.getElementById('itemDetailPeriodDisplay');
   UIElements.itemDetailList = document.getElementById('itemDetailList');
   UIElements.itemDetailPagination = document.getElementById('itemDetailPagination');
   UIElements.itemDetailPrevBtn = document.getElementById('itemDetailPrevBtn');
   UIElements.itemDetailPageInfo = document.getElementById('itemDetailPageInfo');
   UIElements.itemDetailNextBtn = document.getElementById('itemDetailNextBtn');
   // References for the controls within the breakdown section
-  UIElements.breakdownTypeCategoryRadio = document.getElementById('breakdownTypeCategoryRadio');
-  UIElements.breakdownTypeChartOtherRadio = document.getElementById('breakdownTypeChartOtherRadio');
+  // UIElements.breakdownTypeCategoryRadio = document.getElementById('breakdownTypeCategoryRadio'); // Removed
+  // UIElements.breakdownTypeChartOtherRadio = document.getElementById('breakdownTypeChartOtherRadio'); // Removed
   UIElements.breakdownCategorySelect = document.getElementById('breakdownCategorySelect'); // Select for choosing category
-  // END: Added UI element references for Breakdown Details Section
+  // END: Updated UI element references for Breakdown Details Section
 
   // Basic check to ensure critical elements were found
   if (
@@ -246,15 +245,15 @@ function queryUIElements() {
     !UIElements.pomodoroTimeFocusedEl ||
     !UIElements.itemDetailSection ||
     !UIElements.itemDetailTitle ||
-    !UIElements.itemDetailPeriodDisplay ||
+    // !UIElements.itemDetailPeriodDisplay ||
     !UIElements.itemDetailList ||
     !UIElements.itemDetailPagination ||
     !UIElements.itemDetailPrevBtn ||
     !UIElements.itemDetailPageInfo ||
     !UIElements.itemDetailNextBtn ||
-    !UIElements.breakdownTypeCategoryRadio || // Check for new radio
-    !UIElements.breakdownTypeChartOtherRadio || // Check for new radio
-    !UIElements.breakdownCategorySelect // Check for new select
+    // !UIElements.breakdownTypeCategoryRadio || // Removed
+    // !UIElements.breakdownTypeChartOtherRadio || // Removed
+    !UIElements.breakdownCategorySelect
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure
