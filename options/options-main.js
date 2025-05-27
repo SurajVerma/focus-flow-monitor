@@ -395,7 +395,7 @@ function updateDisplayForSelectedRangeUI() {
   } else if (selectedRangeValue === '') {
     dataFetchKey = 'today';
     displayLabelKey = 'Today';
-    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today';
+    if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = 'today'; // Default to today if nothing is selected
     isRangeView = false;
   }
 
@@ -407,6 +407,23 @@ function updateDisplayForSelectedRangeUI() {
   } else if (loader) {
     loader.style.display = 'none';
   }
+
+  // START: Hide item detail section when main range changes
+  if (UIElements.itemDetailSection) {
+    UIElements.itemDetailSection.style.display = 'none';
+    UIElements.itemDetailSection.classList.remove('scrolled-once', 'scrolled-once-prompt');
+    if (UIElements.itemDetailList)
+      UIElements.itemDetailList.innerHTML = '<li>Select an item from the chart or category list to see details.</li>';
+    if (UIElements.itemDetailTitle) UIElements.itemDetailTitle.textContent = 'Breakdown Details';
+    // Reset breakdown state
+    AppState.currentBreakdownType = 'category'; // Default back to category
+    AppState.currentBreakdownIdentifier = null;
+    AppState.itemDetailCurrentPage = 1;
+    if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = ''; // Reset dropdown
+    if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true; // Reset radio
+    if (UIElements.itemDetailPagination) UIElements.itemDetailPagination.style.display = 'none';
+  }
+  // END: Hide item detail section
 
   setTimeout(() => {
     let domainData = {},
@@ -870,10 +887,16 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     ]);
     const currentTrackedData = result.trackedData || {};
     const currentDailyDomainData = result.dailyDomainData || {};
-    const currentAssignments = AppState.categoryAssignments || {};
-    const currentCategories = AppState.categories || ['Other'];
+    // --- MODIFIED LINES: Prioritize using the fetched data directly for the rebuild ---
+    const assignmentsForRebuild = result.categoryAssignments || {};
+    const categoriesListForRebuild = result.categories || ['Other'];
+    // Ensure 'Other' is always in the list for rebuilding, even if storage somehow misses it.
+    if (!categoriesListForRebuild.includes('Other')) {
+      categoriesListForRebuild.push('Other');
+    }
 
-    const getCategoryForDomain = (domain, assignments, categoriesList) => {
+    const getCategoryForDomainLocal = (domain, assignments, categoriesList) => {
+      // Renamed to avoid conflict if options-utils is also loaded
       if (!domain) return 'Other';
       if (assignments.hasOwnProperty(domain)) {
         return categoriesList.includes(assignments[domain]) ? assignments[domain] : 'Other';
@@ -892,7 +915,8 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
     for (const domain in currentTrackedData) {
       const time = currentTrackedData[domain];
       if (time > 0) {
-        const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
+        // const category = getCategoryForDomainLocal(domain, currentAssignments, currentCategories);
+        const category = getCategoryForDomainLocal(domain, assignmentsForRebuild, categoriesListForRebuild);
         rebuiltCategoryTimeData[category] = (rebuiltCategoryTimeData[category] || 0) + time;
       }
     }
@@ -904,7 +928,8 @@ async function recalculateAndUpdateCategoryTotals(changeDetails) {
       for (const domain in domainsForDate) {
         const time = domainsForDate[domain];
         if (time > 0) {
-          const category = getCategoryForDomain(domain, currentAssignments, currentCategories);
+          // const category = getCategoryForDomainLocal(domain, currentAssignments, currentCategories);
+          const category = getCategoryForDomainLocal(domain, assignmentsForRebuild, categoriesListForRebuild);
           rebuiltDailyCategoryData[date][category] = (rebuiltDailyCategoryData[date][category] || 0) + time;
         }
       }
@@ -964,13 +989,17 @@ function handleCalendarDayClick(event) {
 
   console.log(`[DEBUG Main] handleCalendarDayClick: Clicked on date ${dateStr}`);
 
+  // 1. Update AppState with the new selected date.
   AppState.selectedDateStr = dateStr;
 
+  // 2. Update calendar visual highlighting.
   if (typeof highlightSelectedCalendarDay === 'function') {
     highlightSelectedCalendarDay(dateStr);
   }
 
   if (UIElements.dateRangeSelect) {
+    // 3. Ensure the dateRangeSelect dropdown is set to its empty value state (""),
+    //    as a specific date is now selected, not a predefined range.
     const valueWasChanged = UIElements.dateRangeSelect.value !== '';
     if (valueWasChanged) {
       console.log(
@@ -981,6 +1010,7 @@ function handleCalendarDayClick(event) {
       UIElements.dateRangeSelect.value = '';
     }
 
+    // 4. Call the UI update function directly to reflect the calendar day selection.
     console.log(
       '[DEBUG Main] handleCalendarDayClick: Manually calling updateDisplayForSelectedRangeUI for the new date.'
     );
@@ -1149,6 +1179,63 @@ function setupEventListeners() {
       UIElements.blockPageShowQuoteCheckbox.addEventListener('change', handleBlockPageShowQuoteChange);
     if (UIElements.blockPageUserQuotesTextarea && typeof handleBlockPageUserQuotesChange === 'function')
       UIElements.blockPageUserQuotesTextarea.addEventListener('change', handleBlockPageUserQuotesChange);
+
+    // START: Add event listeners for item detail section and its controls
+    if (UIElements.categoryTimeList) {
+      UIElements.categoryTimeList.addEventListener('click', (event) => {
+        if (event.target.classList.contains('category-name-clickable')) {
+          const categoryName = event.target.dataset.categoryName;
+          if (categoryName && typeof handleCategoryBreakdownRequest === 'function') {
+            if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true;
+            if (UIElements.breakdownCategorySelect) UIElements.breakdownCategorySelect.value = categoryName;
+            // Ensure other radio is unchecked
+            if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = false;
+
+            handleCategoryBreakdownRequest(categoryName);
+          }
+        }
+      });
+    }
+
+    if (UIElements.breakdownTypeCategoryRadio) {
+      UIElements.breakdownTypeCategoryRadio.addEventListener('change', () => {
+        if (UIElements.breakdownTypeCategoryRadio.checked && typeof updateItemDetailDisplay === 'function') {
+          AppState.itemDetailCurrentPage = 1;
+          // AppState.currentBreakdownIdentifier will be set by the select's change or a category click
+          updateItemDetailDisplay();
+        }
+      });
+    }
+    if (UIElements.breakdownTypeChartOtherRadio) {
+      UIElements.breakdownTypeChartOtherRadio.addEventListener('change', () => {
+        if (UIElements.breakdownTypeChartOtherRadio.checked && typeof handleChartOtherDomainsRequest === 'function') {
+          // No need to set category select here, handleChartOtherDomainsRequest will set the correct state
+          handleChartOtherDomainsRequest(); // This will set AppState and call updateItemDetailDisplay
+        }
+      });
+    }
+
+    if (UIElements.breakdownCategorySelect) {
+      UIElements.breakdownCategorySelect.addEventListener('change', () => {
+        if (UIElements.breakdownTypeCategoryRadio) UIElements.breakdownTypeCategoryRadio.checked = true;
+        if (UIElements.breakdownTypeChartOtherRadio) UIElements.breakdownTypeChartOtherRadio.checked = false;
+
+        if (typeof updateItemDetailDisplay === 'function') {
+          AppState.currentBreakdownIdentifier = UIElements.breakdownCategorySelect.value;
+          AppState.currentBreakdownType = 'category';
+          AppState.itemDetailCurrentPage = 1;
+          updateItemDetailDisplay();
+        }
+      });
+    }
+
+    if (UIElements.itemDetailPrevBtn && typeof handleItemDetailPrev === 'function') {
+      UIElements.itemDetailPrevBtn.addEventListener('click', handleItemDetailPrev);
+    }
+    if (UIElements.itemDetailNextBtn && typeof handleItemDetailNext === 'function') {
+      UIElements.itemDetailNextBtn.addEventListener('click', handleItemDetailNext);
+    }
+    // END: Add event listeners
 
     if (typeof handleRuleTypeChange === 'function') handleRuleTypeChange();
     console.log('[Options Main] Event listeners setup complete.');

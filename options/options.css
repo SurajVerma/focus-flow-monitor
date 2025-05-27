@@ -1792,3 +1792,225 @@ button.action-button.secondary:hover {
     border-left-color: var(--bg-button-primary);
   }
 }
+/* --- Styling for Clickable Category Names in "Time per Category" List --- */
+#categoryTimeList .category-name-clickable {
+  cursor: pointer;
+  color: var(--text-color-link, #007bff);
+  font-weight: 500;
+  text-decoration: none; /* No underline by default */
+  padding: 3px 6px; /* Slightly increased padding for better click target */
+  border-radius: var(--border-radius, 0.3rem); /* Consistent border-radius */
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, text-decoration 0.15s ease-in-out;
+}
+
+#categoryTimeList .category-name-clickable:hover,
+#categoryTimeList .category-name-clickable:focus {
+  color: var(--bg-button-primary-hover, #0056b3);
+  background-color: var(--bg-hover-row, #eef2f7); /* Subtle background on hover */
+  text-decoration: underline; /* Underline on hover for clear affordance */
+  outline: none;
+}
+
+/* --- Styling for the Item Detail Section --- */
+#itemDetailSection {
+  margin-top: var(--spacing-xl, 24px);
+  padding: var(--spacing-lg, 16px);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-card);
+}
+
+#itemDetailSection h3#itemDetailTitle {
+  margin-top: 0;
+  margin-bottom: var(--spacing-lg, 16px);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--text-color-heading);
+  text-align: center;
+  padding-bottom: var(--spacing-sm, 8px);
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+#itemDetailPeriodDisplay {
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  display: block;
+  text-align: center;
+  margin-bottom: var(--spacing-md, 12px);
+}
+
+.breakdown-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md, 12px);
+  margin-bottom: var(--spacing-lg, 16px);
+  padding: var(--spacing-md, 12px);
+  background-color: var(--bg-page, #f7f8fc);
+  border: 1px solid var(--border-color-light, #e9ecef);
+  border-radius: var(--border-radius, 0.3rem);
+  align-items: center;
+  justify-content: space-between; /* Changed from space-around for better control */
+}
+
+.breakdown-controls > div {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  flex: 1 1 auto; /* Allow to grow and shrink, basis is auto */
+}
+
+/* Specific styling for the first control group (Category select) */
+.breakdown-controls > div:first-child {
+  min-width: 300px; /* Ensure enough space for label and select */
+  flex-grow: 2; /* Allow it to take a bit more space if available */
+}
+/* Specific styling for the second control group (Other Domains radio) */
+.breakdown-controls > div:last-child {
+  justify-content: flex-start; /* Align to start if it's the only one on a new line */
+  min-width: 250px;
+}
+
+.breakdown-controls label {
+  margin-bottom: 0;
+  font-weight: normal;
+  font-size: var(--font-size-base, 1rem);
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent label from shrinking */
+}
+
+.breakdown-controls input[type='radio'] {
+  margin-right: 5px;
+  vertical-align: middle;
+  accent-color: var(--bg-button-primary);
+  flex-shrink: 0;
+}
+
+.breakdown-controls select#breakdownCategorySelect {
+  padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
+  font-size: var(--font-size-base, 1rem);
+  flex-grow: 1;
+  border: 1px solid var(--border-color-input);
+  border-radius: var(--border-radius);
+  background-color: var(--bg-input);
+  color: var(--text-color-primary);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  min-width: 150px; /* Ensure select has a decent minimum width */
+}
+.breakdown-controls select#breakdownCategorySelect:focus {
+  border-color: var(--border-color-input-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+#itemDetailList {
+  border: 1px solid var(--border-color-medium);
+  border-radius: var(--border-radius);
+  padding: 0;
+  list-style: none;
+}
+
+#itemDetailList li {
+  padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color-light);
+  font-size: var(--font-size-sm);
+}
+#itemDetailList li:last-child {
+  border-bottom: none;
+}
+
+/* Consistent styling for domain/name and time spans in all lists */
+/* For #categoryTimeList, the .category-name part is styled by .category-name-clickable */
+#detailedTimeList li .domain,
+#itemDetailList li .domain {
+  color: var(--text-color-secondary); /* Ensures this is applied */
+  font-weight: normal; /* Ensures normal weight for consistency */
+  margin-right: var(--spacing-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  flex-grow: 1;
+}
+
+#detailedTimeList li .time,
+#categoryTimeList li .time, /* This will style the time part in the category list */
+#itemDetailList li .time {
+  color: var(--text-color-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  background-color: var(--bg-alternate-row);
+  padding: 3px 7px;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+#itemDetailPagination {
+  margin-top: var(--spacing-md, 12px);
+}
+
+/* Dark mode adjustments for new/modified styles */
+@media (prefers-color-scheme: dark) {
+  #categoryTimeList .category-name-clickable {
+    color: var(--text-color-link, #0a84ff);
+  }
+
+  #categoryTimeList .category-name-clickable:hover,
+  #categoryTimeList .category-name-clickable:focus {
+    color: var(--bg-button-primary-hover, #339cff);
+    background-color: var(--bg-hover-row, #38383a);
+  }
+
+  #itemDetailSection {
+    background-color: var(--bg-card, #2c2c2e);
+    border-color: var(--border-color-medium, #4a4a4c);
+  }
+
+  #itemDetailSection h3#itemDetailTitle {
+    color: var(--text-color-heading, #ffffff);
+    border-bottom-color: var(--border-color-medium, #4a4a4c);
+  }
+
+  #itemDetailPeriodDisplay {
+    color: var(--text-color-secondary);
+  }
+
+  .breakdown-controls {
+    background-color: var(--bg-page, #1c1c1e);
+    border-color: var(--border-color-medium, #4a4a4c);
+  }
+
+  .breakdown-controls select#breakdownCategorySelect {
+    border-color: var(--border-color-input, #545456);
+    background-color: var(--bg-input, #3a3a3c);
+    color: var(--text-color-primary, #f2f2f7);
+  }
+
+  .breakdown-controls label {
+    color: var(--text-color-secondary);
+  }
+
+  #itemDetailList {
+    border-color: var(--border-color-medium);
+  }
+  #itemDetailList li {
+    border-bottom-color: var(--border-color-light);
+  }
+
+  /* Ensure dark mode consistency for list item parts */
+  #detailedTimeList li .domain,
+  #itemDetailList li .domain {
+    /* .category-name in #categoryTimeList is handled by .category-name-clickable */
+    color: var(--text-color-secondary);
+  }
+  #detailedTimeList li .time,
+  #categoryTimeList li .time,
+  #itemDetailList li .time {
+    color: var(--text-color-primary);
+    background-color: var(--bg-alternate-row, #2a2a2c);
+  }
+}

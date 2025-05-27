@@ -945,25 +945,7 @@ function handleNextMonth() {
     renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
   if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
 }
-function handleCalendarDayClick(event) {
-  const dayCell = event.target.closest('.calendar-day');
-  if (!dayCell) return;
-  const dateStr = dayCell.dataset.date;
-  if (!dateStr) return;
-  AppState.selectedDateStr = dateStr;
-  if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(dateStr);
-  const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
-  const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
-  const displayDateLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(dateStr) : dateStr;
-  const totalSeconds = Object.values(domainDataForDay).reduce((sum, time) => sum + (time || 0), 0);
-  if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = '';
-  if (totalSeconds < 1) {
-    if (typeof displayNoDataForDate === 'function') displayNoDataForDate(displayDateLabel);
-  } else {
-    if (typeof updateStatsDisplay === 'function')
-      updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
-  }
-}
+
 function handleCalendarMouseOver(event) {
   if (typeof showDayDetailsPopup === 'function') showDayDetailsPopup(event);
 }
@@ -1418,10 +1400,6 @@ async function handleResetPomodoroSettings() {
     ) {
       // The user will click the save button manually if they want to persist.
       // No automatic save here to give user a chance to review.
-      // For now:
-      // await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: settingsToSave });
-      // await browser.runtime.sendMessage({ action: 'pomodoroSettingsChanged' });
-      // displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Pomodoro settings reset to defaults. Click Save to apply.', false);
       console.log('[Options Handlers] Pomodoro settings reset to defaults in UI. User needs to save.');
       displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Settings reset to defaults. Click "Save" to apply changes.', false);
     }
@@ -1430,3 +1408,65 @@ async function handleResetPomodoroSettings() {
     displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Failed to reset Tomato Clock settings.', true);
   }
 }
+
+// START: New handlers for item detail breakdown
+/**
+ * Handles the request to show a breakdown of websites for a specific category.
+ * This is typically called when a category name is clicked in the "Time per Category" list.
+ * @param {string} categoryName - The name of the category to show breakdown for.
+ */
+function handleCategoryBreakdownRequest(categoryName) {
+  console.log(`[Options Handlers] Request to breakdown category: ${categoryName}`);
+  AppState.currentBreakdownType = 'category';
+  AppState.currentBreakdownIdentifier = categoryName;
+  AppState.itemDetailCurrentPage = 1; // Reset pagination for new breakdown
+
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay();
+  } else {
+    console.error('updateItemDetailDisplay function is not defined in options-ui.js');
+  }
+}
+
+/**
+ * Handles the request to show a breakdown of websites that constitute the
+ * "Other Domains" slice in the main chart.
+ * This is typically called when the "Other Domains" slice of the chart is clicked.
+ */
+function handleChartOtherDomainsRequest() {
+  console.log('[Options Handlers] Request to breakdown "Other Domains" from chart.');
+  AppState.currentBreakdownType = 'chartOtherDomains';
+  AppState.currentBreakdownIdentifier = 'chartOtherDomains'; // Specific marker
+  AppState.itemDetailCurrentPage = 1; // Reset pagination
+
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay();
+  } else {
+    console.error('updateItemDetailDisplay function is not defined in options-ui.js');
+  }
+}
+
+/**
+ * Handles the "Previous" button click for the item detail list pagination.
+ */
+function handleItemDetailPrev() {
+  if (AppState.itemDetailCurrentPage > 1) {
+    AppState.itemDetailCurrentPage--;
+    if (typeof updateItemDetailDisplay === 'function') {
+      updateItemDetailDisplay();
+    }
+  }
+}
+
+/**
+ * Handles the "Next" button click for the item detail list pagination.
+ */
+function handleItemDetailNext() {
+  // The check for totalPages should be handled within updateItemDetailDisplay
+  // before disabling the button. Here, we just increment and let it re-render.
+  AppState.itemDetailCurrentPage++;
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay();
+  }
+}
+// END: New handlers for item detail breakdown

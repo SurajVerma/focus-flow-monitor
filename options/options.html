@@ -105,6 +105,45 @@
                 </div>
               </div>
             </div>
+
+            <section id="itemDetailSection" class="stats-list-container">
+              <h3 id="itemDetailTitle">Breakdown Details</h3>
+              <div class="breakdown-controls">
+                <div>
+                  <input
+                    type="radio"
+                    id="breakdownTypeCategoryRadio"
+                    name="breakdownType"
+                    value="category"
+                    checked
+                    style="margin-right: 4px" />
+                  <label for="breakdownTypeCategoryRadio">Top Websites in Category:</label>
+                  <select id="breakdownCategorySelect" style="min-width: 150px">
+                    <option value="">-- Select Category --</option>
+                  </select>
+                </div>
+                <div>
+                  <input
+                    type="radio"
+                    id="breakdownTypeChartOtherRadio"
+                    name="breakdownType"
+                    value="chart_other_domains"
+                    style="margin-right: 4px" />
+                  <label for="breakdownTypeChartOtherRadio">"Other Domains" from Chart</label>
+                </div>
+              </div>
+              <p>
+                <em>Data for: <span id="itemDetailPeriodDisplay">Selected Period</span></em>
+              </p>
+              <ul id="itemDetailList">
+                <li>Select an item from the chart or category list to see details.</li>
+              </ul>
+              <div class="pagination-controls" id="itemDetailPagination" style="display: none">
+                <button id="itemDetailPrevBtn" disabled>&laquo; Prev</button>
+                <span id="itemDetailPageInfo">Page 1 of 1</span>
+                <button id="itemDetailNextBtn" disabled>Next &raquo;</button>
+              </div>
+            </section>
           </section>
         </div>
 
