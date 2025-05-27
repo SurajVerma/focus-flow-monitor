@@ -149,10 +149,10 @@ const defaultCategoryProductivityRatings = {
   Shopping: PRODUCTIVITY_TIERS.DISTRACTING,
   'Social Media': PRODUCTIVITY_TIERS.DISTRACTING,
   Entertainment: PRODUCTIVITY_TIERS.DISTRACTING,
-  Other: PRODUCTIVITY_TIERS.NEUTRAL, // Note: Categories added by the user later won't have a default here // The calculation function will handle this by defaulting them to Neutral.
+  Other: PRODUCTIVITY_TIERS.NEUTRAL,
 };
 
-const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings'; // Key for user settings
+const STORAGE_KEY_PRODUCTIVITY_RATINGS = 'categoryProductivityRatings';
 
 /**
  * Calculates the Focus Score based on category times and ratings.
@@ -224,7 +224,8 @@ function isValidDomainPattern(pattern) {
   if (parts.length > 1) {
     const tld = parts[parts.length - 1];
     if (!/^[a-zA-Z]{2,63}$/.test(tld)) {
-      // TLD should be letters
+      // TLD should be letters, but this check is basic.
+      // Real TLD validation is complex, this is a simple heuristic.
     }
   }
 
@@ -242,3 +243,37 @@ function isValidDomainPattern(pattern) {
 
   return true;
 }
+
+// START: ADDED getCategoryForDomain function
+/**
+ * Determines the category for a given domain based on assignments.
+ * @param {string} domain - The domain to categorize.
+ * @param {object} assignments - The category assignments object (e.g., AppState.categoryAssignments).
+ * @param {string[]} categoriesList - The list of all available categories (e.g., AppState.categories).
+ * @returns {string} The category name, defaulting to 'Other'.
+ */
+function getCategoryForDomain(domain, assignments, categoriesList) {
+  const defaultCat = 'Other'; // Default category
+
+  if (!domain || typeof domain !== 'string') return defaultCat;
+  if (!assignments || typeof assignments !== 'object') return defaultCat;
+  if (!categoriesList || !Array.isArray(categoriesList)) return defaultCat;
+
+  // Direct match
+  if (assignments.hasOwnProperty(domain)) {
+    // Ensure the assigned category actually exists in the master list
+    return categoriesList.includes(assignments[domain]) ? assignments[domain] : defaultCat;
+  }
+
+  // Wildcard match
+  const parts = domain.split('.');
+  for (let i = 1; i < parts.length; i++) {
+    const wildcardPattern = '*.' + parts.slice(i).join('.');
+    if (assignments.hasOwnProperty(wildcardPattern)) {
+      return categoriesList.includes(assignments[wildcardPattern]) ? assignments[wildcardPattern] : defaultCat;
+    }
+  }
+
+  return defaultCat;
+}
+// END: ADDED getCategoryForDomain function

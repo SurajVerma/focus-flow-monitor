@@ -17,6 +17,10 @@ const STORAGE_KEY_BLOCK_PAGE_SHOW_QUOTE = 'blockPage_showQuote';
 const STORAGE_KEY_BLOCK_PAGE_USER_QUOTES = 'blockPage_userQuotes';
 const STORAGE_KEY_POMODORO_SETTINGS = 'pomodoroUserSettings';
 
+// Storage keys for Pomodoro Stats (must match values in background/state.js)
+const STORAGE_KEY_POMODORO_STATS_DAILY = 'pomodoroStatsDaily';
+const STORAGE_KEY_POMODORO_STATS_ALL_TIME = 'pomodoroStatsAllTime';
+
 // --- Global App State ---
 let AppState = {
   // Core Data
@@ -62,6 +66,12 @@ let AppState = {
     sessionsCompleted: 0,
     timeFocused: 0,
   },
+  allPomodoroDailyStats: {}, // Will be populated from storage
+
+  itemDetailCurrentPage: 1,
+  itemDetailItemsPerPage: 10,
+  currentBreakdownIdentifier: null, // Will store category name or null (for 'Other Chart Domains')
+  tempChartOtherDomainsData: [], // Stores the domains that make up the "Other Domains" slice of the chart
 };
 
 // --- UI Element References ---
@@ -77,7 +87,7 @@ function queryUIElements() {
   UIElements.newCategoryNameInput = document.getElementById('newCategoryName');
   UIElements.addCategoryBtn = document.getElementById('addCategoryBtn');
   UIElements.domainPatternInput = document.getElementById('domainPattern');
-  UIElements.categorySelect = document.getElementById('categorySelect');
+  UIElements.categorySelect = document.getElementById('categorySelect'); // Main select for assignments
   UIElements.assignDomainBtn = document.getElementById('assignDomainBtn');
   UIElements.cancelAssignDomainBtn = document.getElementById('cancelAssignDomainBtn');
   UIElements.ruleTypeSelect = document.getElementById('ruleTypeSelect');
@@ -166,7 +176,7 @@ function queryUIElements() {
   UIElements.totalTimeForRangeValue = document.getElementById('totalTimeForRangeValue');
   UIElements.averageTimeForRange = document.getElementById('averageTimeForRange');
 
-  // --- NEW: Pomodoro Settings UI Elements ---
+  // --- Pomodoro Settings UI Elements ---
   UIElements.pomodoroWorkDurationInput = document.getElementById('pomodoroWorkDuration');
   UIElements.pomodoroShortBreakDurationInput = document.getElementById('pomodoroShortBreakDuration');
   UIElements.pomodoroLongBreakDurationInput = document.getElementById('pomodoroLongBreakDuration');
@@ -177,11 +187,26 @@ function queryUIElements() {
   UIElements.pomodoroEnableNotificationsCheckbox = document.getElementById('pomodoroEnableNotificationsCheckbox');
   UIElements.pomodoroNotificationPermissionStatus = document.getElementById('pomodoroNotificationPermissionStatus');
 
-  // --- NEW: Pomodoro Stats UI Elements (Dashboard) ---
+  // --- Pomodoro Stats UI Elements (Dashboard) ---
   UIElements.pomodoroStatsContainer = document.getElementById('pomodoroStatsContainer');
   UIElements.pomodoroStatsLabel = document.getElementById('pomodoroStatsLabel');
   UIElements.pomodoroSessionsCompletedEl = document.getElementById('pomodoroSessionsCompleted');
   UIElements.pomodoroTimeFocusedEl = document.getElementById('pomodoroTimeFocused');
+
+  // START: Updated UI element references for Breakdown Details Section
+  UIElements.itemDetailSection = document.getElementById('itemDetailSection');
+  UIElements.itemDetailTitle = document.getElementById('itemDetailTitle');
+  // UIElements.itemDetailPeriodDisplay = document.getElementById('itemDetailPeriodDisplay');
+  UIElements.itemDetailList = document.getElementById('itemDetailList');
+  UIElements.itemDetailPagination = document.getElementById('itemDetailPagination');
+  UIElements.itemDetailPrevBtn = document.getElementById('itemDetailPrevBtn');
+  UIElements.itemDetailPageInfo = document.getElementById('itemDetailPageInfo');
+  UIElements.itemDetailNextBtn = document.getElementById('itemDetailNextBtn');
+  // References for the controls within the breakdown section
+  // UIElements.breakdownTypeCategoryRadio = document.getElementById('breakdownTypeCategoryRadio'); // Removed
+  // UIElements.breakdownTypeChartOtherRadio = document.getElementById('breakdownTypeChartOtherRadio'); // Removed
+  UIElements.breakdownCategorySelect = document.getElementById('breakdownCategorySelect'); // Select for choosing category
+  // END: Updated UI element references for Breakdown Details Section
 
   // Basic check to ensure critical elements were found
   if (
@@ -207,7 +232,6 @@ function queryUIElements() {
     !UIElements.averageTimeForRange ||
     !UIElements.pomodoroEnableNotificationsCheckbox ||
     !UIElements.pomodoroNotificationPermissionStatus ||
-    // New Pomodoro elements
     !UIElements.pomodoroWorkDurationInput ||
     !UIElements.pomodoroShortBreakDurationInput ||
     !UIElements.pomodoroLongBreakDurationInput ||
@@ -218,7 +242,18 @@ function queryUIElements() {
     !UIElements.pomodoroStatsContainer ||
     !UIElements.pomodoroStatsLabel ||
     !UIElements.pomodoroSessionsCompletedEl ||
-    !UIElements.pomodoroTimeFocusedEl
+    !UIElements.pomodoroTimeFocusedEl ||
+    !UIElements.itemDetailSection ||
+    !UIElements.itemDetailTitle ||
+    // !UIElements.itemDetailPeriodDisplay ||
+    !UIElements.itemDetailList ||
+    !UIElements.itemDetailPagination ||
+    !UIElements.itemDetailPrevBtn ||
+    !UIElements.itemDetailPageInfo ||
+    !UIElements.itemDetailNextBtn ||
+    // !UIElements.breakdownTypeCategoryRadio || // Removed
+    // !UIElements.breakdownTypeChartOtherRadio || // Removed
+    !UIElements.breakdownCategorySelect
   ) {
     console.error('One or more critical UI elements are missing from options.html!');
     return false; // Indicate failure

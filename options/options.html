@@ -105,6 +105,26 @@
                 </div>
               </div>
             </div>
+
+            <section id="itemDetailSection" class="stats-list-container" style="display: none">
+              <h3 id="itemDetailTitle">Breakdown Details</h3>
+              <div class="breakdown-controls">
+                <div>
+                  <label for="breakdownCategorySelect">View websites in category:</label>
+                  <select id="breakdownCategorySelect" style="min-width: 150px">
+                    <option value="">-- Select Category --</option>
+                  </select>
+                </div>
+              </div>
+              <ul id="itemDetailList">
+                <li>Select an item from the chart or category list to see details.</li>
+              </ul>
+              <div class="pagination-controls" id="itemDetailPagination" style="display: none">
+                <button id="itemDetailPrevBtn" disabled>&laquo; Prev</button>
+                <span id="itemDetailPageInfo">Page 1 of 1</span>
+                <button id="itemDetailNextBtn" disabled>Next &raquo;</button>
+              </div>
+            </section>
           </section>
         </div>
 

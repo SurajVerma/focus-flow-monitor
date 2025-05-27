@@ -49,10 +49,14 @@ function displayCategoryTime(dataToDisplay) {
     const li = document.createElement('li');
     const nameSpan = document.createElement('span');
     nameSpan.textContent = item.category;
-    nameSpan.className = 'category-name';
+    nameSpan.className = 'category-name category-name-clickable'; // Use CSS class for styling
+    nameSpan.title = `Click to see websites in ${item.category}`;
+    nameSpan.dataset.categoryName = item.category;
+
     const timeSpan = document.createElement('span');
-    timeSpan.textContent = formatTime(item.time, true); // From utils.js
+    timeSpan.textContent = formatTime(item.time, true);
     timeSpan.className = 'time';
+
     li.appendChild(nameSpan);
     li.appendChild(timeSpan);
     UIElements.categoryTimeList.appendChild(li);
@@ -71,7 +75,7 @@ function populateCategoryList() {
     li.textContent = 'No categories defined.';
     UIElements.categoryList.appendChild(li);
     return;
-  } // Sort categories alphabetically for display, keeping 'Other' last
+  }
 
   const sortedCategories = [...AppState.categories].sort((a, b) => {
     if (a === 'Other') return 1;
@@ -82,7 +86,7 @@ function populateCategoryList() {
   sortedCategories.forEach((cat) => {
     const li = document.createElement('li');
     li.classList.add('category-list-item');
-    li.dataset.categoryName = cat; // Store name for editing logic
+    li.dataset.categoryName = cat;
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'category-name-display';
@@ -125,7 +129,7 @@ function populateCategoryList() {
       cancelBtn.style.display = 'none';
       controlsDiv.appendChild(cancelBtn);
     } else {
-      controlsDiv.style.minWidth = '80px'; // Adjust as needed based on button sizes
+      controlsDiv.style.minWidth = '80px';
     }
 
     li.appendChild(controlsDiv);
@@ -134,17 +138,32 @@ function populateCategoryList() {
 }
 
 function populateCategorySelect() {
-  if (!UIElements.categorySelect) return;
-  UIElements.categorySelect.replaceChildren();
-  const defaultOption = document.createElement('option');
-  defaultOption.value = '';
-  defaultOption.textContent = 'Select Category';
-  UIElements.categorySelect.appendChild(defaultOption);
+  if (UIElements.categorySelect) {
+    UIElements.categorySelect.replaceChildren();
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Select Category';
+    UIElements.categorySelect.appendChild(defaultOption);
+  }
+
+  if (UIElements.breakdownCategorySelect) {
+    UIElements.breakdownCategorySelect.replaceChildren();
+    const defaultBreakdownOption = document.createElement('option');
+    defaultBreakdownOption.value = '';
+    defaultBreakdownOption.textContent = '-- Select Category --';
+    UIElements.breakdownCategorySelect.appendChild(defaultBreakdownOption);
+  }
+
   AppState.categories.forEach((cat) => {
     const option = document.createElement('option');
     option.value = cat;
     option.textContent = cat;
-    UIElements.categorySelect.appendChild(option);
+    if (UIElements.categorySelect) {
+      UIElements.categorySelect.appendChild(option.cloneNode(true));
+    }
+    if (UIElements.breakdownCategorySelect) {
+      UIElements.breakdownCategorySelect.appendChild(option.cloneNode(true));
+    }
   });
 }
 
@@ -267,8 +286,8 @@ function populateRuleList() {
 
       let scheduleText = '';
       if (rule.type.includes('block-') && (rule.startTime || rule.days)) {
-        const displayStartTime = rule.startTime ? formatTimeToAMPM(rule.startTime) : ''; // From utils.js
-        const displayEndTime = rule.endTime ? formatTimeToAMPM(rule.endTime) : ''; // From utils.js
+        const displayStartTime = rule.startTime ? formatTimeToAMPM(rule.startTime) : '';
+        const displayEndTime = rule.endTime ? formatTimeToAMPM(rule.endTime) : '';
         const timePart = displayStartTime && displayEndTime ? `${displayStartTime}-${displayEndTime}` : 'All Day';
         const daysPart = rule.days ? rule.days.join(',') : 'All Week';
         if (rule.days || (displayStartTime && displayEndTime)) {
@@ -284,7 +303,7 @@ function populateRuleList() {
         detailClass = 'rule-blocked';
       } else if (rule.type === 'limit-url' || rule.type === 'limit-category') {
         typeText = rule.type === 'limit-url' ? 'Limit URL' : 'Limit Cat';
-        detailContent = ` (Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`; // From utils.js
+        detailContent = ` (Limit: ${formatTime(rule.limitSeconds || 0, false)}/day)`;
         detailClass = 'rule-limit';
       } else {
         typeText = 'Unknown Rule';
@@ -336,7 +355,7 @@ function populateRuleList() {
 
 function renderCalendar(year, month) {
   if (!UIElements.calendarGrid || !UIElements.currentMonthYearSpan) return;
-  const todayStr = getCurrentDateString(); // from utils.js
+  const todayStr = getCurrentDateString();
   const monthNames = [
     'January',
     'February',
@@ -366,7 +385,7 @@ function renderCalendar(year, month) {
     const dayCell = document.createElement('div');
     dayCell.classList.add('calendar-day');
     const date = new Date(year, month, day);
-    const dateStr = formatDate(date); // from utils.js
+    const dateStr = formatDate(date);
     if (dateStr === todayStr) dayCell.classList.add('today');
     dayCell.dataset.date = dateStr;
     const dayNumberSpan = document.createElement('span');
@@ -380,7 +399,7 @@ function renderCalendar(year, month) {
     const timeSpan = document.createElement('span');
     timeSpan.classList.add('day-time');
     if (dailyTotalSeconds > 0) {
-      timeSpan.textContent = formatTime(dailyTotalSeconds, false); // From utils.js
+      timeSpan.textContent = formatTime(dailyTotalSeconds, false);
     } else {
       timeSpan.textContent = '-';
       timeSpan.classList.add('no-data');
@@ -397,7 +416,6 @@ function renderCalendar(year, month) {
     } else {
       dayCell.style.cursor = 'default';
     }
-
     fragment.appendChild(dayCell);
   }
   UIElements.calendarGrid.appendChild(fragment);
@@ -415,9 +433,9 @@ function showDayDetailsPopup(event) {
     .slice(0, 3);
   UIElements.calendarDetailPopup.replaceChildren();
   const heading = document.createElement('strong');
-  heading.textContent = formatDisplayDate(dateStr); // from utils.js
+  heading.textContent = formatDisplayDate(dateStr);
   UIElements.calendarDetailPopup.appendChild(heading);
-  const totalText = document.createTextNode(`Total: ${formatTime(totalSeconds, true)}`); // from utils.js
+  const totalText = document.createTextNode(`Total: ${formatTime(totalSeconds, true)}`);
   UIElements.calendarDetailPopup.appendChild(totalText);
   UIElements.calendarDetailPopup.appendChild(document.createElement('br'));
   if (topDomains.length > 0) {
@@ -425,7 +443,7 @@ function showDayDetailsPopup(event) {
     const sitesList = document.createElement('ul');
     topDomains.forEach(([domain, time]) => {
       const li = document.createElement('li');
-      li.textContent = `${domain}: ${formatTime(time, false)}`; // from utils.js
+      li.textContent = `${domain}: ${formatTime(time, false)}`;
       sitesList.appendChild(li);
     });
     UIElements.calendarDetailPopup.appendChild(document.createElement('br'));
@@ -439,7 +457,6 @@ function showDayDetailsPopup(event) {
   const container = document.querySelector('.calendar-container');
   if (!container) return;
   const dayRect = dayCell.getBoundingClientRect();
-  const contRect = container.getBoundingClientRect();
   let top = dayCell.offsetTop + dayCell.offsetHeight + 5;
   let left = dayCell.offsetLeft + dayCell.offsetWidth / 2;
   UIElements.calendarDetailPopup.style.position = 'absolute';
@@ -489,6 +506,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
     AppState.timeChart = null;
   }
   if (!data || Object.keys(data).length === 0) {
+    AppState.tempChartOtherDomainsData = []; // Clear other domains data
     clearChartOnError(`No data for ${periodLabel}`);
     return;
   }
@@ -501,6 +519,7 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
       .sort((a, b) => b.time - a.time);
     otherLabel = 'Other Categories';
   } else {
+    // domain view
     sortedData = Object.entries(data)
       .map(([n, t]) => ({ name: n, time: t }))
       .filter((i) => i.time > 0.1)
@@ -508,21 +527,35 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
     otherLabel = 'Other Domains';
   }
   if (sortedData.length === 0) {
+    AppState.tempChartOtherDomainsData = []; // Clear other domains data
     clearChartOnError(`No significant data for ${periodLabel}`);
     return;
   }
+
   let labels = sortedData.map((i) => i.name),
     times = sortedData.map((i) => i.time);
+  AppState.tempChartOtherDomainsData = []; // Reset before populating
+
   if (sortedData.length > maxSlices) {
     const top = sortedData.slice(0, maxSlices - 1);
     labels = top.map((i) => i.name);
     times = top.map((i) => i.time);
-    const other = sortedData.slice(maxSlices - 1).reduce((s, i) => s + i.time, 0);
-    if (other > 0.1) {
+    const otherSliceData = sortedData.slice(maxSlices - 1);
+    const otherTime = otherSliceData.reduce((s, i) => s + i.time, 0);
+    if (otherTime > 0.1) {
       labels.push(otherLabel);
-      times.push(other);
+      times.push(otherTime);
+      if (viewMode === 'domain') {
+        // Only populate for domain view
+        AppState.tempChartOtherDomainsData = otherSliceData;
+        console.log(
+          '[RenderChart] Stored tempChartOtherDomainsData for "Other Domains" slice:',
+          JSON.parse(JSON.stringify(AppState.tempChartOtherDomainsData))
+        );
+      }
     }
   }
+
   const defaultPalette = [
     'rgba(54, 162, 235, 0.8)',
     'rgba(255, 99, 132, 0.8)',
@@ -538,11 +571,11 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
   ];
   let backgroundColors;
   if (viewMode === 'category') {
-    backgroundColors = labels.map((l) => getCategoryColor(l)); // from utils.js
-    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other'); // from utils.js
+    backgroundColors = labels.map((l) => getCategoryColor(l));
+    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other');
   } else {
     backgroundColors = labels.map((_, i) => defaultPalette[i % defaultPalette.length]);
-    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other'); // from utils.js
+    if (labels.includes(otherLabel)) backgroundColors[labels.indexOf(otherLabel)] = getCategoryColor('Other');
   }
   try {
     AppState.timeChart = new Chart(ctx, {
@@ -562,11 +595,86 @@ function renderChart(data, periodLabel = 'Selected Period', viewMode = 'domain')
               label: (c) => {
                 let l = c.label || '';
                 if (l) l += ': ';
-                if (c.parsed !== null && c.parsed !== undefined) l += formatTime(c.parsed, true); // from utils.js
+                if (c.parsed !== null && c.parsed !== undefined) l += formatTime(c.parsed, true);
                 return l;
+              },
+              afterBody: function (tooltipItems) {
+                // const chartInstance = this.chart; // Not used currently
+                const currentViewMode = AppState.currentChartViewMode;
+                let additionalInfo = [];
+
+                if (tooltipItems.length > 0) {
+                  const tooltipItem = tooltipItems[0];
+                  const label = tooltipItem.label;
+
+                  if (currentViewMode === 'category' && label !== 'Other Categories') {
+                    const categoryName = label;
+                    const { domainData: currentPeriodDomainData } = getFilteredDataForRange(
+                      UIElements.dateRangeSelect.value || AppState.selectedDateStr,
+                      /^\d{4}-\d{2}-\d{2}$/.test(AppState.selectedDateStr) && UIElements.dateRangeSelect.value === ''
+                    );
+
+                    if (currentPeriodDomainData) {
+                      const domainsInCategory = [];
+                      for (const domain in currentPeriodDomainData) {
+                        if (
+                          typeof getCategoryForDomain === 'function' &&
+                          getCategoryForDomain(domain, AppState.categoryAssignments, AppState.categories) ===
+                            categoryName
+                        ) {
+                          domainsInCategory.push({ name: domain, time: currentPeriodDomainData[domain] });
+                        }
+                      }
+                      const topDomains = domainsInCategory.sort((a, b) => b.time - a.time).slice(0, 2);
+                      if (topDomains.length > 0) {
+                        additionalInfo.push('');
+                        additionalInfo.push('Top sites:');
+                        topDomains.forEach((d) => additionalInfo.push(`  ${d.name} (${formatTime(d.time, false)})`));
+                      }
+                    }
+                  } else if (
+                    currentViewMode === 'domain' &&
+                    label === 'Other Domains' &&
+                    AppState.tempChartOtherDomainsData &&
+                    AppState.tempChartOtherDomainsData.length > 0
+                  ) {
+                    const topOtherDomains = [...AppState.tempChartOtherDomainsData] // Use the stored data
+                      .sort((a, b) => b.time - a.time)
+                      .slice(0, 2);
+                    if (topOtherDomains.length > 0) {
+                      additionalInfo.push('');
+                      additionalInfo.push('Includes:');
+                      topOtherDomains.forEach((d) => additionalInfo.push(`  ${d.name} (${formatTime(d.time, false)})`));
+                    }
+                  }
+                }
+                return additionalInfo;
               },
             },
           },
+        },
+        onClick: (event, elements, chart) => {
+          if (elements.length > 0) {
+            const clickedElement = elements[0];
+            const index = clickedElement.index;
+            const label = chart.data.labels[index];
+            console.log(`[Chart onClick] Clicked: ${label}, Current View: ${AppState.currentChartViewMode}`);
+
+            if (label === 'Other Domains' && AppState.currentChartViewMode === 'domain') {
+              console.log("[Chart onClick] 'Other Domains' slice clicked.");
+              if (typeof handleChartOtherDomainsRequest === 'function') {
+                handleChartOtherDomainsRequest();
+              }
+            } else if (AppState.currentChartViewMode === 'category') {
+              const categoryName = label;
+              console.log(`[Chart onClick] Category slice '${categoryName}' clicked.`);
+              if (categoryName && categoryName !== 'Other Categories') {
+                if (typeof handleCategoryBreakdownRequest === 'function') {
+                  handleCategoryBreakdownRequest(categoryName);
+                }
+              }
+            }
+          }
         },
       },
     });
@@ -605,9 +713,6 @@ function clearChartOnError(message = 'Error loading chart data') {
   }
 }
 
-/**
- * Populates the Productivity Settings list in the options page.
- */
 function populateProductivitySettings() {
   if (!UIElements.productivitySettingsList) {
     console.error('Productivity settings list UI element not found!');
@@ -673,7 +778,6 @@ function populateProductivitySettings() {
   UIElements.productivitySettingsList.appendChild(fragment);
 }
 
-// --- Populate Pomodoro Settings Inputs ---
 function populatePomodoroSettingsInputs(settings) {
   if (
     !UIElements.pomodoroWorkDurationInput ||
@@ -685,14 +789,13 @@ function populatePomodoroSettingsInputs(settings) {
     return;
   }
 
-  const { durations, sessionsBeforeLongBreak } = settings || {}; // Handle undefined settings gracefully
+  const { durations, sessionsBeforeLongBreak } = settings || {};
 
-  const POMODORO_PHASES_WORK = 'Work'; // Or use a globally available constant
+  const POMODORO_PHASES_WORK = 'Work';
   const POMODORO_PHASES_SHORT_BREAK = 'Short Break';
   const POMODORO_PHASES_LONG_BREAK = 'Long Break';
 
   const defaultDurations = {
-    // Define defaults for robustness
     [POMODORO_PHASES_WORK]: 25 * 60,
     [POMODORO_PHASES_SHORT_BREAK]: 5 * 60,
     [POMODORO_PHASES_LONG_BREAK]: 15 * 60,
@@ -702,84 +805,284 @@ function populatePomodoroSettingsInputs(settings) {
   const currentDurations = durations || defaultDurations;
   const currentSessions = sessionsBeforeLongBreak !== undefined ? sessionsBeforeLongBreak : defaultSessions;
 
-  if (currentDurations[POMODORO_PHASES_WORK] !== undefined) {
-    UIElements.pomodoroWorkDurationInput.value = currentDurations[POMODORO_PHASES_WORK] / 60;
-  } else {
-    UIElements.pomodoroWorkDurationInput.value = defaultDurations[POMODORO_PHASES_WORK] / 60;
-  }
-
-  if (currentDurations[POMODORO_PHASES_SHORT_BREAK] !== undefined) {
-    UIElements.pomodoroShortBreakDurationInput.value = currentDurations[POMODORO_PHASES_SHORT_BREAK] / 60;
-  } else {
-    UIElements.pomodoroShortBreakDurationInput.value = defaultDurations[POMODORO_PHASES_SHORT_BREAK] / 60;
-  }
-  if (currentDurations[POMODORO_PHASES_LONG_BREAK] !== undefined) {
-    UIElements.pomodoroLongBreakDurationInput.value = currentDurations[POMODORO_PHASES_LONG_BREAK] / 60;
-  } else {
-    UIElements.pomodoroLongBreakDurationInput.value = defaultDurations[POMODORO_PHASES_LONG_BREAK] / 60;
-  }
-
+  UIElements.pomodoroWorkDurationInput.value =
+    (currentDurations[POMODORO_PHASES_WORK] || defaultDurations[POMODORO_PHASES_WORK]) / 60;
+  UIElements.pomodoroShortBreakDurationInput.value =
+    (currentDurations[POMODORO_PHASES_SHORT_BREAK] || defaultDurations[POMODORO_PHASES_SHORT_BREAK]) / 60;
+  UIElements.pomodoroLongBreakDurationInput.value =
+    (currentDurations[POMODORO_PHASES_LONG_BREAK] || defaultDurations[POMODORO_PHASES_LONG_BREAK]) / 60;
   UIElements.pomodoroSessionsInput.value = currentSessions;
 }
 
-// --- Display Pomodoro Stats ---
-async function displayPomodoroStats(periodLabel = 'Today', noData = false) {
+async function displayPomodoroStats(periodLabel = 'Today', noDataForMainStats = false) {
+  console.log(
+    `[DEBUG Pomodoro UI - ENTRY] displayPomodoroStats called. periodLabel: "${periodLabel}", noDataForMainStats: ${noDataForMainStats}`
+  );
+
   if (
     !UIElements.pomodoroStatsContainer ||
     !UIElements.pomodoroStatsLabel ||
     !UIElements.pomodoroSessionsCompletedEl ||
     !UIElements.pomodoroTimeFocusedEl
   ) {
-    console.warn('[Options UI] Pomodoro stats UI elements not found.');
+    console.warn('[Options UI] Pomodoro stats UI elements not found. Aborting displayPomodoroStats.');
     return;
   }
 
   UIElements.pomodoroStatsLabel.textContent = `Tomato Clock Stats (${periodLabel})`;
+  UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: N/A`;
+  UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: N/A`;
+  UIElements.pomodoroStatsContainer.style.display = 'block';
 
-  if (noData) {
-    UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: N/A`;
-    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: N/A`;
-    UIElements.pomodoroStatsContainer.style.display = 'block';
+  console.log(`[DEBUG Pomodoro UI - POST UI CHECK] AppState.selectedDateStr: "${AppState.selectedDateStr}"`);
+
+  const isMultiDayRangeLabel = periodLabel === 'This Week' || periodLabel === 'This Month';
+  console.log(`[DEBUG Pomodoro UI] isMultiDayRangeLabel: ${isMultiDayRangeLabel} for periodLabel: "${periodLabel}"`);
+
+  if (noDataForMainStats && isMultiDayRangeLabel) {
+    console.log(
+      '[DEBUG Pomodoro UI] Showing N/A due to noDataForMainStats and isMultiDayRangeLabel for a multi-day range.'
+    );
     return;
   }
 
   try {
-    let statsToDisplay = { workSessions: 0, totalWorkTime: 0 }; // Default to 0 if no data found
+    let statsToDisplay = { workSessions: 0, totalWorkTime: 0 };
+    const allDailyStats = AppState.allPomodoroDailyStats || {};
+    console.log(
+      '[DEBUG Pomodoro UI] AppState.allPomodoroDailyStats available:',
+      Object.keys(allDailyStats).length > 0 ? JSON.parse(JSON.stringify(allDailyStats)) : '{}'
+    );
 
-    let dateToFetch = getCurrentDateString(); // Default to today
-    if (
-      periodLabel !== 'Today' &&
-      periodLabel !== 'This Week' &&
-      periodLabel !== 'This Month' &&
-      periodLabel !== 'All Time'
-    ) {
-      dateToFetch = AppState.selectedDateStr || getCurrentDateString();
-    }
-
-    if (browser && browser.runtime && browser.runtime.sendMessage) {
-      try {
-        console.log(`[Options UI] Requesting Pomodoro stats for date: ${dateToFetch}`);
-        const response = await browser.runtime.sendMessage({ action: 'getPomodoroStatsForDate', date: dateToFetch });
-        if (response && response.success && response.stats) {
-          statsToDisplay = response.stats;
-          console.log(`[Options UI] Received Pomodoro stats for ${dateToFetch}:`, statsToDisplay);
-        } else {
-          console.warn(
-            `[Options UI] Failed to fetch Pomodoro stats for ${dateToFetch} from background or no stats available. Error:`,
-            response?.error
-          );
+    if (periodLabel === 'Today') {
+      const todayStr =
+        typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0];
+      statsToDisplay = allDailyStats[todayStr] || { workSessions: 0, totalWorkTime: 0 };
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'Today': dateStr: ${todayStr}, stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'This Week') {
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr =
+          typeof formatDate === 'function'
+            ? formatDate(date)
+            : new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+        const dailyStat = allDailyStats[dateStr];
+        if (dailyStat) {
+          statsToDisplay.workSessions += dailyStat.workSessions || 0;
+          statsToDisplay.totalWorkTime += dailyStat.totalWorkTime || 0;
         }
-      } catch (err) {
-        console.warn(`[Options UI] Error sending message to get Pomodoro stats for ${dateToFetch}:`, err);
       }
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'This Week': aggregated stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'This Month') {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      for (let day = 1; day <= today.getDate(); day++) {
+        const date = new Date(year, month, day);
+        const dateStr =
+          typeof formatDate === 'function'
+            ? formatDate(date)
+            : new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString().split('T')[0];
+        const dailyStat = allDailyStats[dateStr];
+        if (dailyStat) {
+          statsToDisplay.workSessions += dailyStat.workSessions || 0;
+          statsToDisplay.totalWorkTime += dailyStat.totalWorkTime || 0;
+        }
+      }
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'This Month': aggregated stats:`,
+        JSON.parse(JSON.stringify(statsToDisplay))
+      );
+    } else if (periodLabel === 'All Time') {
+      statsToDisplay = { workSessions: 0, totalWorkTime: 0 };
+      if (Object.keys(allDailyStats).length > 0) {
+        for (const dateStr_1 in allDailyStats) {
+          const dailyStat_1 = allDailyStats[dateStr_1];
+          if (dailyStat_1) {
+            statsToDisplay.workSessions += dailyStat_1.workSessions || 0;
+            statsToDisplay.totalWorkTime += dailyStat_1.totalWorkTime || 0;
+          }
+        }
+      }
+      console.log(`[DEBUG Pomodoro UI] Case 'All Time': stats:`, JSON.parse(JSON.stringify(statsToDisplay)));
+    } else {
+      const dateStrToUse =
+        AppState.selectedDateStr ||
+        (typeof getCurrentDateString === 'function' ? getCurrentDateString() : new Date().toISOString().split('T')[0]);
+      console.log(
+        `[DEBUG Pomodoro UI] Case 'Specific Date/Else': periodLabel: "${periodLabel}", determined dateStrToUse: "${dateStrToUse}"`
+      );
+
+      if (allDailyStats.hasOwnProperty(dateStrToUse)) {
+        statsToDisplay = allDailyStats[dateStrToUse] || { workSessions: 0, totalWorkTime: 0 };
+        console.log(`[DEBUG Pomodoro UI] Found data for ${dateStrToUse}:`, JSON.parse(JSON.stringify(statsToDisplay)));
+      } else {
+        statsToDisplay = { workSessions: 0, totalWorkTime: 0 };
+        console.log(`[DEBUG Pomodoro UI] No data found for ${dateStrToUse} in allDailyStats. Using zeroed stats.`);
+      }
+
+      UIElements.pomodoroStatsLabel.textContent = `Tomato Clock Stats (${
+        typeof formatDisplayDate === 'function' ? formatDisplayDate(dateStrToUse) : dateStrToUse
+      })`;
     }
 
     UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: ${statsToDisplay.workSessions}`;
-    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: ${formatTime(statsToDisplay.totalWorkTime, false)}`;
-    UIElements.pomodoroStatsContainer.style.display = 'block';
+    UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: ${
+      typeof formatTime === 'function'
+        ? formatTime(statsToDisplay.totalWorkTime, false)
+        : statsToDisplay.totalWorkTime / 60 + 'm'
+    }`;
   } catch (error) {
     console.error('[Options UI] Error displaying Pomodoro stats:', error);
     UIElements.pomodoroSessionsCompletedEl.textContent = `Work Sessions: Error`;
     UIElements.pomodoroTimeFocusedEl.textContent = `Time Focused: Error`;
+  }
+}
+
+function updateItemDetailDisplay(isInitialCall = false) {
+  // Added isInitialCall parameter
+  if (
+    !UIElements.itemDetailSection ||
+    !UIElements.itemDetailTitle ||
+    !UIElements.itemDetailList ||
+    !UIElements.breakdownCategorySelect
+  ) {
+    console.warn('[updateItemDetailDisplay] Critical UI elements for breakdown section are missing. Aborting.');
+    if (UIElements.itemDetailSection) UIElements.itemDetailSection.style.display = 'none';
+    return;
+  }
+
+  console.log(
+    `[updateItemDetailDisplay] Current Breakdown Identifier: ${AppState.currentBreakdownIdentifier}, Initial Call: ${isInitialCall}`
+  );
+
+  let currentPeriodLabel = 'Selected Period';
+  if (UIElements.dateRangeSelect.value === '' && AppState.selectedDateStr) {
+    currentPeriodLabel =
+      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+  } else if (UIElements.dateRangeSelect.value) {
+    currentPeriodLabel =
+      UIElements.dateRangeSelect.options[UIElements.dateRangeSelect.selectedIndex]?.text || AppState.selectedDateStr;
+  } else if (AppState.selectedDateStr) {
+    currentPeriodLabel =
+      typeof formatDisplayDate === 'function' ? formatDisplayDate(AppState.selectedDateStr) : AppState.selectedDateStr;
+  }
+
+  let titleBase = 'Breakdown Details';
+  let dataForBreakdownList = [];
+
+  const currentDashboardPeriodValue = UIElements.dateRangeSelect.value || AppState.selectedDateStr;
+  const isSpecificDate =
+    /^\d{4}-\d{2}-\d{2}$/.test(AppState.selectedDateStr) && UIElements.dateRangeSelect.value === '';
+  const { domainData: currentPeriodDomainData } = getFilteredDataForRange(currentDashboardPeriodValue, isSpecificDate);
+
+  if (AppState.currentBreakdownIdentifier === null) {
+    titleBase = `Breakdown: Other Chart Domains`;
+    dataForBreakdownList = [...AppState.tempChartOtherDomainsData].sort((a, b) => b.time - a.time);
+    if (dataForBreakdownList.length === 0) {
+      titleBase = "Details for 'Other Domains' (from Chart)";
+    }
+  } else if (typeof AppState.currentBreakdownIdentifier === 'string') {
+    const categoryName = AppState.currentBreakdownIdentifier;
+    titleBase = `Websites in: ${categoryName}`;
+    if (currentPeriodDomainData) {
+      const domainsInCategory = [];
+      for (const domain in currentPeriodDomainData) {
+        const actualCategory =
+          typeof getCategoryForDomain === 'function'
+            ? getCategoryForDomain(domain, AppState.categoryAssignments, AppState.categories)
+            : 'Error';
+        if (actualCategory === categoryName) {
+          domainsInCategory.push({ name: domain, time: currentPeriodDomainData[domain] });
+        }
+      }
+      dataForBreakdownList = domainsInCategory.sort((a, b) => b.time - a.time);
+    } else {
+      dataForBreakdownList = [];
+    }
+  } else {
+    dataForBreakdownList = [];
+    titleBase = 'Select an item to see details';
+  }
+
+  UIElements.itemDetailTitle.textContent = `${titleBase} (${currentPeriodLabel})`;
+  UIElements.itemDetailList.innerHTML = '';
+
+  if (dataForBreakdownList.length === 0) {
+    const li = document.createElement('li');
+    if (AppState.currentBreakdownIdentifier === null && AppState.tempChartOtherDomainsData.length === 0) {
+      li.textContent = 'No "Other Domains" data from the current chart view, or this slice was not present/clicked.';
+    } else if (typeof AppState.currentBreakdownIdentifier === 'string' && !AppState.currentBreakdownIdentifier) {
+      li.textContent = 'Please select a category to see its website breakdown.';
+    } else {
+      li.textContent = 'No specific items to display for this selection.';
+    }
+    UIElements.itemDetailList.appendChild(li);
+    if (UIElements.itemDetailPagination) UIElements.itemDetailPagination.style.display = 'none';
+  } else {
+    const totalItems = dataForBreakdownList.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / AppState.itemDetailItemsPerPage));
+    AppState.itemDetailCurrentPage = Math.max(1, Math.min(AppState.itemDetailCurrentPage, totalPages));
+
+    const startIndex = (AppState.itemDetailCurrentPage - 1) * AppState.itemDetailItemsPerPage;
+    const endIndex = startIndex + AppState.itemDetailItemsPerPage;
+    const paginatedItems = dataForBreakdownList.slice(startIndex, endIndex);
+
+    paginatedItems.forEach((item) => {
+      const li = document.createElement('li');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = item.name;
+      nameSpan.className = 'domain';
+
+      const timeSpan = document.createElement('span');
+      timeSpan.textContent = formatTime(item.time, true);
+      timeSpan.className = 'time';
+
+      li.appendChild(nameSpan);
+      li.appendChild(timeSpan);
+      UIElements.itemDetailList.appendChild(li);
+    });
+
+    if (UIElements.itemDetailPageInfo)
+      UIElements.itemDetailPageInfo.textContent = `Page ${AppState.itemDetailCurrentPage} of ${totalPages}`;
+    if (UIElements.itemDetailPrevBtn) UIElements.itemDetailPrevBtn.disabled = AppState.itemDetailCurrentPage <= 1;
+    if (UIElements.itemDetailNextBtn)
+      UIElements.itemDetailNextBtn.disabled = AppState.itemDetailCurrentPage >= totalPages;
+    if (UIElements.itemDetailPagination)
+      UIElements.itemDetailPagination.style.display = totalPages > 1 ? 'flex' : 'none';
+  }
+
+  const shouldShowSection =
+    dataForBreakdownList.length > 0 ||
+    typeof AppState.currentBreakdownIdentifier === 'string' ||
+    AppState.currentBreakdownIdentifier === null;
+  UIElements.itemDetailSection.style.display = shouldShowSection ? 'block' : 'none';
+
+  if (shouldShowSection) {
+    if (isInitialCall) {
+      // Only add 'scrolled-once' on initial load if section is shown, don't scroll
+      if (!UIElements.itemDetailSection.classList.contains('scrolled-once')) {
+        UIElements.itemDetailSection.classList.add('scrolled-once');
+      }
+    } else {
+      // Subsequent calls (user interactions)
+      if (!UIElements.itemDetailSection.classList.contains('scrolled-once')) {
+        UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        UIElements.itemDetailSection.classList.add('scrolled-once');
+      } else if (UIElements.itemDetailSection.classList.contains('scrolled-once-prompt')) {
+        UIElements.itemDetailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        UIElements.itemDetailSection.classList.remove('scrolled-once-prompt');
+      }
+    }
+  } else {
+    UIElements.itemDetailSection.classList.remove('scrolled-once', 'scrolled-once-prompt');
   }
 }

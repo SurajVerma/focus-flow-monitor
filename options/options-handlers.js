@@ -945,25 +945,7 @@ function handleNextMonth() {
     renderCalendar(AppState.calendarDate.getFullYear(), AppState.calendarDate.getMonth());
   if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(AppState.selectedDateStr);
 }
-function handleCalendarDayClick(event) {
-  const dayCell = event.target.closest('.calendar-day');
-  if (!dayCell) return;
-  const dateStr = dayCell.dataset.date;
-  if (!dateStr) return;
-  AppState.selectedDateStr = dateStr;
-  if (typeof highlightSelectedCalendarDay === 'function') highlightSelectedCalendarDay(dateStr);
-  const domainDataForDay = AppState.dailyDomainData[dateStr] || {};
-  const categoryDataForDay = AppState.dailyCategoryData[dateStr] || {};
-  const displayDateLabel = typeof formatDisplayDate === 'function' ? formatDisplayDate(dateStr) : dateStr;
-  const totalSeconds = Object.values(domainDataForDay).reduce((sum, time) => sum + (time || 0), 0);
-  if (UIElements.dateRangeSelect) UIElements.dateRangeSelect.value = '';
-  if (totalSeconds < 1) {
-    if (typeof displayNoDataForDate === 'function') displayNoDataForDate(displayDateLabel);
-  } else {
-    if (typeof updateStatsDisplay === 'function')
-      updateStatsDisplay(domainDataForDay, categoryDataForDay, displayDateLabel, dateStr);
-  }
-}
+
 function handleCalendarMouseOver(event) {
   if (typeof showDayDetailsPopup === 'function') showDayDetailsPopup(event);
 }
@@ -973,7 +955,7 @@ function handleCalendarMouseOut() {
 function handleChartViewChange(event) {
   AppState.currentChartViewMode = event.target.value;
   console.log(`Chart view changed to: ${AppState.currentChartViewMode}`);
-  if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+  if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI(false); // Not initial load
 }
 function handleExportCsv() {
   if (!UIElements.dateRangeSelect) {
@@ -1047,6 +1029,8 @@ async function handleExportData() {
       'dailyDomainData',
       'dailyCategoryData',
       'hourlyData',
+      'pomodoroStatsDaily',
+      'pomodoroStatsAllTime',
       STORAGE_KEY_IDLE_THRESHOLD,
       STORAGE_KEY_DATA_RETENTION_DAYS,
       STORAGE_KEY_PRODUCTIVITY_RATINGS,
@@ -1072,11 +1056,16 @@ async function handleExportData() {
         dataToExport[key] = storedData[key] ?? DEFAULT_DATA_RETENTION_DAYS;
       else if (key === STORAGE_KEY_PRODUCTIVITY_RATINGS) dataToExport[key] = storedData[key] || {};
       else if (key === STORAGE_KEY_POMODORO_SETTINGS)
-        // Ensure Pomodoro settings are included
         dataToExport[key] = storedData[key] || {
-          notifyEnabled: true, // Default value
-          durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 }, // Default durations
-          sessionsBeforeLongBreak: 4, // Default sessions
+          notifyEnabled: true,
+          durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 },
+          sessionsBeforeLongBreak: 4,
+        };
+      else if (key === 'pomodoroStatsDaily') dataToExport[key] = storedData[key] || {};
+      else if (key === 'pomodoroStatsAllTime')
+        dataToExport[key] = storedData[key] || {
+          totalWorkSessionsCompleted: 0,
+          totalTimeFocused: 0,
         };
       else if (key.startsWith('blockPage_')) {
         if (key.includes('show')) dataToExport[key] = storedData[key] ?? true;
@@ -1152,15 +1141,14 @@ function handleImportFileChange(event) {
         UIElements.importStatus.className = 'status-message';
         UIElements.importStatus.style.display = 'block';
       }
-      // Ensure Pomodoro settings have defaults if not present in imported file
       const pomodoroDefaults = {
         notifyEnabled: true,
         durations: { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 },
         sessionsBeforeLongBreak: 4,
       };
       importedData[STORAGE_KEY_POMODORO_SETTINGS] = {
-        ...pomodoroDefaults, // Apply defaults first
-        ...(importedData[STORAGE_KEY_POMODORO_SETTINGS] || {}), // Then override with imported, if any
+        ...pomodoroDefaults,
+        ...(importedData[STORAGE_KEY_POMODORO_SETTINGS] || {}),
       };
 
       await browser.storage.local.set(importedData);
@@ -1206,7 +1194,7 @@ async function handleProductivityRatingChange(event) {
     currentRatings[category] = newRating;
     await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: currentRatings });
     AppState.categoryProductivityRatings = currentRatings;
-    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
+    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI(false); // Not initial
   } catch (error) {
     console.error('Error saving productivity rating:', error);
     alert('Failed to save productivity setting. Please try again.');
@@ -1266,33 +1254,29 @@ async function handlePomodoroNotificationToggle() {
         finalNotifyEnabledState = false;
       }
     }
-    AppState.pomodoroNotifyEnabled = finalNotifyEnabledState; // Update AppState immediately
+    AppState.pomodoroNotifyEnabled = finalNotifyEnabledState;
     const settingsResult = await browser.storage.local.get(STORAGE_KEY_POMODORO_SETTINGS);
     let pomodoroSettings = settingsResult[STORAGE_KEY_POMODORO_SETTINGS] || {};
 
-    // Ensure durations and sessionsBeforeLongBreak are preserved or defaulted
-    const defaultDurations = { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 }; // Keep these consistent
+    const defaultDurations = { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
     const defaultSessions = 4;
     pomodoroSettings.durations = pomodoroSettings.durations || defaultDurations;
     pomodoroSettings.sessionsBeforeLongBreak = pomodoroSettings.sessionsBeforeLongBreak || defaultSessions;
 
-    // Update only the notifyEnabled part
     pomodoroSettings.notifyEnabled = AppState.pomodoroNotifyEnabled;
 
     await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: pomodoroSettings });
     console.log('[Options Handlers] Pomodoro notification setting saved:', pomodoroSettings);
 
     if (typeof updatePomodoroPermissionStatusDisplay === 'function') {
-      await updatePomodoroPermissionStatusDisplay(); // Update UI text based on permission & new setting
+      await updatePomodoroPermissionStatusDisplay();
     }
-    // Notify background script about the change (it will re-read from storage)
     browser.runtime
       .sendMessage({ action: 'pomodoroSettingsChanged' })
       .then((response) => console.log('[Options Handlers] Notified background of Pomodoro settings change:', response))
       .catch((err) => console.error('[Options Handlers] Error notifying background:', err));
   } catch (error) {
     console.error('[Options Handlers] Error in handlePomodoroNotificationToggle:', error);
-    // Revert checkbox to reflect actual AppState if error occurs
     if (UIElements.pomodoroEnableNotificationsCheckbox) {
       UIElements.pomodoroEnableNotificationsCheckbox.checked = AppState.pomodoroNotifyEnabled;
     }
@@ -1300,7 +1284,6 @@ async function handlePomodoroNotificationToggle() {
       updatePomodoroPermissionStatusDisplay();
     }
   } finally {
-    // Using a short timeout to prevent rapid toggling issues if permission dialog is slow
     setTimeout(() => {
       AppState.isRequestingPermission = false;
       console.log('[Options Handlers] isRequestingPermission flag reset.');
@@ -1309,9 +1292,8 @@ async function handlePomodoroNotificationToggle() {
   }
 }
 
-// --- Pomodoro Settings Handlers ---
 const POMODORO_SETTINGS_ERROR_ID = 'pomodoroSettingsError';
-const POMODORO_PHASES_CONST = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' }; // Define for use here
+const POMODORO_PHASES_CONST = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' };
 
 async function handleSavePomodoroSettings() {
   clearMessage(POMODORO_SETTINGS_ERROR_ID);
@@ -1390,35 +1372,102 @@ async function handleResetPomodoroSettings() {
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS] &&
       settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled !== undefined
         ? settingsResult[STORAGE_KEY_POMODORO_SETTINGS].notifyEnabled
-        : true; 
+        : true;
 
     const settingsToSave = {
       durations: defaultSettings.durations,
       sessionsBeforeLongBreak: defaultSettings.sessionsBeforeLongBreak,
-      notifyEnabled: currentNotifyEnabled, // Preserve current notification preference
+      notifyEnabled: currentNotifyEnabled,
     };
 
     if (typeof populatePomodoroSettingsInputs === 'function') {
-      populatePomodoroSettingsInputs(settingsToSave); // Update UI immediately
+      populatePomodoroSettingsInputs(settingsToSave);
     }
 
-    // Ask user if they want to save these defaults
     if (
       confirm(
         "Reset Pomodoro settings to defaults? Your notification preference will be kept. Click 'Save Tomato Clock Settings' to apply."
       )
     ) {
-      // The user will click the save button manually if they want to persist.
-      // No automatic save here to give user a chance to review.
-      // For now:
-      // await browser.storage.local.set({ [STORAGE_KEY_POMODORO_SETTINGS]: settingsToSave });
-      // await browser.runtime.sendMessage({ action: 'pomodoroSettingsChanged' });
-      // displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Pomodoro settings reset to defaults. Click Save to apply.', false);
       console.log('[Options Handlers] Pomodoro settings reset to defaults in UI. User needs to save.');
       displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Settings reset to defaults. Click "Save" to apply changes.', false);
     }
   } catch (error) {
     console.error('Error resetting Pomodoro settings:', error);
     displayMessage(POMODORO_SETTINGS_ERROR_ID, 'Failed to reset Tomato Clock settings.', true);
+  }
+}
+
+function handleCategoryBreakdownRequest(categoryName) {
+  console.log(`[Options Handlers] Request to breakdown category: ${categoryName}`);
+  AppState.currentBreakdownIdentifier = categoryName;
+  if (UIElements.breakdownCategorySelect) {
+    UIElements.breakdownCategorySelect.value = categoryName;
+  }
+  AppState.itemDetailCurrentPage = 1;
+
+  if (UIElements.itemDetailSection) {
+    // Add prompt before calling update
+    UIElements.itemDetailSection.classList.add('scrolled-once-prompt');
+  }
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay(false); // Pass false for isInitialCall
+  } else {
+    console.error('updateItemDetailDisplay function is not defined in options-ui.js');
+  }
+}
+
+function handleChartOtherDomainsRequest() {
+  console.log('[Options Handlers] Request to breakdown "Other Domains" from chart.');
+  AppState.currentBreakdownIdentifier = null;
+  if (UIElements.breakdownCategorySelect) {
+    UIElements.breakdownCategorySelect.value = '';
+  }
+  AppState.itemDetailCurrentPage = 1;
+
+  if (UIElements.itemDetailSection) {
+    // Add prompt before calling update
+    UIElements.itemDetailSection.classList.add('scrolled-once-prompt');
+  }
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay(false); // Pass false for isInitialCall
+  } else {
+    console.error('updateItemDetailDisplay function is not defined in options-ui.js');
+  }
+}
+
+function handleBreakdownCategorySelectChange() {
+  if (!UIElements.breakdownCategorySelect) return;
+  const selectedCategory = UIElements.breakdownCategorySelect.value;
+
+  if (selectedCategory) {
+    AppState.currentBreakdownIdentifier = selectedCategory;
+  } else {
+    AppState.currentBreakdownIdentifier = null;
+  }
+  AppState.itemDetailCurrentPage = 1;
+
+  if (UIElements.itemDetailSection) {
+    // Add prompt before calling update
+    UIElements.itemDetailSection.classList.add('scrolled-once-prompt');
+  }
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay(false); // Pass false for isInitialCall
+  }
+}
+
+function handleItemDetailPrev() {
+  if (AppState.itemDetailCurrentPage > 1) {
+    AppState.itemDetailCurrentPage--;
+    if (typeof updateItemDetailDisplay === 'function') {
+      updateItemDetailDisplay(false); // Pass false for isInitialCall
+    }
+  }
+}
+
+function handleItemDetailNext() {
+  AppState.itemDetailCurrentPage++;
+  if (typeof updateItemDetailDisplay === 'function') {
+    updateItemDetailDisplay(false); // Pass false for isInitialCall
   }
 }
