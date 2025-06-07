@@ -269,63 +269,78 @@ async function handleSaveCategoryClick(event) {
   if (cancelButton) cancelButton.disabled = true;
 
   try {
-    let assignmentsChanged = false;
-    let rulesChanged = false;
-
+    // 1. Update categories array
     const categoryIndex = AppState.categories.indexOf(oldName);
     if (categoryIndex > -1) {
       AppState.categories[categoryIndex] = newName;
       AppState.categories.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    } else {
-      throw new Error(`Could not find old category name in state: ${oldName}`);
     }
 
-    for (const domain in AppState.categoryAssignments) {
+    // 2. Update assignments that used the old name
+    Object.keys(AppState.categoryAssignments).forEach((domain) => {
       if (AppState.categoryAssignments[domain] === oldName) {
         AppState.categoryAssignments[domain] = newName;
-        assignmentsChanged = true;
       }
-    }
+    });
+
+    // 3. Update rules that used the old name
     AppState.rules.forEach((rule) => {
       if (rule.type.includes('-category') && rule.value === oldName) {
         rule.value = newName;
-        rulesChanged = true;
       }
     });
+
+    // 4. Update productivity ratings
     if (AppState.categoryProductivityRatings.hasOwnProperty(oldName)) {
       AppState.categoryProductivityRatings[newName] = AppState.categoryProductivityRatings[oldName];
       delete AppState.categoryProductivityRatings[oldName];
-      await browser.storage.local.set({ [STORAGE_KEY_PRODUCTIVITY_RATINGS]: AppState.categoryProductivityRatings });
     }
 
-    const savePromises = [saveCategoriesAndAssignments()];
-    if (rulesChanged && typeof saveRules === 'function') savePromises.push(saveRules());
-    await Promise.all(savePromises);
+    // 5. Incrementally update historical data objects (much faster)
+    if (AppState.categoryTimeData[oldName]) {
+      AppState.categoryTimeData[newName] =
+        (AppState.categoryTimeData[newName] || 0) + AppState.categoryTimeData[oldName];
+      delete AppState.categoryTimeData[oldName];
+    }
+    Object.keys(AppState.dailyCategoryData).forEach((date) => {
+      if (AppState.dailyCategoryData[date][oldName]) {
+        AppState.dailyCategoryData[date][newName] =
+          (AppState.dailyCategoryData[date][newName] || 0) + AppState.dailyCategoryData[date][oldName];
+        delete AppState.dailyCategoryData[date][oldName];
+      }
+    });
 
-    if (typeof recalculateAndUpdateCategoryTotals === 'function') {
-      await recalculateAndUpdateCategoryTotals({ type: 'categoryRename', oldCategory: oldName, newCategory: newName });
+    // 6. Save all updated state objects to storage
+    await browser.storage.local.set({
+      categories: AppState.categories,
+      categoryAssignments: AppState.categoryAssignments,
+      rules: AppState.rules,
+      categoryProductivityRatings: AppState.categoryProductivityRatings,
+      categoryTimeData: AppState.categoryTimeData,
+      dailyCategoryData: AppState.dailyCategoryData,
+    });
+
+    // 7. Notify background script of all changes
+    await browser.runtime.sendMessage({ action: 'categoriesUpdated' });
+    await browser.runtime.sendMessage({ action: 'rulesUpdated' });
+
+    // 8. Refresh the entire UI from the now-updated state
+    if (typeof loadAllData === 'function') {
+      await loadAllData();
     }
 
-    if (typeof populateCategoryList === 'function') populateCategoryList();
-    if (typeof populateCategorySelect === 'function') populateCategorySelect();
-    if (typeof populateRuleCategorySelect === 'function') populateRuleCategorySelect();
-    if (assignmentsChanged && typeof populateAssignmentList === 'function') populateAssignmentList();
-    if (rulesChanged && typeof populateRuleList === 'function') populateRuleList();
-    if (typeof populateProductivitySettings === 'function') populateProductivitySettings();
-    if (typeof updateDisplayForSelectedRangeUI === 'function') updateDisplayForSelectedRangeUI();
-
-    console.log(`Category "${oldName}" renamed to "${newName}" and changes saved.`);
     displayMessage(ADD_CATEGORY_ERROR_ID, `Category "${oldName}" successfully renamed to "${newName}".`, false);
   } catch (error) {
     console.error('Error saving category rename:', error);
     displayMessage(ADD_CATEGORY_ERROR_ID, `Failed to save category rename: ${error.message || 'Unknown error'}`, true);
+    if (typeof loadAllData === 'function') {
+      await loadAllData(); // Reload to reset to a known good state on error
+    }
   } finally {
     saveButton.textContent = originalButtonText;
     saveButton.disabled = false;
     if (cancelButton) cancelButton.disabled = false;
-    if (listItem.classList.contains('editing')) {
-      resetCategoryItemUI(listItem);
-    }
+    // The list is re-populated by loadAllData, so we don't need to manually reset the UI item
   }
 }
 

@@ -1,3 +1,6 @@
+/*****************************************************************
+* Updated File: for-gemini/popup/popup.css
+*****************************************************************/
 :root {
   --popup-bg: #f0f2f5;
   --popup-text-primary: #1c1e21;
@@ -437,7 +440,7 @@ body {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 

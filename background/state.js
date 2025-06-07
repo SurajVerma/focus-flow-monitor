@@ -17,6 +17,10 @@ const FocusFlowState = {
   saveTimeoutId: null,
   updateStateTimeoutId: null,
 
+  // In-memory cache for performance-critical operations
+  activeBlockingRules: [],
+  activeCategoryAssignments: {},
+
   // Constants for Tracking & Storage
   STORAGE_KEY_TRACKING_STATE: 'currentTrackingState',
   STORAGE_KEY_IDLE_THRESHOLD: 'idleThresholdSeconds',

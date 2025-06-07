@@ -1,7 +1,15 @@
+/*****************************************************************
+ * Updated File: for-gemini/popup/popup.js
+ *****************************************************************/
 // --- Global Chart Instance ---
 let hourlyChartInstance = null;
 // --- Interval ID for live popup updates ---
 let popupUpdateIntervalId = null;
+
+// ID for the status message timeout to prevent conflicting timers
+let statusMessageTimeoutId = null;
+// Flag to prevent the main refresh loop from clearing a temporary message
+let isDisplayingTempStatus = false;
 
 const STORAGE_KEY_TIME_FORMAT = 'hourlyChartTimeFormat'; // true for 24-hour, false for 12-hour
 let use24HourFormat = false; // Default to 12-hour format
@@ -655,7 +663,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    if (pomodoroStatusMessageEl) {
+    /*****************************************************************
+     * START of Added/Modified Code
+     *****************************************************************/
+    // This logic is now wrapped in a check to see if we are showing a temporary message.
+    if (pomodoroStatusMessageEl && !isDisplayingTempStatus) {
+      /*****************************************************************
+       * END of Added/Modified Code
+       *****************************************************************/
       if (state.timerState === 'paused') {
         pomodoroStatusMessageEl.textContent = 'Paused';
       } else if (
@@ -715,6 +730,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (pomodoroStartPauseBtn) {
     pomodoroStartPauseBtn.addEventListener('click', () => {
+      // Clear any pending message timeout when a new action is taken
+      if (statusMessageTimeoutId) clearTimeout(statusMessageTimeoutId);
+      isDisplayingTempStatus = false;
+
       const currentButtonText = pomodoroStartPauseBtn.textContent;
       const action =
         currentButtonText === 'Start' || currentButtonText === 'Resume' ? 'startPomodoro' : 'pausePomodoro';
@@ -727,6 +746,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (pomodoroResetBtn) {
     pomodoroResetBtn.addEventListener('click', () => {
+      // Clear any pending message timeout when a new action is taken
+      if (statusMessageTimeoutId) clearTimeout(statusMessageTimeoutId);
+      isDisplayingTempStatus = false;
+
       browser.runtime
         .sendMessage({ action: 'getPomodoroStatus' })
         .then((state) => {
@@ -734,15 +757,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Cannot reset, invalid state from background:', state);
             return;
           }
-          const isAtVeryStartOfCycle =
+          const isAtStartOfPhase =
             state.timerState === 'stopped' &&
-            state.currentPhase === POMODORO_PHASES.WORK &&
-            state.workSessionsCompleted === 0 &&
-            state.remainingTime === state.durations[POMODORO_PHASES.WORK];
+            state.durations &&
+            state.remainingTime === state.durations[state.currentPhase];
 
-          if (isAtVeryStartOfCycle) {
-            if (pomodoroStatusMessageEl) pomodoroStatusMessageEl.textContent = 'Timer is already at the start.';
-            setTimeout(() => updatePomodoroDisplay(state), 1500);
+          if (isAtStartOfPhase) {
+            /*****************************************************************
+             * START of Added/Modified Code
+             *****************************************************************/
+            if (pomodoroStatusMessageEl) {
+              isDisplayingTempStatus = true; // Set the flag
+              pomodoroStatusMessageEl.textContent = 'Timer is already at the start.';
+              statusMessageTimeoutId = setTimeout(() => {
+                if (
+                  pomodoroStatusMessageEl &&
+                  pomodoroStatusMessageEl.textContent === 'Timer is already at the start.'
+                ) {
+                  pomodoroStatusMessageEl.textContent = '';
+                }
+                isDisplayingTempStatus = false; // Clear the flag
+              }, 3000);
+            }
+            /*****************************************************************
+             * END of Added/Modified Code
+             *****************************************************************/
             return;
           }
           const message = `Reset current ${state.currentPhase} timer?`;
@@ -759,6 +798,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (pomodoroChangePhaseBtn) {
     pomodoroChangePhaseBtn.addEventListener('click', () => {
+      // Clear any pending message timeout when a new action is taken
+      if (statusMessageTimeoutId) clearTimeout(statusMessageTimeoutId);
+      isDisplayingTempStatus = false;
+
       browser.runtime
         .sendMessage({ action: 'getPomodoroStatus' })
         .then((state) => {

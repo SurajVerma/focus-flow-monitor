@@ -1,10 +1,20 @@
 {
   "manifest_version": 2,
   "name": "Focus Flow Monitor",
-  "version": "0.8.6",
+  "version": "0.9.0",
   "description": "Master your online habits! Track time, visualize usage, block distractions, set limits, and enhance focus with the built-in Pomodoro (Tomato) timer.",
-  "permissions": ["tabs", "storage", "idle", "alarms", "webRequest", "webRequestBlocking", "<all_urls>"],
-  "optional_permissions": ["notifications"],
+  "permissions": [
+    "tabs",
+    "storage",
+    "idle",
+    "alarms",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "optional_permissions": [
+    "notifications"
+  ],
   "background": {
     "scripts": [
       "background/utils.js",
@@ -27,7 +37,10 @@
     "page": "options/options.html",
     "open_in_tab": true
   },
-  "web_accessible_resources": ["data/default_config.json", "blocked/blocked.html"],
+  "web_accessible_resources": [
+    "data/default_config.json",
+    "blocked/blocked.html"
+  ],
   "icons": {
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
