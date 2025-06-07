@@ -1,5 +1,39 @@
 const PRUNE_ALARM_NAME = 'dailyDataPruneCheck'; // Used for the daily data pruning alarm
 
+// --- State Update Queue ---
+let eventQueue = [];
+let isProcessingQueue = false;
+
+// New function to process the state update queue sequentially
+async function processStateUpdateQueue() {
+  if (isProcessingQueue || eventQueue.length === 0) {
+    return;
+  }
+  isProcessingQueue = true;
+  const eventContext = eventQueue.shift(); // Get the oldest event
+
+  await updateTrackingStateImplementation(eventContext); // from tracking.js
+
+  isProcessingQueue = false;
+  // Process the next item in the queue if any exist
+  processStateUpdateQueue();
+}
+
+// New function to update the in-memory cache for blocking rules
+async function updateRuleAndAssignmentCache() {
+  try {
+    const result = await browser.storage.local.get(['rules', 'categoryAssignments']);
+    FocusFlowState.activeBlockingRules = result.rules || [];
+    FocusFlowState.activeCategoryAssignments = result.categoryAssignments || {};
+    console.log('[Cache] Updated active blocking rules and assignments in memory.');
+  } catch (err) {
+    console.error('[Cache] Failed to update caches:', err);
+    // Fallback to empty on error to prevent faulty blocking
+    FocusFlowState.activeBlockingRules = [];
+    FocusFlowState.activeCategoryAssignments = {};
+  }
+}
+
 const POMODORO_PHASES = { WORK: 'Work', SHORT_BREAK: 'Short Break', LONG_BREAK: 'Long Break' };
 
 // Default settings, will be overridden by loaded settings
@@ -439,6 +473,9 @@ async function setupAlarms() {
 async function initializeExtension() {
   await loadData(); // from storage.js - also loads pomodoro stats
   await loadPomodoroStateAndSettings(); // Loads pomodoro timer state and user configurations
+
+  await updateRuleAndAssignmentCache(); // Initialize the rule cache on startup
+
   await setupAlarms();
 
   try {
@@ -465,37 +502,46 @@ async function initializeExtension() {
   console.log('[System] Background script initialization complete.');
 }
 
+// Replace all listeners to use the queue system
 browser.tabs.onActivated.addListener(() => {
-  updateTrackingStateDebounced('tabs.onActivated');
+  eventQueue.push('tabs.onActivated');
+  processStateUpdateQueue();
 });
+
 browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab && tab.url && getDomain(tab.url)) {
-    // getDomain from utils.js
     browser.windows
       .getLastFocused({ populate: true, windowTypes: ['normal'] })
       .then((currentWindow) => {
         if (currentWindow && currentWindow.focused) {
           const activeTab = currentWindow.tabs.find((t) => t.active);
           if (activeTab && activeTab.id === tabId) {
-            updateTrackingStateDebounced('tabs.onUpdated (complete)');
+            eventQueue.push('tabs.onUpdated (complete)');
+            processStateUpdateQueue();
           }
         }
       })
       .catch((e) => {
-        // Benign in many cases
+        /* Benign error */
       });
   }
 });
+
 browser.windows.onFocusChanged.addListener(() => {
-  updateTrackingStateDebounced('windows.onFocusChanged');
+  eventQueue.push('windows.onFocusChanged');
+  processStateUpdateQueue();
 });
+
 browser.idle.onStateChanged.addListener((newState) => {
-  updateTrackingStateDebounced(`idle.onStateChanged (${newState})`);
+  eventQueue.push(`idle.onStateChanged (${newState})`);
+  processStateUpdateQueue();
 });
 
 browser.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === FocusFlowState.ALARM_NAME) {
-    await updateTrackingStateImplementation(FocusFlowState.ALARM_NAME); // from tracking.js
+    eventQueue.push(FocusFlowState.ALARM_NAME);
+    processStateUpdateQueue();
+    await checkTimeLimitsAndRedirectIfNeeded(); // Async limit check
   } else if (alarm.name === PRUNE_ALARM_NAME) {
     console.log(`[Alarm] Triggered: ${PRUNE_ALARM_NAME}`);
     await pruneOldData(); // from storage.js
@@ -504,28 +550,20 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
 
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   (async () => {
-    if (request.action === 'categoriesUpdated' || request.action === 'rulesUpdated') {
+    if (
+      request.action === 'categoriesUpdated' ||
+      request.action === 'rulesUpdated' ||
+      request.action === 'importedData'
+    ) {
       console.log(`[System Background] Reloading config data due to ${request.action} message.`);
-      try {
-        await loadData(); // from storage.js
-        sendResponse({ success: true, message: 'Config data reloaded.' });
-      } catch (err) {
-        console.error(`[System Background] Error reloading data on message:`, err);
-        sendResponse({ success: false, message: 'Error reloading config.' });
+      await loadData();
+      if (request.action === 'importedData') {
+        await loadPomodoroStateAndSettings();
       }
-    } else if (request.action === 'importedData') {
-      console.log(`[System Background] Reloading ALL data due to data import.`);
-      try {
-        await loadData(); // from storage.js
-        console.log('[System Background] Background state reloaded after import.');
-        await loadPomodoroStateAndSettings(); // Also reload Pomodoro state
-        sendResponse({ success: true, message: 'Background state reloaded after import.' });
-      } catch (err) {
-        console.error(`[System Background] Error reloading background state after import:`, err);
-        sendResponse({ success: false, message: 'Error reloading background state.' });
-      }
+      await updateRuleAndAssignmentCache(); // Update cache on any rule/category change
+      sendResponse({ success: true, message: 'Config data and cache reloaded.' });
     }
-    // --- Pomodoro Message Handlers ---
+    // --- The rest of the Pomodoro message handlers remain the same ---
     else if (request.action === 'pomodoroSettingsChanged') {
       console.log(`[System Background] Received pomodoroSettingsChanged. Reloading settings from storage.`);
       try {
@@ -545,15 +583,12 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
           pomodoroSettings.notifyEnabled =
             loadedSettings.notifyEnabled !== undefined ? loadedSettings.notifyEnabled : true;
 
-          // If timer is stopped or current phase duration changed, reset timer to new duration
           if (
             pomodoroState.timerState === 'stopped' ||
             (pomodoroState.currentPhase &&
               pomodoroSettings.durations[pomodoroState.currentPhase] !== pomodoroState.remainingTime &&
               pomodoroState.timerState !== 'running')
           ) {
-            // Update remaining time only if it's explicitly different and timer not running.
-            // Or if it was stopped, it should reflect the new duration of the current phase.
             const newPhaseDuration =
               pomodoroSettings.durations[pomodoroState.currentPhase] ||
               pomodoroSettings.durations[POMODORO_PHASES.WORK];
@@ -568,7 +603,6 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
             `Notify: ${pomodoroSettings.notifyEnabled}`
           );
         } else {
-          // This case should ideally not happen if options page always saves the full object
           console.warn(
             `[Pomodoro Background] No pomodoroUserSettings found in storage on 'pomodoroSettingsChanged'. Using defaults.`
           );
@@ -578,7 +612,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
           pomodoroState.remainingTime =
             pomodoroSettings.durations[pomodoroState.currentPhase] || pomodoroSettings.durations[POMODORO_PHASES.WORK];
         }
-        await sendPomodoroStatusToPopups(); // Send updated status
+        await sendPomodoroStatusToPopups();
         sendResponse({ success: true, message: 'Background acknowledged and reloaded Pomodoro settings.' });
       } catch (err) {
         console.error(`[System Background] Error reloading pomodoro settings in background:`, err);
@@ -586,23 +620,21 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     } else if (request.action === 'getPomodoroStatus') {
       let currentNotifyEnabled = pomodoroSettings.notifyEnabled;
-      let settingChangedInStorage = false; // Flag to check if we need to save
+      let settingChangedInStorage = false;
       if (currentNotifyEnabled) {
-        // Only check permission if user *wants* notifications
         try {
           const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
           if (!hasPermission) {
             console.log(
               '[Pomodoro Background] getPomodoroStatus: notifyEnabled was true, but permission missing. Updating to false.'
             );
-            pomodoroSettings.notifyEnabled = false; // Update the live settings
-            currentNotifyEnabled = false; // Reflect this in the response
-            settingChangedInStorage = true; // Mark to save this reconciled state
+            pomodoroSettings.notifyEnabled = false;
+            currentNotifyEnabled = false;
+            settingChangedInStorage = true;
           }
         } catch (err) {
           console.error('[Pomodoro Background] getPomodoroStatus: Error checking notification permission:', err);
           if (pomodoroSettings.notifyEnabled) {
-            // If it was true and we errored
             pomodoroSettings.notifyEnabled = false;
             currentNotifyEnabled = false;
             settingChangedInStorage = true;
@@ -610,12 +642,12 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       }
       if (settingChangedInStorage) {
-        await savePomodoroStateAndSettings(); // Save if notifyEnabled was changed
+        await savePomodoroStateAndSettings();
       }
       sendResponse({
         ...pomodoroState,
         durations: pomodoroSettings.durations,
-        notifyEnabled: currentNotifyEnabled, // Send the reconciled state
+        notifyEnabled: currentNotifyEnabled,
       });
     } else if (request.action === 'startPomodoro') {
       startPomodoroTimer();
@@ -639,24 +671,22 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         let settingActuallyChanged = false;
 
         if (userIntentEnabled) {
-          // If user wants to enable
           try {
             const hasPermission = await browser.permissions.contains({ permissions: ['notifications'] });
             if (!hasPermission) {
               console.warn(
                 '[Pomodoro Background] Popup requested to enable notifications, but permission is missing. Overriding intent: Forcing disabled.'
               );
-              finalNotifyEnabledState = false; // Cannot enable without permission
+              finalNotifyEnabledState = false;
             }
           } catch (err) {
             console.error(
               '[Pomodoro Background] Error checking notification permission during update from popup:',
               err
             );
-            finalNotifyEnabledState = false; // Assume no permission on error
+            finalNotifyEnabledState = false;
           }
         }
-        // else: if user wants to disable, finalNotifyEnabledState is already false
 
         if (pomodoroSettings.notifyEnabled !== finalNotifyEnabledState) {
           pomodoroSettings.notifyEnabled = finalNotifyEnabledState;
@@ -666,7 +696,7 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (settingActuallyChanged) {
           await savePomodoroStateAndSettings();
         }
-        await sendPomodoroStatusToPopups(); // Reflect change immediately
+        await sendPomodoroStatusToPopups();
         console.log(
           `[Pomodoro Background] Popup update. User intent: ${userIntentEnabled}, Actual setting in background: ${pomodoroSettings.notifyEnabled}`
         );
@@ -675,14 +705,13 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: false, error: "Missing 'enabled' parameter." });
       }
     } else if (request.action === 'getPomodoroStatsForDate') {
-      // Handler for stats request
-      const dateStr = request.date || getCurrentDateString(); // Default to today if no date specified
+      const dateStr = request.date || getCurrentDateString();
       const dailyStats = FocusFlowState.pomodoroDailyStats[dateStr] || { workSessions: 0, totalWorkTime: 0 };
       console.log(`[Pomodoro Background] Responding to getPomodoroStatsForDate for ${dateStr}:`, dailyStats);
       sendResponse({ success: true, stats: dailyStats });
     }
   })();
-  return true; // Indicates that sendResponse will be called asynchronously
+  return true;
 });
 
 initializeExtension();
