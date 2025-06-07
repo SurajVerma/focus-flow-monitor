@@ -3,6 +3,12 @@
     "focusflow-monitor@bleuflex.com": {
       "updates": [
         {
+          "version": "0.9.0.4",
+          "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/v0.9.0.4/359e173d93d4421eb63d-0.9.0.4.xpi",
+          "update_hash": "sha256:6115F14E583207A9F5C14666226D675489C028618444E165FAC13478824FF34D",
+          "update_info_url": "https://github.com/SurajVerma/focus-flow-monitor/releases/tag/v0.9.0.4"
+        },
+        {
           "version": "0.9.0.3",
           "update_link": "https://github.com/SurajVerma/focus-flow-monitor/releases/download/v0.9.0.3/359e173d93d4421eb63d-0.9.0.3.xpi",
           "update_hash": "sha256:374AECE2C5BFEA910224469907DF86CF54268AD519A39F9ADAC0D1276DEE5150",
