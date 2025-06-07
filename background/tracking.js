@@ -171,3 +171,78 @@ const updateTrackingStateDebounced = debounce(
   (context) => updateTrackingStateImplementation(context),
   FocusFlowState.UPDATE_STATE_DEBOUNCE_MS
 );
+
+// This function checks if the currently active tab should be blocked due to a time limit.
+async function checkTimeLimitsAndRedirectIfNeeded() {
+  const { rules, dailyDomainData, dailyCategoryData } = FocusFlowState;
+  if (!rules || rules.length === 0) return; // No rules to check
+
+  const limitRules = rules.filter((r) => r.type && r.type.startsWith('limit-'));
+  if (limitRules.length === 0) return; // No limit rules to check
+
+  let activeTab;
+  try {
+    const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    if (!tab || !tab.url) return;
+    activeTab = tab;
+  } catch (e) {
+    // This can happen if no window is focused, which is fine.
+    return;
+  }
+
+  const domain = getDomain(activeTab.url);
+  if (!domain) return;
+
+  const todayStr = getCurrentDateString();
+  const todaysDomainData = dailyDomainData[todayStr] || {};
+  const todaysCategoryData = dailyCategoryData[todayStr] || {};
+  // Use the getCategoryForDomain from utils.js, which now uses the cache
+  const category = getCategoryForDomain(domain);
+
+  for (const rule of limitRules) {
+    let timeSpentToday = 0;
+    let ruleMatches = false;
+
+    if (rule.type === 'limit-url' && urlMatchesPattern(activeTab.url, rule.value)) {
+      let timeSum = 0;
+      const targetValue = rule.value;
+      if (targetValue.startsWith('*.')) {
+        const basePattern = targetValue.substring(2);
+        for (const d in todaysDomainData) {
+          if (d === basePattern || d.endsWith('.' + basePattern)) {
+            timeSum += todaysDomainData[d];
+          }
+        }
+      } else {
+        timeSum = todaysDomainData[targetValue] || 0;
+      }
+      timeSpentToday = timeSum;
+      ruleMatches = true;
+    } else if (rule.type === 'limit-category' && category === rule.value) {
+      timeSpentToday = todaysCategoryData[rule.value] || 0;
+      ruleMatches = true;
+    }
+
+    if (ruleMatches && timeSpentToday >= rule.limitSeconds) {
+      console.log(`[Async Limit Check] Limit reached for ${domain}. Redirecting tab.`);
+      const blockPageBaseUrl = browser.runtime.getURL('blocked/blocked.html');
+      const params = new URLSearchParams({
+        url: activeTab.url,
+        reason: 'limit',
+        type: rule.type,
+        value: rule.value,
+        limit: rule.limitSeconds.toString(),
+        spent: timeSpentToday.toString(),
+      });
+      try {
+        // Prevent redirection loop if already on the block page
+        if (!activeTab.url.startsWith(blockPageBaseUrl)) {
+          await browser.tabs.update(activeTab.id, { url: `${blockPageBaseUrl}?${params.toString()}` });
+        }
+      } catch (e) {
+        console.error('Failed to redirect tab for time limit:', e);
+      }
+      return; // Stop checking after the first active limit is found and actioned
+    }
+  }
+}
