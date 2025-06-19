@@ -124,16 +124,17 @@ Starting with version 0.9.0.1, the version available on GitHub Releases will be 
 ## Screenshots
 
 **Dashboard**
-![dashboard](https://github.com/user-attachments/assets/23bbf8cc-1b5e-43bd-a315-6b0ce83b03ca)
+![dashboard](https://github.com/user-attachments/assets/51a27e18-9b6b-4bea-8202-d221b1030f8a)
+
 
 **Content Control**
-![content-control](https://github.com/user-attachments/assets/29e15382-e0b5-4d7c-9919-637ad4e03f62)
+![content-control](https://github.com/user-attachments/assets/abcbf7b4-616d-4808-acc2-ddb4dff6b854)
 
 **Productivity**
-![productivity](https://github.com/user-attachments/assets/442e2b88-2e57-46cb-aab9-ed7b999b8b67)
+![productivity](https://github.com/user-attachments/assets/8b6fc986-b892-43b8-b01b-66253ccdf3d9)
 
 **Settings**
-![settings](https://github.com/user-attachments/assets/35f87464-7ce4-4c37-a03f-0cdade941f6f)
+![settings](https://github.com/user-attachments/assets/85631834-fc34-464b-ab7a-23e9a7903b07)
 
 **Blocked Page Example:**
 ![Blocked Page](https://github.com/user-attachments/assets/01c6ba2b-595c-41a1-943b-15ed34228b61)
