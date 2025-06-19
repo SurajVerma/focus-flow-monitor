@@ -79,6 +79,7 @@ Get the latest **stable version** from the official Firefox Add-ons page:
 [**Install Focus Flow Monitor (AMO Stable)**](https://addons.mozilla.org/en-US/firefox/addon/focusflow-monitor/)
 
 For the latest features and updates, you can install the **Beta version** directly from [GitHub Releases](https://github.com/SurajVerma/focus-flow-monitor/releases).
+Make sure to pin the extension to your toolbar.
 
 [⬆️ Back to Top](#focus-flow-monitor)
 ---
